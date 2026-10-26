@@ -26,7 +26,11 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 **Making music**
 - Twelve-track step sequencer with a volume slider, mute, lock and re-roll on every track. Tap a track name to hear its sound.
 - Sixteen pads (Kit and Notes banks) played with the mouse or keyboard, with recording into patterns.
-- Load your own audio samples onto drum pads; the vocal chop pad follows the chords.
+- Load your own audio samples onto drum pads; the vocal chop pad follows the chords. Sample pads have one-shot or hold play modes, trim, tune, attack, release, filter, reverse and choke.
+- MPC-style **Sampler**: load or drop an audio file, see the waveform, and chop it by Threshold (transients), Regions, Beat grid or Manual. Drag chop lines, split, merge and snap to zero crossings. The 16 chops play on the **Chops** pad bank and record into the Chops track; **⚄ Flip it** makes a random pattern from them.
+- **Pad FX** on every pad: reverb, delays, chorus, flanger, phaser, tremolo, auto-pan, filters, filter gate, overdrive, fuzz, bitcrusher, lo-fi, telephone, compressor, EQ and ring mod, each with amount and mix.
+- **Note repeat** (1/8 to 1/32 and triplets), **Vintage** mode (MPC60, MPC3000, SP-1200) and a live **Filter sweep**.
+- Stop, Space or Esc silences everything, including samples, reverb and echo tails.
 - Patterns A–D chained into a song, including random arrangements.
 - Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut.
 
