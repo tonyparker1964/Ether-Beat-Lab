@@ -2,15 +2,32 @@
 
 [Open Ether Beat Lab](https://tonyparker1964.github.io/Ether-Beat-Lab/)
 
-A browser-based beat sequencer built for Ether's creative workflow.
+A browser-based beat maker built for Ether's creative workflow. Every sound is synthesized in the browser, so there are no sample libraries to download.
 
-- Generate and mutate rhythms across nine genres.
-- Set tempo, swing, energy, complexity, key, scale and Journey stage.
-- Edit step sequences, mute tracks and lock parts while randomizing.
-- Play sixteen pads with the mouse or keyboard and record hits into patterns.
-- Arrange patterns A–D into a song.
-- Load custom audio samples.
-- Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, chord, section, beat, bar, kick and snare timing for Ether Cut.
+## Features
+
+**Beats and randomizing**
+- Nine genres: Boom Bap, Lo-fi, Trap, Drill, House, Afrobeats, Dembow, Drum & Bass and Phonk.
+- One-press **⚄ Randomize** for genre, tempo, key, scale, chords, sounds and patterns, with locks for anything you want to keep.
+- **Mutate**, per-track re-roll, new chord progressions, **Wildness** (borrows from other genres) and Undo.
+- Tempo, swing, energy, complexity, key, scale (including Hijaz, Bhairav, Pelog and other world scales) and Zero's Journey stage.
+
+**Sounds**
+- 53 instruments, each genre with its own palette, plus the Ether families:
+  - **Ether Voices:** Ether Choir, Silk Vox, Prism Vox.
+  - **Ether Presets:** Ascend, Midnight Keys, Bloom, Twin Lead, Analog Dream, Fusion Keys, Tape Glow, Earth Pad.
+  - **Ether Atmos:** Dune Drone, Fable Pad, Haze, Glass, Dark Metal, Flux Mallet, Toybox.
+  - **Ether World:** tin whistle, fiddle, Celtic harp, sitar, bansuri, oud, kora, balafon, tres, gamelan.
+- Two chord layers with a blend control, chord voicings, chord rhythms (hold, stabs, arpeggio, 16th sequence), a melody track and nine bass sounds.
+- World percussion (bodhrán, tabla, darbuka, djembe, talking drum, bongos, gong), rise-and-hit FX, reverb and tempo-synced echo.
+- **⚄ Roll sounds** picks a new instrument combination.
+
+**Making music**
+- Step sequencer with mute, lock and re-roll on every track.
+- Sixteen pads (Kit and Notes banks) played with the mouse or keyboard, with recording into patterns.
+- Load your own audio samples onto drum pads; the vocal chop pad follows the chords.
+- Patterns A–D chained into a song, including random arrangements.
+- Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut.
 
 ## Use
 
