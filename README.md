@@ -20,10 +20,11 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
   - **Ether World:** tin whistle, fiddle, Celtic harp, sitar, bansuri, oud, kora, balafon, tres, gamelan.
 - Two chord layers with a blend control, chord voicings, chord rhythms (hold, stabs, arpeggio, 16th sequence), a melody track and nine bass sounds.
 - World percussion (bodhrán, tabla, darbuka, djembe, talking drum, bongos, gong), rise-and-hit FX, reverb and tempo-synced echo.
+- A sound picker for every drum track: kick, snare, hat, open hat, percussion, tom, crash, FX and vocal chop, with a reset to the genre's kit.
 - **⚄ Roll sounds** picks a new instrument combination.
 
 **Making music**
-- Step sequencer with mute, lock and re-roll on every track.
+- Twelve-track step sequencer with a volume slider, mute, lock and re-roll on every track. Tap a track name to hear its sound.
 - Sixteen pads (Kit and Notes banks) played with the mouse or keyboard, with recording into patterns.
 - Load your own audio samples onto drum pads; the vocal chop pad follows the chords.
 - Patterns A–D chained into a song, including random arrangements.
