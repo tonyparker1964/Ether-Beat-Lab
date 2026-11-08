@@ -34,6 +34,17 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 - Patterns A–D chained into a song, including random arrangements.
 - Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut.
 
+## Mac app with your Native Instruments sounds
+
+The Mac app is the same Beat Lab in its own window, plus two things the web page can't do:
+
+- **Native Instruments library.** Add your NI drive (or folders) and Beat Lab scans it once. Drum one-shots from Maschine expansions and Battery kits are sorted into kick, snare, clap, hats, percussion, toms and cymbals by kit; melodic one-shots (keys, pads, synths, plucks, bells, strings, brass, guitars, bass) become playable instruments, tuned from the note in each file name. Pick a **drum kit**, press **⚄ Kit for genre**, or **browse**, listen (▶) and put any sound on any drum track or on Chords A/B, Melody or Bass with **Use on…**. Everything plays in the step sequencer, on the pads and in the export. Kontakt libraries use NI's locked formats, so they're counted and skipped. With **Roll and Randomize use NI sounds** on, ⚄ Roll sounds and ⚄ Randomize pick from your library too.
+- **AI Producer.** Type a vibe ("late-night jazzy boom bap, warm and dusty") and press **Produce**. It sets the genre, tempo, key, scale, swing, energy and complexity, and chooses your NI kit and instruments. It uses the model loaded in **LM Studio** on your Mac: no API key, and nothing leaves your computer. When LM Studio is off it falls back to the built-in producer, which reads genre, mood and speed words. The AI Producer's built-in mode also works on the web page.
+
+Sound files are read straight from your drive and played inside the app; the app only serves files its own scan found.
+
+**Install:** in Terminal, in this folder, run `./install-mac-app.sh`. It builds the app and puts **Ether Beat Lab.app** in Applications. It needs Xcode or the Command Line Tools (`xcode-select --install`). Run it again after pulling updates. Exports are saved to your Downloads folder.
+
 ## Use
 
 Open the live page in a modern browser, press Play, and explore the controls. Audio starts after a user gesture. The app runs in your browser; loaded samples are processed locally.

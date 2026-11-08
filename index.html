@@ -139,6 +139,21 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .subhead{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:16px 0 0;font-weight:500}
 .sounds-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:12px}
 .sounds-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+/* Native Instruments library and AI Producer (Mac app) */
+.ni-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.ni-input{flex:1 1 260px;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.ni-row select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:260px}
+.ni-status{font-size:13px;color:var(--dim);margin:8px 0 0}
+.ni-results{margin-top:12px;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.ni-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line)}
+.ni-item:last-child{border-bottom:0}
+.ni-item .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ni-item .meta{display:block;color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ni-item select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:13px}
+.ni-empty{padding:14px;color:var(--dim);font-size:14px}
+.prod-note{margin:10px 0 0;font-size:14px;color:var(--dim);min-height:1.2em}
+.prod-set{margin-top:10px}
+.prod-set summary{cursor:pointer}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
 .seg button{background:none;border:0;padding:6px 14px;font-weight:600;font-size:13px;color:var(--dim)}
 .seg button[aria-pressed="true"]{background:var(--text);color:var(--ink)}
@@ -225,6 +240,50 @@ input[type=range]{width:100%;accent-color:var(--accent)}
     </div>
   </section>
 
+  <section class="panel" aria-label="AI Producer">
+    <div class="sounds-head">
+      <h2>AI Producer</h2>
+      <span class="lbl" id="prodWho"></span>
+    </div>
+    <div class="ni-row">
+      <input type="text" id="prodVibe" class="ni-input" placeholder="Describe the vibe, e.g. late-night jazzy boom bap, warm and dusty" aria-label="Describe the vibe">
+      <button class="btn primary" id="prodGo">✦ Produce</button>
+    </div>
+    <p class="prod-note" id="prodNote">Type a vibe and press Produce: it picks the genre, tempo, key, scale and energy, and your Native Instruments kit and instruments.</p>
+    <details class="prod-set">
+      <summary class="lbl">AI settings</summary>
+      <div class="ni-row">
+        <label class="toggle"><input type="checkbox" id="prodAI" checked> Use my local AI (LM Studio)</label>
+        <input type="text" id="prodModel" class="ni-input" placeholder="LM Studio model (blank = the one that's loaded)" aria-label="LM Studio model">
+      </div>
+      <p class="ni-status">Runs on this Mac with LM Studio: no API key, nothing leaves your computer. When LM Studio is off, the built-in producer (no AI) reads the mood words in your vibe instead.</p>
+    </details>
+  </section>
+
+  <section class="panel" id="niPanel" aria-label="Native Instruments" hidden>
+    <div class="sounds-head">
+      <h2>Native Instruments</h2>
+      <div class="ni-row" style="margin:0">
+        <button class="btn" id="niFolders">Add NI folders…</button>
+        <button class="mini" id="niRescan">Rescan</button>
+      </div>
+    </div>
+    <p class="ni-status" id="niStatus">Add your Native Instruments drive to use its sounds.</p>
+    <div class="ni-row">
+      <label class="field" style="flex:1 1 260px"><span class="lbl">Drum kit</span><select id="niKit"></select></label>
+      <button class="btn" id="niGenreKit" title="A kit that suits this genre">⚄ Kit for genre</button>
+      <button class="mini" id="niSynthKit" title="Use Beat Lab's own synthesized drums again">Back to synth drums</button>
+      <label class="toggle"><input type="checkbox" id="niRoll" checked> ⚄ Roll and Randomize use NI sounds</label>
+    </div>
+    <h3 class="subhead">Browse and assign</h3>
+    <div class="ni-row">
+      <input type="search" id="niSearch" class="ni-input" placeholder="Search sounds, kits and instruments…" aria-label="Search Native Instruments sounds">
+      <select id="niType" aria-label="Type"></select>
+      <select id="niKitFilter" aria-label="Kit"></select>
+    </div>
+    <div class="ni-results" id="niResults" role="list"></div>
+  </section>
+
   <section class="panel" aria-label="Sounds">
     <div class="sounds-head">
       <h2>Sounds</h2>
@@ -246,6 +305,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       <h3 class="subhead" style="margin:0">Drum kit</h3>
       <button class="mini" id="resetKit" title="Go back to this genre's drum sounds">Reset kit to genre</button>
     </div>
+    <p class="ni-status" id="niKitNote" hidden></p>
     <div class="sounds-grid">
       <label class="field"><span class="lbl">Kick</span><select id="kitKick"></select></label>
       <label class="field"><span class="lbl">Snare</span><select id="kitSnare"></select></label>
@@ -883,7 +943,7 @@ function trigger(ctx,bus,id,t,v,o){
     case "mel": INST[state.inst.mel].play(ctx,out,t,o.f,v*.42,o.len); break;
     case "chops": { const sl=sliceList(), k=o.slice||0; if(!sampler.buf||k>=sl.length) return null;
       return playSlice(ctx,out,t,sampler.buf,sl[k].s,sl[k].e,chopParams[k],o.len,sampler.mono?"chops":"chop"+k,v); }
-    case "bass": V.bass(ctx,out,t,v,o.f,o.len,state.inst.bass,o.fNext); break;
+    case "bass": { const nb=state.inst.bass; if(nb.startsWith("ni:")&&INST[nb]) INST[nb].play(ctx,out,t,o.f,v*.75,o.len); else V.bass(ctx,out,t,v,o.f,o.len,nb,o.fNext); break; }
     case "keys": V.keys(ctx,out,t,v,o.freqs,o.len,rhythm(),g,state.energy); break;
     case "fx": V["fx_"+state.inst.fx](ctx,out,t,v,o.len||1.6); break;
   }
@@ -1575,6 +1635,362 @@ buildGrid();
 renderPads();
 renderChain();
 requestAnimationFrame(frame);
+</script>
+<script>
+"use strict";
+/* ---------- Native Instruments library (Mac app) ---------- */
+// The Mac app answers on window.webkit.messageHandlers.ether and serves sound files at ether://app/sound.
+const NATIVE=!!(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.ether);
+async function native(action,data){
+  if(!NATIVE) throw new Error("Only in the Mac app");
+  const r=await window.webkit.messageHandlers.ether.postMessage(Object.assign({action},data||{}));
+  return typeof r==="string"?JSON.parse(r):r;
+}
+const NI={lib:null,ready:new Map(),loading:new Map(),kit:null,kits:[],instById:new Map()};
+const NI_TRACKS={kick:["kick"],snare:["snare","clap"],hat:["closedHat"],ohat:["openHat"],perc:["perc"],tom:["tom"],crash:["cymbal"]};
+const NI_TRIM={kick:.95,snare:.8,hat:.42,ohat:.38,perc:.5,tom:.6,crash:.32};
+const NI_ROLE_LABEL={kick:"Kick",snare:"Snare",clap:"Clap",closedHat:"Closed hat",openHat:"Open hat",perc:"Percussion",tom:"Tom",cymbal:"Cymbal"};
+const NI_CATS={keys:"Keys",pad:"Pads",synth:"Synths",pluck:"Plucks",bell:"Bells & mallets",strings:"Strings",brass:"Brass & winds",guitar:"Guitars",bass:"Bass"};
+const NI_SLOTS={a:"Chords A",b:"Chords B",mel:"Melody",bass:"Bass"};
+// Words that suggest a kit suits a genre, matched against kit and expansion names.
+const GENRE_WORDS={boombap:["boom","bap","hip","hop","90","golden","basement","dusty","vinyl","soul","funk","crate"],
+  lofi:["lofi","lo","dusty","chill","tape","jazz","jazzy","vinyl","mellow"],trap:["trap","808","dark","street"],
+  drill:["drill","dark","street"],house:["house","disco","deep","garage","club"],afro:["afro","amapiano","afrobeats","african"],
+  dembow:["latin","reggaeton","dembow","tropical","caribbean"],dnb:["jungle","dnb","breaks","drum"],phonk:["phonk","memphis","cowbell","drift"]};
+
+const niURL=path=>"ether://app/sound?p="+encodeURIComponent(path);
+const niName=path=>path.split("/").pop().replace(/\.[^.]+$/,"");
+
+/* Load and prepare one file: skip silence before the hit and remember its loudness. */
+function niLoad(path){
+  if(NI.ready.has(path)) return Promise.resolve(NI.ready.get(path));
+  if(NI.loading.has(path)) return NI.loading.get(path);
+  ensureCtx();
+  const job=(async()=>{
+    const r=await fetch(niURL(path)); if(!r.ok) throw new Error("Couldn't read "+niName(path));
+    const buf=await ctx.decodeAudioData(await r.arrayBuffer());
+    let peak=0; const chans=[]; for(let c=0;c<buf.numberOfChannels;c++) chans.push(buf.getChannelData(c));
+    for(const d of chans) for(let i=0;i<d.length;i++){ const a=Math.abs(d[i]); if(a>peak) peak=a; }
+    let start=0; const th=peak*.02;
+    outer: for(let i=0;i<buf.length;i++){ for(const d of chans){ if(Math.abs(d[i])>=th){ start=i; break outer; } } }
+    const info={buf,start:Math.max(0,start-Math.round(buf.sampleRate*.001))/buf.sampleRate,norm:peak>.0001?1/peak:1};
+    NI.ready.set(path,info); NI.loading.delete(path); return info;
+  })();
+  job.catch(()=>NI.loading.delete(path));
+  NI.loading.set(path,job); return job;
+}
+
+/* Drum sounds go onto Beat Lab's own sample slots, so the sequencer, pads and export use them. */
+async function niAssignDrum(track,file){
+  const b=await niLoad(file.path), d=b.buf.duration;
+  samples[track]={buf:b.buf,name:file.name,start:b.start/d,end:1,ni:file,
+    p:Object.assign(defParams(),{level:Math.min(3,(NI_TRIM[track]||.6)*b.norm),mode:"oneshot"})};
+}
+function niDrumsInKit(kit){ return NI.lib?NI.lib.drums.filter(f=>f.kit===kit):[]; }
+async function niUseKit(kit,quiet){
+  const files=niDrumsInKit(kit); if(!files.length) return;
+  const clapFirst=G().snareType==="clap", jobs=[];
+  for(const [track,roles] of Object.entries(NI_TRACKS)){
+    const order=track==="snare"&&clapFirst?["clap","snare"]:roles;
+    let pool=[]; for(const r of order){ pool=files.filter(f=>f.role===r); if(pool.length) break; }
+    if(!pool.length){ if(samples[track]&&samples[track].ni) delete samples[track]; continue; }
+    jobs.push(niAssignDrum(track,pick(pool)));
+  }
+  const res=await Promise.allSettled(jobs);
+  NI.kit=kit; $("niKit").value=kit; renderGrid(); renderPads(); niStatus();
+  const failed=res.filter(r=>r.status==="rejected").length;
+  if(!quiet) toast(failed?`NI kit ${kit} (${failed} sounds couldn't be read)`:"NI kit: "+kit);
+}
+function niSynthKit(){ Object.keys(NI_TRACKS).forEach(t=>{ if(samples[t]&&samples[t].ni) delete samples[t]; }); NI.kit=null; $("niKit").value=""; renderGrid(); renderPads(); niStatus(); }
+function niGenreKit(extraWords){
+  if(!NI.kits.length) return null;
+  const want=(GENRE_WORDS[state.genre]||[]).concat(extraWords||[]);
+  let best=0, pool=[];
+  for(const k of NI.kits){ const words=k.toLowerCase().split(/[^a-z0-9]+/); const sc=want.reduce((a,w)=>a+(words.includes(w)?1:0),0);
+    if(sc>best){ best=sc; pool=[k]; } else if(sc===best&&sc>0) pool.push(k); }
+  return pick(best>0?pool:NI.kits);
+}
+
+/* Instruments: a set of notes from one expansion, played at any pitch by picking the nearest note. */
+function niRegister(inst){
+  const key="ni:"+inst.id;
+  if(!INST[key]){
+    INST[key]={n:inst.name+" · "+inst.kit,fam:"Native Instruments",ni:inst,play(c,out,t,f,v,dur){ niPlay(inst,c,out,t,f,v,dur); }};
+    if(inst.category==="bass") BASSES[key]=INST[key].n;
+  }
+  return key;
+}
+function niLoadInst(inst){ return Promise.allSettled(inst.zones.map(z=>niLoad(z.path))); }
+function niPlay(inst,c,out,t,f,v,dur){
+  const m=69+12*Math.log2(f/440); let best=null, bd=1e9;
+  for(const z of inst.zones){ const r=NI.ready.get(z.path); if(!r) continue; const d=Math.abs(z.root-m); if(d<bd){ bd=d; best={z,r}; } }
+  if(!best){ niLoadInst(inst); return; }
+  const src=c.createBufferSource(); src.buffer=best.r.buf; src.playbackRate.value=Math.pow(2,(m-best.z.root)/12);
+  const len=Math.max(.08,dur||.4), rel=Math.min(.45,.08+len*.25), lvl=Math.max(.0001,v*1.4*best.r.norm), g=c.createGain();
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(lvl,t+.005); g.gain.setValueAtTime(lvl,t+len); g.gain.linearRampToValueAtTime(0,t+len+rel);
+  src.connect(g).connect(out); src.start(t,best.r.start); src.stop(t+len+rel+.03);
+}
+async function niAssignInst(slot,inst,quiet){
+  const key=niRegister(inst); await niLoadInst(inst);
+  state.inst[slot]=key; if(slot==="b"&&state.inst.blend<.25) state.inst.blend=.4;
+  syncSounds(); renderGrid(); renderPadEdit();
+  if(!quiet) toast(`${NI_SLOTS[slot]}: ${inst.name}`);
+}
+function niInstruments(cats,kit){ if(!NI.lib) return []; return NI.lib.instruments.filter(i=>cats.includes(i.category)&&(!kit||i.kit===kit)); }
+/* Prefer instruments from the same expansion as the drums, then several-note instruments, then anything. */
+function niPickInst(cats,kit,avoid){
+  const ok=i=>!avoid||!avoid.includes(i.id);
+  for(const pool of [niInstruments(cats,kit).filter(ok),niInstruments(cats).filter(i=>i.zones.length>=3&&ok(i)),niInstruments(cats).filter(ok)])
+    if(pool.length) return pick(pool);
+  return null;
+}
+async function niRollAll(announce){
+  if(!NI.lib||!NI.kits.length) return;
+  pushUndo();
+  const kit=niGenreKit(); const jobs=[niUseKit(kit,true)];
+  const chords=niPickInst(["keys","pad","strings","guitar"],kit), mel=niPickInst(["bell","pluck","synth","brass","guitar","keys"],kit,chords?[chords.id]:null), bass=niPickInst(["bass"],kit);
+  if(chords) jobs.push(niAssignInst("a",chords,true));
+  if(mel) jobs.push(niAssignInst("mel",mel,true));
+  if(bass) jobs.push(niAssignInst("bass",bass,true));
+  await Promise.allSettled(jobs);
+  if(announce) toast(`NI: ${kit}${chords?" · "+chords.name:""}${mel?" · "+mel.name:""}`);
+}
+// Roll sounds and Randomize also pick NI sounds when that's switched on.
+const _rollSounds=rollSounds;
+rollSounds=function(fromButton){ _rollSounds(fromButton); if(NI.lib&&$("niRoll").checked) niRollAll(fromButton); };
+
+/* ---------- Library panel ---------- */
+function niApplyLibrary(lib){
+  NI.lib=lib; NI.instById=new Map(lib.instruments.map(i=>[i.id,i]));
+  const kits=new Map(); lib.drums.forEach(f=>{ const k=kits.get(f.kit)||new Set(); k.add(f.role); kits.set(f.kit,k); });
+  NI.kits=[...kits.entries()].filter(([,r])=>r.has("kick")&&(r.has("snare")||r.has("clap"))).map(([k])=>k).sort((a,b)=>a.localeCompare(b));
+  const ks=$("niKit"); ks.innerHTML=""; ks.add(new Option("Beat Lab synth drums","")); NI.kits.forEach(k=>ks.add(new Option(k,k))); ks.value=NI.kit||"";
+  const allKits=[...new Set(lib.drums.map(f=>f.kit).concat(lib.instruments.map(i=>i.kit)))].sort((a,b)=>a.localeCompare(b));
+  const kf=$("niKitFilter"); kf.innerHTML=""; kf.add(new Option("All kits","")); allKits.forEach(k=>kf.add(new Option(k,k)));
+  niStatus(); niRender();
+}
+function niStatus(){
+  const el=$("niStatus"), lib=NI.lib;
+  if(!lib||(!lib.drums.length&&!lib.instruments.length)){ el.textContent=lib&&lib.folders.length?"No usable sounds found yet. Check the folders, then Rescan.":"Add your Native Instruments drive to use its sounds."; return; }
+  let s=`${lib.drums.length.toLocaleString()} drum sounds in ${NI.kits.length} kits · ${lib.instruments.length.toLocaleString()} instruments`;
+  if(lib.locked) s+=` · ${lib.locked.toLocaleString()} Kontakt files skipped (they only play inside Kontakt)`;
+  if(lib.missing&&lib.missing.length) s+=` · not connected: ${lib.missing.join(", ")}`;
+  if(NI.kit) s+=` · playing kit: ${NI.kit}`;
+  el.textContent=s;
+  const kn=$("niKitNote"); kn.hidden=!NI.kit;
+  kn.textContent=NI.kit?`Playing the Native Instruments kit “${NI.kit}”. The choices below are Beat Lab's synth drums, used for any sound the kit doesn't have and when you go back to synth drums.`:"";
+}
+function niEntries(){
+  if(!NI.lib) return [];
+  const q=$("niSearch").value.trim().toLowerCase(), type=$("niType").value, kit=$("niKitFilter").value, out=[];
+  const match=(...xs)=>!q||q.split(/\s+/).every(w=>xs.some(x=>x.toLowerCase().includes(w)));
+  if(!type||type.startsWith("d:")) for(const f of NI.lib.drums){
+    if(type&&type!=="d:"+f.role) continue; if(kit&&f.kit!==kit) continue;
+    if(match(f.name,f.kit,NI_ROLE_LABEL[f.role])) out.push({kind:"drum",f}); if(out.length>=200) return out; }
+  if(!type||type.startsWith("i:")) for(const i of NI.lib.instruments){
+    if(type&&type!=="i:"+i.category) continue; if(kit&&i.kit!==kit) continue;
+    if(match(i.name,i.kit,NI_CATS[i.category]||"")) out.push({kind:"inst",i}); if(out.length>=200) return out; }
+  return out;
+}
+function niRender(){
+  const box=$("niResults"); box.innerHTML=""; const list=niEntries();
+  if(!list.length){ const e=document.createElement("div"); e.className="ni-empty"; e.textContent=NI.lib?"Nothing matches.":"Add your NI folders to browse."; box.appendChild(e); return; }
+  for(const it of list){
+    const row=document.createElement("div"); row.className="ni-item"; row.setAttribute("role","listitem");
+    const play=document.createElement("button"); play.className="mini"; play.textContent="▶"; play.title="Listen";
+    const txt=document.createElement("div"), nm=document.createElement("span"), meta=document.createElement("span");
+    nm.className="nm"; meta.className="meta";
+    const sel=document.createElement("select"); sel.add(new Option("Use on…",""));
+    if(it.kind==="drum"){
+      nm.textContent=it.f.name; meta.textContent=`${NI_ROLE_LABEL[it.f.role]} · ${it.f.kit}`;
+      play.onclick=()=>niAuditionDrum(it.f);
+      ["kick","snare","hat","ohat","perc","tom","crash","chop"].forEach(t=>sel.add(new Option(trackLabel(t)+" track",t)));
+      sel.onchange=async()=>{ const t=sel.value; sel.value=""; if(!t) return; pushUndo();
+        try{ await niAssignDrum(t,it.f); renderGrid(); renderPads(); toast(`${it.f.name} on ${trackLabel(t)}`); }catch(e){ toast(e.message); } };
+    } else {
+      const n=it.i.zones.length;
+      nm.textContent=it.i.name; meta.textContent=`${NI_CATS[it.i.category]||"Instrument"} · ${it.i.kit} · ${n} note${n===1?"":"s"}`;
+      play.onclick=()=>niAuditionInst(it.i);
+      Object.entries(NI_SLOTS).forEach(([k,label])=>sel.add(new Option(label,k)));
+      sel.onchange=async()=>{ const s=sel.value; sel.value=""; if(!s) return; pushUndo(); await niAssignInst(s,it.i); preview(s==="a"||s==="b"?"keys":s); };
+    }
+    txt.append(nm,meta); row.append(play,txt,sel); box.appendChild(row);
+  }
+}
+async function niAuditionDrum(f){
+  try{ const b=await niLoad(f.path); await ctx.resume(); const s=ctx.createBufferSource(), g=ctx.createGain(); s.buffer=b.buf; g.gain.value=.8*b.norm;
+    s.connect(g).connect(chain?chain.dry:ctx.destination); s.start(ctx.currentTime+.01,b.start,Math.min(2.5,b.buf.duration)); }
+  catch(e){ toast(e.message); }
+}
+async function niAuditionInst(inst){
+  await niLoadInst(inst); await ctx.resume(); const t=ctx.currentTime+.03, base=keysBase()+(inst.category==="bass"?-24:0);
+  const dest=chain?chain.dry:ctx.destination;
+  [0,4,7,12].forEach((st,k)=>niPlay(inst,ctx,dest,t+k*.22,mtof(base+st),.6,.3));
+}
+async function niCall(action,data,busy){
+  const st=$("niStatus"); if(busy) st.textContent=busy;
+  ["niFolders","niRescan"].forEach(id=>$(id).disabled=true);
+  try{ const lib=await native(action,data); if(lib) niApplyLibrary(lib); else niStatus(); }
+  catch(e){ st.textContent="Couldn't read the library: "+e.message; }
+  finally{ ["niFolders","niRescan"].forEach(id=>$(id).disabled=false); }
+}
+function niSetup(){
+  if(!NATIVE) return;
+  $("niPanel").hidden=false;
+  const ty=$("niType"); ty.add(new Option("All types",""));
+  const og1=document.createElement("optgroup"); og1.label="Drums"; Object.entries(NI_ROLE_LABEL).forEach(([k,n])=>og1.appendChild(new Option(n,"d:"+k))); ty.appendChild(og1);
+  const og2=document.createElement("optgroup"); og2.label="Instruments"; Object.entries(NI_CATS).forEach(([k,n])=>og2.appendChild(new Option(n,"i:"+k))); ty.appendChild(og2);
+  let tmr=null; $("niSearch").oninput=()=>{ clearTimeout(tmr); tmr=setTimeout(niRender,180); };
+  ty.onchange=niRender; $("niKitFilter").onchange=niRender;
+  $("niFolders").onclick=()=>niCall("addFolders",null,"Scanning… a big drive over the network can take a few minutes.");
+  $("niRescan").onclick=()=>niCall("rescan",null,"Scanning… a big drive over the network can take a few minutes.");
+  $("niKit").onchange=e=>{ pushUndo(); const k=e.target.value; if(k) niUseKit(k); else niSynthKit(); };
+  $("niGenreKit").onclick=()=>{ const k=niGenreKit(); if(k){ pushUndo(); niUseKit(k); } else toast("Add your NI folders first"); };
+  $("niSynthKit").onclick=()=>{ pushUndo(); niSynthKit(); toast("Back to Beat Lab's synth drums"); };
+  niCall("library");
+}
+
+/* ---------- AI Producer ---------- */
+const PROD_GENRES={boombap:["boom bap","boombap","hip hop","hip-hop","90s","golden era"],lofi:["lofi","lo-fi","lo fi","chill","study","jazzy","dusty"],
+  trap:["trap"],drill:["drill"],house:["house","disco","garage","dance"],afro:["afro","amapiano","afrobeat","afrobeats"],
+  dembow:["dembow","reggaeton","latin","dancehall"],dnb:["drum and bass","drum & bass","drum n bass","dnb","jungle"],phonk:["phonk","memphis","drift"]};
+const PROD_MOODS=[[["sad","melancholy","melancholic","lonely","rainy","heartbreak","moody","dark"],"aeolian"],[["happy","uplifting","bright","joyful","sunny","summer"],"ionian"],
+  [["dreamy","floating","magical","ethereal","heavenly","wonder"],"lydian"],[["jazzy","soulful","smooth","groovy","neo soul"],"dorian"],
+  [["mysterious","eerie","tense","sinister","exotic","spanish"],"phrygian"],[["epic","dramatic","cinematic","haunting"],"harmonic"]];
+const KEY_NAMES={c:0,"c#":1,db:1,d:2,"d#":3,eb:3,e:4,f:5,"f#":6,gb:6,g:7,"g#":8,ab:8,a:9,"a#":10,bb:10,b:11};
+const hasWord=(text,w)=>(" "+text+" ").includes(" "+w+" ");
+const prodWords=s=>s.toLowerCase().replace(/[^a-z0-9#&]+/g," ").trim();
+
+function prodInstrumentChoices(){
+  if(!NI.lib) return {};
+  const out={};
+  for(const cat of Object.keys(NI_CATS)){
+    const list=NI.lib.instruments.filter(i=>i.category===cat).sort((a,b)=>b.zones.length-a.zones.length).slice(0,35);
+    if(list.length) out[cat]=list.map(i=>i.name+" · "+i.kit);
+  }
+  return out;
+}
+function prodRequest(vibe){
+  const genres=Object.entries(GENRES).map(([k,g])=>`- ${k}: ${g.n}, about ${g.bpm} BPM`).join("\n");
+  const modes=Object.entries(MODES).map(([k,m])=>`${k} (${m.n})`).join(", ");
+  const kits=NI.kits.slice(0,250).map(k=>"- "+k).join("\n");
+  const inst=prodInstrumentChoices();
+  const instText=Object.entries(inst).map(([c,l])=>`${NI_CATS[c]}:\n${l.map(x=>"- "+x).join("\n")}`).join("\n\n");
+  const system=`You are a music producer setting up a beat maker for the person. Read their vibe and choose settings that make it sound like that. `+
+    `Use only names from the lists, written exactly. Respond with only JSON: {"genre":"genre id","bpm":number,"key":"C, C#, D, Eb, E, F, F#, G, Ab, A, Bb or B",`+
+    `"mode":"mode id","energy":0-1,"complexity":0-1,"swing":0-60,"kit":"drum kit name or empty","chords":"instrument or empty",`+
+    `"chords2":"second chord instrument or empty","melody":"instrument or empty","bass":"bass instrument or empty","note":"one short sentence on your choices"}`;
+  let user=`Vibe: ${vibe}\n\nGenres:\n${genres}\n\nModes: ${modes}`;
+  if(kits) user+=`\n\nDrum kits:\n${kits}`;
+  if(instText) user+=`\n\nInstruments:\n${instText}`;
+  return {system,user};
+}
+function prodFindInst(label){
+  if(!label||!NI.lib) return null; const l=String(label).trim().toLowerCase(); if(!l) return null;
+  return NI.lib.instruments.find(i=>(i.name+" · "+i.kit).toLowerCase()===l)||NI.lib.instruments.find(i=>i.name.toLowerCase()===l)||null;
+}
+function prodParse(text){
+  const t=String(text).replace(/<think>[\s\S]*?(<\/think>|$)/g,"").trim(), a=t.indexOf("{"), b=t.lastIndexOf("}");
+  if(a<0||b<=a) throw new Error("its answer had no settings in it");
+  let j; try{ j=JSON.parse(t.slice(a,b+1)); }catch(e){ throw new Error("its answer couldn't be read"); }
+  const plan={note:String(j.note||"").trim()};
+  const g=String(j.genre||"").toLowerCase().replace(/[^a-z]/g,""); if(GENRES[g]) plan.genre=g;
+  else { const hit=Object.entries(GENRES).find(([,v])=>v.n.toLowerCase().replace(/[^a-z]/g,"")===g); if(hit) plan.genre=hit[0]; }
+  const num=x=>x==null||x===""||!isFinite(+x)?undefined:+x;
+  if(num(j.bpm)>0) plan.bpm=num(j.bpm);
+  const k=String(j.key||"").toLowerCase().replace("♯","#").replace("♭","b").replace(/\s.*$/,""); if(k in KEY_NAMES) plan.root=KEY_NAMES[k];
+  const m=String(j.mode||"").toLowerCase(); if(MODES[m]) plan.mode=m; else { const hm=Object.entries(MODES).find(([,v])=>v.n.toLowerCase().startsWith(m)&&m); if(hm) plan.mode=hm[0]; }
+  if(num(j.energy)!=null) plan.energy=num(j.energy); if(num(j.complexity)!=null) plan.complexity=num(j.complexity); if(num(j.swing)!=null) plan.swing=num(j.swing);
+  if(j.kit&&NI.kits.includes(j.kit)) plan.kit=j.kit;
+  plan.chords=prodFindInst(j.chords); plan.chords2=prodFindInst(j.chords2); plan.melody=prodFindInst(j.melody); plan.bass=prodFindInst(j.bass);
+  if(plan.bass&&plan.bass.category!=="bass") plan.bass=null;
+  return plan;
+}
+/* The built-in producer: reads genre, mood and speed words. Works with no AI at all. */
+function prodBuiltIn(vibe){
+  const w=prodWords(vibe), plan={}, heard=[];
+  for(const [g,keys] of Object.entries(PROD_GENRES)) if(keys.some(k=>hasWord(w,prodWords(k)))){ plan.genre=g; heard.push(GENRES[g].n); break; }
+  const g=GENRES[plan.genre||state.genre];
+  for(const [words,mode] of PROD_MOODS){ const hit=words.find(x=>hasWord(w,x)); if(hit){ plan.mode=mode; heard.push(hit); break; } }
+  const slow=["slow","chill","calm","sleepy","mellow","relaxed","laid back","late night"].find(x=>hasWord(w,x));
+  const fast=["fast","hype","energetic","aggressive","party","hard","upbeat","intense"].find(x=>hasWord(w,x));
+  const bpmHit=w.match(/\b(\d{2,3}) ?bpm\b/);
+  plan.bpm=bpmHit?+bpmHit[1]:g.bpm+(fast?10:0)-(slow?10:0);
+  if(slow){ plan.energy=.32; heard.push(slow); } if(fast){ plan.energy=.85; heard.push(fast); }
+  const simple=["simple","minimal","sparse","stripped"].find(x=>hasWord(w,x)), busy=["complex","busy","intricate","rolling"].find(x=>hasWord(w,x));
+  if(simple) plan.complexity=.25; if(busy) plan.complexity=.78;
+  const swingy=["jazzy","swing","bouncy","dusty","groovy","lazy"].find(x=>hasWord(w,x)); plan.swing=swingy?Math.min(60,g.swing+12):(hasWord(w,"straight")?0:g.swing);
+  if(NI.lib&&NI.kits.length){
+    const extra=w.split(" ").filter(x=>x.length>=4);
+    const prevGenre=state.genre; if(plan.genre) state.genre=plan.genre; plan.kit=niGenreKit(extra); state.genre=prevGenre;
+    const want=[["keys",["piano","keys","rhodes","organ","wurli"]],["pad",["pad","ambient","dreamy","ethereal","atmospheric"]],["strings",["strings","orchestral","cinematic","violin","cello"]],
+      ["guitar",["guitar"]],["brass",["brass","horn","horns","sax","trumpet","flute"]],["bell",["bell","bells","marimba","mallet","vibes","kalimba"]],["synth",["synth","synthwave","retro"]],["pluck",["pluck"]]];
+    const asked=want.filter(([,ws])=>ws.some(x=>hasWord(w,x))).map(([c])=>c);
+    const chordCats=asked.filter(c=>["keys","pad","strings","guitar","brass","synth"].includes(c));
+    plan.chords=niPickInst(chordCats.length?chordCats:["keys","pad"],plan.kit);
+    const melCats=asked.filter(c=>["bell","brass","synth","pluck","guitar","keys"].includes(c)&&(!plan.chords||c!==plan.chords.category));
+    plan.melody=niPickInst(melCats.length?melCats:["bell","pluck","synth"],plan.kit,plan.chords?[plan.chords.id]:null);
+    plan.bass=niPickInst(["bass"],plan.kit);
+  }
+  plan.note=heard.length?`heard “${heard.join("”, “")}”.`:"no genre or mood words found, so it kept the current genre.";
+  return plan;
+}
+async function prodApply(plan){
+  pushUndo();
+  if(plan.genre&&!state.locks.genre) state.genre=plan.genre;
+  const g=G();
+  if(!state.locks.tempo){ state.bpm=Math.round(Math.max(60,Math.min(180,plan.bpm||g.bpm))); state.swing=Math.round(Math.max(0,Math.min(60,plan.swing??g.swing))); }
+  if(!state.locks.key){ if(plan.root!=null) state.root=plan.root; if(plan.mode) state.mode=plan.mode; }
+  state.stage=0;
+  if(plan.energy!=null) state.energy=+Math.max(0,Math.min(1,plan.energy)).toFixed(2);
+  if(plan.complexity!=null) state.complexity=+Math.max(0,Math.min(1,plan.complexity)).toFixed(2);
+  applyGenreSounds();
+  const jobs=[];
+  if(!state.locks.sounds){
+    if(plan.kit) jobs.push(niUseKit(plan.kit,true));
+    if(plan.chords) jobs.push(niAssignInst("a",plan.chords,true));
+    if(plan.chords2){ jobs.push(niAssignInst("b",plan.chords2,true)); }
+    if(plan.melody) jobs.push(niAssignInst("mel",plan.melody,true));
+    if(plan.bass) jobs.push(niAssignInst("bass",plan.bass,true));
+  }
+  await Promise.allSettled(jobs);
+  state.seed=R()*1000;
+  genPattern(P(),true);
+  if(chain) applyChain(chain,ctx);
+  refreshAll();
+}
+async function produce(){
+  const vibe=$("prodVibe").value.trim(); if(!vibe){ toast("Describe the vibe first"); $("prodVibe").focus(); return; }
+  const btn=$("prodGo"), note=$("prodNote"); btn.disabled=true;
+  let plan=null, who="Built-in producer (no AI)", why="";
+  try{
+    if(NATIVE&&$("prodAI").checked){
+      note.textContent="Asking your local AI…";
+      try{ const req=prodRequest(vibe); const r=await native("produce",{system:req.system,user:req.user,model:$("prodModel").value.trim()});
+        if(r.error) throw new Error(r.error); plan=prodParse(r.text); who="AI Producer ("+r.model+")"; }
+      catch(e){ why=e.message; }
+    }
+    if(!plan) plan=prodBuiltIn(vibe);
+    note.textContent="Setting up…";
+    await prodApply(plan);
+    const parts=[G().n,state.bpm+" BPM",NAMES[state.root]+" "+MODES[state.mode].n.split(" ")[0]];
+    if(NI.kit) parts.push("kit: "+NI.kit);
+    const inst=[["a","chords"],["mel","melody"],["bass","bass"]].map(([k,l])=>{ const i=INST[state.inst[k]]; return i&&i.ni?`${l}: ${i.ni.name}`:null; }).filter(Boolean);
+    note.textContent=`${who}: ${plan.note?plan.note+" ":""}${parts.join(" · ")}${inst.length?" · "+inst.join(" · "):""}`+(why?` (The AI couldn't answer: ${why})`:"");
+    $("prodWho").textContent=who;
+    toast("Produced · press Play");
+  } finally { btn.disabled=false; }
+}
+function prodSetup(){
+  $("prodGo").onclick=produce;
+  $("prodVibe").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); produce(); } e.stopPropagation(); });
+  $("prodModel").addEventListener("keydown",e=>e.stopPropagation());
+  $("niSearch").addEventListener("keydown",e=>e.stopPropagation());
+  if(!NATIVE){ $("prodAI").checked=false; $("prodAI").disabled=true; $("prodModel").disabled=true; }
+  else native("settings").then(s=>{ if(s&&s.model) $("prodModel").value=s.model; }).catch(()=>{});
+}
+prodSetup();
+niSetup();
 </script>
 
 </body>
