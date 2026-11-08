@@ -24,6 +24,7 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 - **⚄ Roll sounds** picks a new instrument combination.
 
 **Making music**
+- **16 or 32 steps** per pattern (buttons next to Copy to next and Clear). At 32 steps each pattern is two bars; switching up copies the first bar into the second with small changes (a few hats, percussion and melody notes, a snare fill at the end), switching back keeps the first bar, and Undo brings the second bar back.
 - Twelve-track step sequencer with a volume slider, mute, lock and re-roll on every track. Tap a track name to hear its sound.
 - Sixteen pads (Kit and Notes banks) played with the mouse or keyboard, with recording into patterns.
 - Load your own audio samples onto drum pads; the vocal chop pad follows the chords. Sample pads have one-shot or hold play modes, trim, tune, attack, release, filter, reverse and choke.
