@@ -34,6 +34,12 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 - Patterns A–D chained into a song, including random arrangements.
 - Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut.
 
+## Studio view and visualizer
+
+On a wide window (and always in the Mac app) Beat Lab opens in **Studio view**, a full-window workspace: a control bar with transport and a display (bar and beat, tempo, key, genre, what's playing), a **library** on the left (AI Producer, Native Instruments, beat settings), the **tracks** in the middle, and **editors** along the bottom (Pads, Sounds, Sampler, Visualizer, Export). The ◧ and ⬓ buttons show or hide the library and editors, the line above the editors drags to resize them, and **Classic view** goes back to the single page. Your layout is remembered.
+
+The **Visualizer** reacts to the music and lights each sound in its track color the moment it plays: **Bloom** (a petal per sound), **Orbit** (the spectrum as a ring with a moon per sound), **Skyline** (spectrum bars) and **Tide** (flowing waveforms). ⛶ fills the screen.
+
 ## Mac app with your Native Instruments sounds
 
 The Mac app is the same Beat Lab in its own window, plus two things the web page can't do:

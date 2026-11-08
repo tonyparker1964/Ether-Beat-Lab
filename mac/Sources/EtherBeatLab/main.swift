@@ -272,6 +272,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         config.setURLSchemeHandler(scheme, forURLScheme: "ether")
         config.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "ether")
         config.mediaTypesRequiringUserActionForPlayback = []
+        config.preferences.isElementFullscreenEnabled = true // the visualizer's full screen button
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
         webView = WKWebView(frame: .zero, configuration: config)

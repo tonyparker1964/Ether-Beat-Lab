@@ -117,7 +117,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 @media (max-width:760px){ .duo{grid-template-columns:1fr} }
 .pads-wrap{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:16px;margin-top:12px}
 @media (max-width:520px){ .pads-wrap{grid-template-columns:1fr} }
-.pads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pads{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-content:start}
 .pad{aspect-ratio:1;max-width:100%;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);padding:6px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;
   box-shadow:inset 0 -4px 0 color-mix(in srgb,var(--h) 70%,transparent);touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:background .08s}
 .pad b{font-size:13px;font-weight:600;line-height:1.15;overflow:hidden;text-overflow:ellipsis}
@@ -193,6 +193,65 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:4px;padding:0 5px}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--text);color:var(--ink);padding:8px 14px;border-radius:999px;font-weight:600;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
 #toast.show{opacity:1}
+
+/* ---------- Studio view: a full-window workspace (control bar, library, tracks, editors) ---------- */
+.st-lcd,.st-tog,.st-tabs,.st-grip,.st-only{display:none}
+body.studio{padding:0;margin:0;height:100vh;overflow:hidden}
+body.studio .app{max-width:none;height:100vh;margin:0;display:grid;gap:0;
+  grid-template-columns:var(--side-w,340px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) var(--edit-h,42vh);
+  grid-template-areas:"bar bar" "side main" "side edit"}
+body.studio.st-noside .app{grid-template-columns:0 minmax(0,1fr)}
+body.studio.st-noedit .app{grid-template-rows:auto minmax(0,1fr) 0}
+body.studio.st-noside .st-side,body.studio.st-noedit .st-edit{display:none}
+body.studio header.top{grid-area:bar;border-radius:0;border-width:0 0 1px;display:flex;align-items:center;gap:12px;padding:10px 14px;
+  background:linear-gradient(var(--panel-2),var(--panel))}
+body.studio .brand h1{font-size:20px}
+body.studio .brand .mark{font-size:9px}
+body.studio #scope{flex:0 1 150px;height:38px}
+body.studio .transport{flex:1;display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0}
+body.studio .transport .btn{padding:7px 11px;white-space:nowrap;font-size:14px}
+body.studio .transport .btn.big{font-size:15px;padding:7px 14px}
+body.studio .transport .mini{white-space:nowrap}
+body.studio .transport .spacer{flex:1}
+body.studio .st-lcd{display:flex;gap:2px;background:#070912;border:1px solid var(--line);border-radius:10px;padding:5px 6px;
+  box-shadow:inset 0 1px 6px rgba(0,0,0,.6)}
+.st-lcd>div{display:flex;flex-direction:column;align-items:center;padding:0 10px;border-right:1px solid #1d2238;min-width:58px}
+.st-lcd>div:last-child{border-right:0}
+.st-lcd .v{font-family:var(--f-mono);font-size:16px;font-weight:500;color:var(--accent);letter-spacing:.04em;white-space:nowrap;line-height:1.2}
+.st-lcd .k{font-family:var(--f-mono);font-size:8.5px;letter-spacing:.18em;color:var(--dim);white-space:nowrap}
+body.studio .st-tog{display:inline-flex}
+.st-tog{border:1px solid var(--line);background:var(--panel-2);border-radius:8px;width:38px;height:34px;align-items:center;justify-content:center;font-size:16px;color:var(--dim)}
+.st-tog[aria-pressed="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.st-side{grid-area:side;overflow:auto;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-width:0}
+.st-main{grid-area:main;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.st-edit{grid-area:edit;display:flex;flex-direction:column;border-top:1px solid var(--line);background:var(--panel);min-height:0;min-width:0;position:relative}
+body.studio .st-tabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid var(--line);background:var(--panel-2);position:sticky;top:0;z-index:2}
+.st-tabs button{border:0;background:none;padding:8px 14px;border-radius:8px 8px 0 0;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.st-tabs button[aria-selected="true"]{background:var(--panel);color:var(--accent);box-shadow:inset 0 2px 0 var(--accent)}
+.st-pane{overflow:auto;flex:1;min-height:0}
+body.studio .st-pane>.panel,body.studio .st-side .panel{border:0;border-radius:0;background:none}
+body.studio .st-main>.panel{border-radius:12px}
+body.studio .st-grip{display:block;position:absolute;left:0;right:0;top:-4px;height:8px;cursor:ns-resize;z-index:3}
+body.studio .st-only{display:initial}
+body.studio #toast{bottom:calc(var(--edit-h,42vh) + 14px)}
+body.studio.st-noedit #toast{bottom:20px}
+body.studio .st-side .sounds-grid{grid-template-columns:1fr 1fr}
+body.studio .st-side .fields{grid-template-columns:1fr 1fr}
+@media (max-width:1560px){ body.studio .st-lcd>div:nth-child(5){display:none} }
+@media (max-width:1380px){ body.studio .st-lcd>div:nth-child(4){display:none} body.studio #scope{display:none} }
+@media (max-width:1180px){ body.studio #gen{display:none} }
+body.studio .pads{grid-template-columns:repeat(8,minmax(0,1fr))}
+body.studio .pad{aspect-ratio:auto;height:clamp(54px,calc((var(--edit-h,42vh) - 210px)/2),110px)}
+body.studio .pads-wrap{grid-template-columns:minmax(0,1fr) 230px}
+
+/* ---------- Visualizer ---------- */
+.viz-box{position:relative;height:clamp(220px,34vh,520px);border-radius:12px;overflow:hidden;background:radial-gradient(120% 90% at 50% 100%,#1a1f3a,#070912 70%);margin-top:12px}
+body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 130px);min-height:160px}
+.viz-box canvas{width:100%;height:100%;display:block}
+.viz-box:fullscreen{height:100vh;border-radius:0}
+.viz-box .viz-cap{position:absolute;left:14px;bottom:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:rgba(235,232,244,.55);pointer-events:none}
+.viz-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.viz-ctl select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
 @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
 </style>
 </head>
@@ -402,6 +461,22 @@ input[type=range]{width:100%;accent-color:var(--accent)}
       <p class="hint" id="smpSliceInfo" style="margin-top:10px"></p>
     </div>
     <input type="file" id="smpFile" accept="audio/*" hidden>
+  </section>
+
+  <section class="panel" aria-label="Visualizer">
+    <div class="sounds-head">
+      <h2>Visualizer</h2>
+      <div class="viz-ctl">
+        <select id="vizMode" aria-label="Visualizer style">
+          <option value="bloom">Bloom</option>
+          <option value="orbit">Orbit</option>
+          <option value="skyline">Skyline</option>
+          <option value="tide">Tide</option>
+        </select>
+        <button class="mini" id="vizFull" title="Fill the screen (Esc to leave)">⛶ Full screen</button>
+      </div>
+    </div>
+    <div class="viz-box" id="vizBox"><canvas id="viz" aria-label="Music visualizer"></canvas><span class="viz-cap" id="vizCap">PRESS PLAY</span></div>
   </section>
 
   <section class="export panel" aria-label="Export">
@@ -1991,6 +2066,224 @@ function prodSetup(){
 }
 prodSetup();
 niSetup();
+</script>
+<script>
+"use strict";
+/* ---------- Visualizer ---------- */
+// Hits are recorded as they're scheduled, so shapes flash exactly when each sound plays.
+const VIZ={hits:[],mode:"bloom",bins:null,wave:null,glow:{},t0:performance.now()};
+const VIZ_COL={kick:"--h-kick",snare:"--h-snare",hat:"--h-hat",ohat:"--h-ohat",perc:"--h-perc",tom:"--h-tom",crash:"--h-crash",
+  chop:"--h-chop",chops:"--h-chops",mel:"--h-mel",bass:"--h-bass",keys:"--h-keys",fx:"--h-fx"};
+const _trigger=trigger;
+trigger=function(c,bus,id,t,v,o){ if(c===ctx&&VIZ_COL[id]){ VIZ.hits.push({id,t,v:v||1}); if(VIZ.hits.length>400) VIZ.hits.splice(0,200); } return _trigger.apply(this,arguments); };
+function vizColors(){ const css=getComputedStyle(document.documentElement), out={}; for(const [k,v] of Object.entries(VIZ_COL)) out[k]=css.getPropertyValue(v).trim()||"#fff"; return out; }
+let VIZ_C=null;
+function vizFrame(){
+  requestAnimationFrame(vizFrame);
+  const box=$("vizBox"), cv=$("viz"); if(!box||!cv||!box.offsetParent&&document.fullscreenElement!==box) return;
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(!w||!h) return;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); }
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+  if(!VIZ_C) VIZ_C=vizColors();
+  const live=analyser&&ctx&&ctx.state==="running"&&playing;
+  if(live){ if(!VIZ.bins) { VIZ.bins=new Uint8Array(analyser.frequencyBinCount); VIZ.wave=new Float32Array(analyser.fftSize); }
+    analyser.getByteFrequencyData(VIZ.bins); analyser.getFloatTimeDomainData(VIZ.wave); }
+  // Fade each sound's glow, and light it again when its hit comes due.
+  const now=ctx?ctx.currentTime:0;
+  for(const k of Object.keys(VIZ.glow)) VIZ.glow[k]*=.9;
+  while(VIZ.hits.length&&VIZ.hits[0].t<=now){ const hh=VIZ.hits.shift(); VIZ.glow[hh.id]=Math.max(VIZ.glow[hh.id]||0,Math.min(1,hh.v)); }
+  if(!playing) VIZ.hits.length=0;
+  const bins=VIZ.bins, n=bins?bins.length:0, t=(performance.now()-VIZ.t0)/1000, kick=VIZ.glow.kick||0;
+  const band=(a,b)=>{ if(!live) return 0; let s=0; for(let i=a;i<b;i++) s+=bins[i]; return s/((b-a)*255); };
+  const low=band(1,8), mid=band(8,60), high=band(60,200);
+  $("vizCap").textContent=live?`${G().n.toUpperCase()} · ${state.bpm} BPM · ${NAMES[state.root]} ${MODES[state.mode].n.split(" ")[0].toUpperCase()}`:"PRESS PLAY";
+  const mode=VIZ.mode;
+  // Trails: draw over the last frame with a dark veil instead of clearing.
+  g.fillStyle=mode==="skyline"?"rgba(7,9,18,.55)":mode==="tide"?"rgba(7,9,18,.45)":"rgba(7,9,18,.3)"; g.fillRect(0,0,w,h);
+  g.globalCompositeOperation=mode==="bloom"||mode==="orbit"?"lighter":"source-over";
+  if(mode==="bloom") vizBloom(g,w,h,t,low,mid,high,kick,live);
+  else if(mode==="orbit") vizOrbit(g,w,h,t,low,kick,live);
+  else if(mode==="skyline") vizSkyline(g,w,h,live);
+  else vizTide(g,w,h,t,low,mid,high,live);
+  g.globalCompositeOperation="source-over";
+}
+// Bloom: every sound is a petal around a pulsing center; a petal opens when its sound plays.
+function vizBloom(g,w,h,t,low,mid,high,kick,live){
+  const cx=w/2, cy=h/2, base=Math.min(w,h), ids=["kick","bass","snare","keys","mel","hat","perc","chop","ohat","tom","crash","fx"];
+  const n=ids.length, spin=t*.06;
+  ids.forEach((id,k)=>{
+    const glow=VIZ.glow[id]||0, a=spin+k/n*Math.PI*2, energy=live?(k%3===0?low:k%3===1?mid:high):.05;
+    const len=base*(.2+.22*energy+.22*glow), wid=base*(.035+.05*glow);
+    const tipX=cx+Math.cos(a)*len, tipY=cy+Math.sin(a)*len, nx=-Math.sin(a)*wid, ny=Math.cos(a)*wid;
+    const midX=cx+Math.cos(a)*len*.5, midY=cy+Math.sin(a)*len*.5;
+    g.fillStyle=VIZ_C[id]; g.globalAlpha=.16+.5*glow+.25*energy;
+    g.beginPath(); g.moveTo(cx,cy); g.quadraticCurveTo(midX+nx,midY+ny,tipX,tipY); g.quadraticCurveTo(midX-nx,midY-ny,cx,cy); g.fill();
+    g.globalAlpha=.5+.5*glow; g.beginPath(); g.arc(tipX,tipY,1.5+4*glow,0,Math.PI*2); g.fill();
+  });
+  g.globalAlpha=.35+.5*kick; g.fillStyle=VIZ_C.kick;
+  g.beginPath(); g.arc(cx,cy,base*(.035+.045*kick+.03*low),0,Math.PI*2); g.fill();
+  g.globalAlpha=1;
+}
+// Orbit: the frequency spectrum wrapped into a ring, with each sound as a moon.
+function vizOrbit(g,w,h,t,low,kick,live){
+  const cx=w/2, cy=h/2, R0=Math.min(w,h)*(.2+.05*kick), bins=VIZ.bins, n=bins?Math.floor(bins.length*.7):0, steps=180;
+  for(let i=0;i<steps;i++){
+    const v=n?bins[Math.floor(i/steps*n)]/255:.04, a=i/steps*Math.PI*2-Math.PI/2+t*.05, r2=R0+v*Math.min(w,h)*.28;
+    const id=["kick","bass","keys","mel","snare","hat"][Math.floor(i/steps*6)];
+    g.strokeStyle=VIZ_C[id]; g.globalAlpha=.35+.65*v; g.lineWidth=2;
+    g.beginPath(); g.moveTo(cx+Math.cos(a)*R0,cy+Math.sin(a)*R0); g.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2); g.stroke();
+  }
+  g.globalAlpha=1;
+  Object.keys(VIZ_COL).forEach((id,k)=>{
+    const glow=VIZ.glow[id]||0, a=t*(.2+k*.03)+k*1.3, rr=R0*(1.9+k*.12);
+    const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr*.62, r=3+14*glow;
+    g.fillStyle=VIZ_C[id]; g.globalAlpha=.25+.75*glow; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+  });
+  g.globalAlpha=1;
+  g.fillStyle=`rgba(255,179,107,${.12+.5*kick})`; g.beginPath(); g.arc(cx,cy,R0*.55*(1+.25*low),0,Math.PI*2); g.fill();
+}
+// Skyline: spectrum bars on a log scale, colored low to high by the track colors.
+function vizSkyline(g,w,h,live){
+  const bins=VIZ.bins, cols=64, order=["kick","bass","tom","snare","keys","mel","perc","chop","ohat","hat"];
+  const bw=w/cols;
+  for(let i=0;i<cols;i++){
+    let v=.03;
+    if(bins){ const a=Math.floor(Math.pow(i/cols,2)*bins.length*.75)+1, b=Math.max(a+1,Math.floor(Math.pow((i+1)/cols,2)*bins.length*.75)+1);
+      let s=0; for(let k=a;k<b;k++) s+=bins[k]; v=s/((b-a)*255); }
+    const id=order[Math.floor(i/cols*order.length)], bh=v*h*.88, glow=VIZ.glow[id]||0;
+    g.fillStyle=VIZ_C[id]; g.globalAlpha=.35+.5*Math.max(v,glow*.6);
+    g.fillRect(i*bw+1,h-bh,bw-2,bh);
+    g.globalAlpha=.18*v; g.fillRect(i*bw+1,h-bh-6,bw-2,3);
+  }
+  g.globalAlpha=1;
+}
+// Tide: the waveform as layered glowing lines, rising with the energy of the beat.
+function vizTide(g,w,h,t,low,mid,high,live){
+  const wave=VIZ.wave, layers=[["bass",low,1.6],["keys",mid,1.1],["hat",high,.7]];
+  layers.forEach(([id,e,amp],k)=>{
+    g.strokeStyle=VIZ_C[id]; g.globalAlpha=Math.min(.9,.35+.4*((VIZ.glow[id]||0)*.5+e)); g.lineWidth=1.5+2*e;
+    g.beginPath();
+    for(let x=0;x<=w;x+=3){
+      const i=wave?Math.floor((x/w)*wave.length*.5+k*60)%wave.length:0;
+      const v=live&&wave?wave[i]:Math.sin(x/40+t*(1+k))*.03;
+      const y=h*(.35+k*.15)+v*h*amp*.45+Math.sin(x/90+t*.8+k)*8;
+      x?g.lineTo(x,y):g.moveTo(x,y);
+    }
+    g.stroke();
+  });
+  g.globalAlpha=1;
+}
+function vizSetup(){
+  try{ const m=localStorage.getItem("beatlab.viz"); if(m&&["bloom","orbit","skyline","tide"].includes(m)) VIZ.mode=m; }catch(e){}
+  $("vizMode").value=VIZ.mode;
+  $("vizMode").onchange=e=>{ VIZ.mode=e.target.value; try{ localStorage.setItem("beatlab.viz",VIZ.mode); }catch(err){} };
+  $("vizFull").onclick=()=>{ const b=$("vizBox"); if(document.fullscreenElement) document.exitFullscreen(); else if(b.requestFullscreen) b.requestFullscreen().catch(()=>toast("Full screen isn't available here")); };
+  $("vizBox").ondblclick=()=>$("vizFull").click();
+  requestAnimationFrame(vizFrame);
+}
+
+/* ---------- Studio view ---------- */
+// One window with a control bar and display on top, a library on the left, the tracks in the middle and
+// editors (pads, sounds, sampler, visualizer, export) along the bottom. Classic view keeps the original page.
+const STUDIO={on:false,duo:null,sideTab:"producer",editTab:"pads"};
+const stQ=sel=>document.querySelector(sel);
+function stEl(tag,cls,html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
+function stPanels(){
+  return {bar:stQ("header.top"),deck:stQ('[aria-label="Beat settings"]'),prod:stQ('[aria-label="AI Producer"]'),ni:stQ("#niPanel"),
+    sounds:stQ('[aria-label="Sounds"]'),seq:stQ('[aria-label="Pattern"]'),pads:stQ('[aria-label="Pads"]'),song:stQ('[aria-label="Song"]'),
+    sampler:stQ('[aria-label="Sampler"]'),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo")};
+}
+function stTabs(host,tabs,current,onPick){
+  const bar=stEl("div","st-tabs"); bar.setAttribute("role","tablist");
+  const panes={};
+  tabs.forEach(([key,label,node])=>{
+    if(!node) return;
+    const b=stEl("button",null,label); b.setAttribute("role","tab"); b.dataset.key=key;
+    const pane=stEl("div","st-pane"); pane.setAttribute("role","tabpanel"); pane.appendChild(node); panes[key]=pane;
+    b.onclick=()=>pick(key); bar.appendChild(b);
+  });
+  host.appendChild(bar); Object.values(panes).forEach(p=>host.appendChild(p));
+  function pick(key){ if(!panes[key]) key=Object.keys(panes)[0];
+    bar.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",b.dataset.key===key));
+    Object.entries(panes).forEach(([k,p])=>p.hidden=k!==key); onPick(key); }
+  pick(current);
+  return pick;
+}
+function studioOn(){
+  if(STUDIO.on) return; const app=stQ(".app"), P=stPanels();
+  STUDIO.duo=P.duo;
+  const side=stEl("aside","st-side"), main=stEl("main","st-main"), edit=stEl("section","st-edit");
+  edit.setAttribute("aria-label","Editors"); side.setAttribute("aria-label","Library");
+  const sideTabs=[["producer","Producer",P.prod],["library","Library",NATIVE?P.ni:null],["setup","Beat",P.deck]];
+  STUDIO.pickSide=stTabs(side,sideTabs,STUDIO.sideTab,k=>{ STUDIO.sideTab=k; stSave(); });
+  main.append(P.seq,P.song);
+  const grip=stEl("div","st-grip"); grip.title="Drag to resize"; edit.appendChild(grip);
+  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["sounds","Sounds",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
+    STUDIO.editTab,k=>{ STUDIO.editTab=k; stSave(); if(k==="sampler"&&typeof drawWave==="function") setTimeout(drawWave,30); });
+  [...app.children].forEach(c=>c.remove());
+  app.append(P.bar,side,main,edit);
+  stGrip(grip);
+  document.body.classList.add("studio"); STUDIO.on=true; stSyncToggles(); stSave();
+}
+function studioOff(){
+  if(!STUDIO.on) return; const app=stQ(".app"), P=stPanels(), duo=STUDIO.duo;
+  duo.append(P.pads,P.song);
+  [...app.children].forEach(c=>c.remove());
+  // Back to the classic page order.
+  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.seq,duo,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
+  document.body.classList.remove("studio","st-noside","st-noedit"); STUDIO.on=false; stSyncToggles(); stSave();
+}
+function stGrip(grip){
+  grip.addEventListener("pointerdown",e=>{
+    e.preventDefault(); grip.setPointerCapture(e.pointerId);
+    const move=ev=>{ const hPx=Math.max(140,Math.min(window.innerHeight*.75,window.innerHeight-ev.clientY));
+      document.documentElement.style.setProperty("--edit-h",hPx+"px"); };
+    const up=()=>{ grip.removeEventListener("pointermove",move); grip.removeEventListener("pointerup",up);
+      try{ localStorage.setItem("beatlab.editH",document.documentElement.style.getPropertyValue("--edit-h")); }catch(err){} };
+    grip.addEventListener("pointermove",move); grip.addEventListener("pointerup",up);
+  });
+}
+function stSyncToggles(){
+  $("stSide").setAttribute("aria-pressed",STUDIO.on&&!document.body.classList.contains("st-noside"));
+  $("stEdit").setAttribute("aria-pressed",STUDIO.on&&!document.body.classList.contains("st-noedit"));
+  $("stView").textContent=STUDIO.on?"Classic view":"Studio view";
+}
+function stSave(){ try{ localStorage.setItem("beatlab.studio",JSON.stringify({on:STUDIO.on,side:STUDIO.sideTab,edit:STUDIO.editTab,
+  noside:document.body.classList.contains("st-noside"),noedit:document.body.classList.contains("st-noedit")})); }catch(e){} }
+/* The display in the control bar: position, tempo, key and genre at a glance. */
+function stLCD(){
+  requestAnimationFrame(stLCD); if(!STUDIO.on) return;
+  let pos="1 . 1";
+  if(playing&&curStep>=0){ const txt=$("pos").textContent, m=txt.match(/bar (\d+) of 4 · beat (\d+)/); if(m) pos=`${m[1]} . ${m[2]}`; }
+  const set=(id,v)=>{ const el=$(id); if(el.textContent!==v) el.textContent=v; };
+  set("lcdPos",pos); set("lcdBpm",String(state.bpm)); set("lcdKey",NAMES[state.root]+" "+MODES[state.mode].n.split(" ")[0]); set("lcdGenre",G().n);
+  set("lcdPat",(songOn()?"Song":"Pattern ")+(songOn()?"":state.cur));
+}
+function studioSetup(){
+  const tr=stQ(".transport"), rec=$("rec");
+  const lcd=stEl("div","st-lcd",`<div><span class="v" id="lcdPos">1 . 1</span><span class="k">BAR · BEAT</span></div>
+    <div><span class="v" id="lcdBpm">90</span><span class="k">TEMPO</span></div><div><span class="v" id="lcdKey">A Dorian</span><span class="k">KEY</span></div>
+    <div><span class="v" id="lcdGenre">Boom Bap</span><span class="k">GENRE</span></div><div><span class="v" id="lcdPat">Pattern A</span><span class="k">PLAYING</span></div>`);
+  lcd.setAttribute("aria-hidden","true");
+  rec.after(lcd);
+  const side=stEl("button","st-tog","◧"); side.id="stSide"; side.title="Show or hide the library (producer, sounds, beat settings)";
+  const edit=stEl("button","st-tog","⬓"); edit.id="stEdit"; edit.title="Show or hide the editors (pads, sounds, sampler, visualizer, export)";
+  const view=stEl("button","mini",""); view.id="stView"; view.title="Switch between the studio layout and the classic page";
+  stQ(".brand").after(side);
+  tr.append(edit,view);
+  side.onclick=()=>{ if(!STUDIO.on) return; document.body.classList.toggle("st-noside"); stSyncToggles(); stSave(); };
+  edit.onclick=()=>{ if(!STUDIO.on) return; document.body.classList.toggle("st-noedit"); stSyncToggles(); stSave(); };
+  view.onclick=()=>{ STUDIO.on?studioOff():studioOn(); };
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem("beatlab.studio")||"null"); const eh=localStorage.getItem("beatlab.editH"); if(eh) document.documentElement.style.setProperty("--edit-h",eh); }catch(e){}
+  if(saved){ STUDIO.sideTab=saved.side||STUDIO.sideTab; STUDIO.editTab=saved.edit||STUDIO.editTab; }
+  // Studio is the default in the Mac app and on wide screens.
+  const want=saved?saved.on:(NATIVE||window.innerWidth>=1200);
+  if(want&&window.innerWidth>=900){ studioOn(); if(saved){ document.body.classList.toggle("st-noside",!!saved.noside); document.body.classList.toggle("st-noedit",!!saved.noedit); stSyncToggles(); } }
+  stSyncToggles();
+  requestAnimationFrame(stLCD);
+}
+vizSetup();
+studioSetup();
 </script>
 
 </body>
