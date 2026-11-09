@@ -11,6 +11,12 @@ import WebKit
 /// - MIDI: every connected MIDI keyboard or controller is passed to the page.
 /// - Audio: the plug-ins' output device, and recording from an input when the page can't.
 /// Everything runs on this Mac; nothing goes online.
+/// Mirrors Apple's AUCocoaUIBase (the window factory older AUv2 plug-ins provide).
+@objc protocol CocoaUIFactory {
+    @objc(uiViewForAudioUnit:withSize:)
+    func uiView(forAudioUnit unit: UnsafeMutableRawPointer, with size: NSSize) -> NSView?
+}
+
 final class Engine: NSObject {
     static let shared = Engine()
     weak var webView: WKWebView?
@@ -156,9 +162,13 @@ final class Engine: NSObject {
         let info = raw.assumingMemoryBound(to: AudioUnitCocoaViewInfo.self).pointee
         let bundleURL = info.mCocoaAUViewBundleLocation.takeUnretainedValue() as URL
         let className = info.mCocoaAUViewClass.takeUnretainedValue() as String
-        guard let bundle = Bundle(url: bundleURL), let cls = bundle.classNamed(className) as? NSObject.Type,
-              let factory = cls.init() as? AUCocoaUIBase else { return nil }
-        return factory.uiView(forAudioUnit: au, with: NSSize(width: 640, height: 420))
+        guard let bundle = Bundle(url: bundleURL), let cls = bundle.classNamed(className) as? NSObject.Type else { return nil }
+        let factory = cls.init()
+        let sel = NSSelectorFromString("uiViewForAudioUnit:withSize:")
+        guard factory.responds(to: sel) else { return nil }
+        // Apple's AUCocoaUIBase protocol isn't visible to Swift, so call its one method through the same selector.
+        let ui = unsafeBitCast(factory, to: CocoaUIFactory.self)
+        return ui.uiView(forAudioUnit: UnsafeMutableRawPointer(au), with: NSSize(width: 640, height: 420))
     }
 
     /// The plug-in's current sound, so a project can bring it back.
