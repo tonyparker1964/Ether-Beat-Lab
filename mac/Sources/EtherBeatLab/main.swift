@@ -129,6 +129,7 @@ final class SchemeHandler: NSObject, WKURLSchemeHandler {
         case "wav", "wave": return "audio/wav"
         case "aif", "aiff": return "audio/aiff"
         case "flac": return "audio/flac"
+        case "caf": return "audio/x-caf"
         default: return "application/octet-stream"
         }
     }

@@ -102,6 +102,8 @@ The Mac app is the same Beat Lab in its own window, plus two things the web page
   - **Built-in producer (no AI)**: reads the genre, mood and speed words in your vibe, offline.
   If the AI you picked can't answer, the built-in producer steps in and the note says why. Your choices are remembered.
 
+**Logic Pro's sound library** can be scanned too: press **Add folders** and choose your Logic library disk (or the folder or "Logic Pro Library.bundle" on it). Beat Lab looks inside the library package and reads Logic's Core Audio (.caf) files: drum kit pieces (Drum Machine Designer and Drum Kit Designer) go into the drum menus, and sampled instruments with notes in their file names become playable instruments. Apple Loops are skipped (they're loops, not single hits). Logic's own plug-in instruments (Alchemy, ES2 and the rest) only play inside Logic.
+
 Sound files are read straight from your drive and played inside the app; the app only serves files its own scan found.
 
 **Install:** in Terminal, in this folder, run `./install-mac-app.sh`. It builds the app and puts **Ether Beat Lab.app** in Applications. It needs Xcode or the Command Line Tools (`xcode-select --install`). Run it again after pulling updates. Exports are saved to your Downloads folder.

@@ -37,7 +37,8 @@ struct LibraryIndex: Codable {
 }
 
 enum LibraryScanner {
-    static let audioExtensions: Set<String> = ["wav", "wave", "aif", "aiff", "flac"]
+    /// caf: Logic Pro's sound library (Drum Machine Designer, Drum Kit Designer and Sampler instruments) uses Core Audio files.
+    static let audioExtensions: Set<String> = ["wav", "wave", "aif", "aiff", "flac", "caf"]
     /// Native Instruments' locked containers (Kontakt and others). They only play inside NI's own plug-ins.
     static let lockedExtensions: Set<String> = ["ncw", "nkx", "nkc", "nkr", "nicnt"]
 
@@ -46,12 +47,18 @@ enum LibraryScanner {
         var groups: [String: Instrument] = [:]
         var locked = 0
         let fm = FileManager.default
-        for root in roots {
+        // Logic keeps its sounds inside a package ("Logic Pro Library.bundle"); look inside sound library packages too.
+        var queue = roots
+        var seen = Set<String>()
+        while !queue.isEmpty {
+            let root = queue.removeFirst()
+            guard seen.insert(root.standardizedFileURL.path).inserted else { continue }
             let rootPath = root.standardizedFileURL.path
             guard let walker = fm.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
                                              options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { continue }
             for case let url as URL in walker {
                 let ext = url.pathExtension.lowercased()
+                if ext == "bundle", url.lastPathComponent.lowercased().contains("library") { queue.append(url); continue }
                 if lockedExtensions.contains(ext) { locked += 1; continue }
                 guard audioExtensions.contains(ext), !url.lastPathComponent.hasPrefix("._") else { continue }
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
