@@ -373,6 +373,8 @@ body.studio .st-side .ni-row select{max-width:none;flex:1 1 120px}
 .script textarea.drag{border-color:var(--accent)}
 .script-report{margin-top:10px;font-size:13px}
 .script-report .ok{color:#8fe3a8}
+.script-report .ni{color:var(--text);margin-top:4px}
+.script-ni{font-size:13px;font-weight:500;color:var(--dim)}
 .script-report ul{margin:6px 0 0;padding-left:18px;color:var(--accent)}
 #prodModelRow{flex-wrap:wrap}
 #prodModelRow .ni-input{flex:1 1 100%}
@@ -643,6 +645,7 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
         <button class="mini" id="scriptCopy" title="Write the current beat out as a script">Copy this beat as a script</button>
         <button class="mini" id="scriptSave">Save as .txt</button>
         <button class="mini" id="scriptExample">Example</button>
+        <label class="toggle script-ni" title="Swap Beat Lab's own sounds for the closest ones on your Native Instruments drive"><input type="checkbox" id="scriptNI" checked> Use my NI sounds</label>
         <button class="mini" id="scriptClear" title="Empty the script box (your beat stays as it is)">Clear</button>
       </div>
       <div class="script-report" id="scriptReport" role="status"></div>
@@ -5213,6 +5216,25 @@ function scrPlugin(text){
   if(typeof AUX==="undefined"||!AUX.list.length) return null; const q=scrNorm(text);
   return AUX.list.find(p=>scrNorm(p.name)===q)||AUX.list.find(p=>scrNorm(p.name+" "+p.maker)===q)||AUX.list.find(p=>scrNorm(p.name).startsWith(q))||AUX.list.find(p=>scrNorm(p.name+" "+p.maker).includes(q))||null;
 }
+/* The NI instrument that best fits one of Beat Lab's own sounds: same kind of instrument, the most words in common
+   ("Dark piano" → a dark piano), the drum kit's expansion, then instruments with the most recorded notes (they sound best
+   across the keyboard). Several close ones? One is picked at random so scripts don't all sound alike. */
+const SCR_WORDS_SKIP=new Set(["synth","sound","section","bass","the","and","ether"]);
+function scrNiBest(key,isBass,kit,avoid){
+  if(typeof NI==="undefined"||!NI.lib) return null;
+  const d=isBass?BASSES[key]:INST[key]; if(!d) return null;
+  const cat=isBass?"bass":INST_CAT[key]; if(!cat) return null;
+  const words=scrLabel(d).toLowerCase().replace(/\(.*?\)/g," ").split(/[^a-z0-9]+/).filter(w=>w.length>2&&!SCR_WORDS_SKIP.has(w));
+  if(key==="epiano") words.push("rhodes","electric","ep","wurli");
+  if(key==="808"||key==="dist808") words.push("808");
+  const pool=NI.lib.instruments.filter(i=>i.category===cat&&!(avoid||[]).includes(i.id)); if(!pool.length) return null;
+  const score=i=>{ const n=(i.name+" "+i.kit).toLowerCase(); let sc=0; words.forEach(w=>{ if(n.includes(w)) sc+=3; });
+    if(kit&&i.kit===kit) sc+=2; sc+=Math.min(8,i.zones.length)/4; return sc; };
+  const ranked=pool.map(i=>[score(i),i]).sort((a,b)=>b[0]-a[0]), top=ranked[0][0];
+  const near=ranked.filter(([sc])=>sc>=top-.6).slice(0,4).map(([,i])=>i);
+  return near[Math.floor(R()*near.length)];
+}
+const scrNiOn=()=>{ const c=$("scriptNI"); return !c||c.checked; };
 const SCR_PC={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
 function scrNote(t){ // C3 = 60 (middle C), like Logic and NI; plain numbers are MIDI notes
   if(/^\d+$/.test(t)) return Math.min(127,+t);
@@ -5227,6 +5249,8 @@ function runScript(text){
   const W=(n,msg)=>warns.push(`Line ${n}: ${msg}`);
   const clean=raw=>raw.replace(/^\s*(#|\/\/).*$/,"").replace(/\s\/\/.*$/,"").trim();
   pushUndo(); let title="", pat=null, slot=null, defProg=null, sawPattern=false, songSet=false, len=null, long=false;
+  let kitGiven=false, niAuto=scrNiOn(); const explicit=new Set(), vibe=[];
+  lines.forEach(raw=>{ const c=raw.match(/^\s*(#|\/\/)(.*)$/); if(c) vibe.push(c[2]); });
   const GMAP=Object.fromEntries(GKEYS.map(k=>[k,GENRES[k].n]));
   // Steps per pattern: "steps 32", or 32 when any step line is longer than 16
   const SETTING=/^(tempo|bpm|swing|energy|complexity|wildness|chaos|space|reverb|echo|steps|volume|vol|key|mutate|notes)\b/i;
@@ -5247,7 +5271,8 @@ function runScript(text){
     const sp=l.search(/\s/), cmd=(sp<0?l:l.slice(0,sp)).toLowerCase().replace(/:$/,""), arg=sp<0?"":l.slice(sp+1).trim();
     const warn=msg=>W(n,msg), trk=t=>SCR_TRACK[scrNorm(t)];
     if(cmd==="genre"||cmd==="steps") return;
-    if(cmd==="title"||cmd==="name"){ title=arg.replace(/^["“]|["”]$/g,""); return; }
+    if(cmd==="title"||cmd==="name"){ title=arg.replace(/^["“]|["”]$/g,""); vibe.push(title); return; }
+    if(cmd==="ni"){ niAuto=!/^(off|no|false|0)$/i.test(arg.trim()); return; }
     if(cmd==="tempo"||cmd==="bpm"){ const v=scrPct(arg,60,180); if(v==null) return warn("tempo needs a number"); if(+arg.match(/\d+/)[0]!==v) warn(`tempo set to ${v} (Beat Lab goes from 60 to 180)`); state.bpm=Math.round(v); return; }
     if(cmd==="swing"){ const v=scrPct(arg,0,60); if(v==null) return warn("swing needs a number from 0 to 60"); state.swing=Math.round(v); return; }
     if(cmd==="energy"||cmd==="complexity"||cmd==="wildness"||cmd==="chaos"){ const v=scrPct(arg,0,100); if(v==null) return warn(cmd+" needs a number from 0 to 100");
@@ -5263,7 +5288,7 @@ function runScript(text){
       const what=scrNorm(arg.slice(0,s2)), val=arg.slice(s2+1).trim(), I=state.inst;
       const set=(map,key,label)=>{ const k=scrFind(map,val); if(k==null) return warn(`no ${label} called "${val}"`); I[key]=k; };
       const useInst=(slotKey,name)=>{ const r=scrInst(name,slotKey==="bass"); if(!r){ warn(`no ${slotKey==="bass"?"bass":"instrument"} called "${name}"`); return false; }
-        if(r.key) I[slotKey]=r.key; else jobs.push(()=>niAssignInst(slotKey,r.ni,true)); return true; };
+        if(r.key) I[slotKey]=r.key; else { explicit.add(slotKey); jobs.push(()=>niAssignInst(slotKey,r.ni,true)); } return true; };
       if(what==="chords"||what==="keys"){ const [a,b]=val.split("+").map(x=>x.trim());
         if(!useInst("a",a)) return;
         if(b){ const bl=b.match(/(\d+)\s*%?\s*$/), bn=bl?b.slice(0,bl.index).trim():b; if(useInst("b",bn)&&bl) I.blend=Math.max(0,Math.min(100,+bl[1]))/100; }
@@ -5278,7 +5303,7 @@ function runScript(text){
       const id=SCR_TRACK[what]; if(id&&KITS[id]) return set(KITS[id],id,trackLabel(id)+" sound");
       return warn(`"sound ${arg.slice(0,s2)}" isn't a sound slot`);
     }
-    if(cmd==="kit"){ const name=arg.replace(/^["“]|["”]$/g,"");
+    if(cmd==="kit"){ const name=arg.replace(/^["“]|["”]$/g,""); kitGiven=true;
       if(scrNorm(name)==="synth"||scrNorm(name)==="none"){ jobs.push(()=>niSynthKit()); return; }
       if(typeof NI==="undefined"||!NI.kits.length) return warn("NI kits load from your Native Instruments drive in the Mac app");
       const k=NI.kits.find(x=>scrNorm(x)===scrNorm(name))||NI.kits.find(x=>scrNorm(kitShort(x))===scrNorm(name))||NI.kits.find(x=>scrNorm(x).includes(scrNorm(name)));
@@ -5296,7 +5321,7 @@ function runScript(text){
       if(!sl) return warn(`plugin needs a part (chords, chords2, melody or bass) and a name, like plugin chords "Kontakt 8"`);
       if(!NATIVE) return warn("plug-ins play in the Mac app");
       const p=scrPlugin(name); if(!p) return warn(`no plug-in called "${name}" (Audio/MIDI → Plug-ins lists them)`);
-      auRegister(sl,p.id); state.inst[sl]=auKey(sl,p.id); return; }
+      auRegister(sl,p.id); state.inst[sl]=auKey(sl,p.id); explicit.add(sl); return; }
     if(cmd==="notes"){
       const s2=arg.search(/\s/), id=s2<0?null:trk(arg.slice(0,s2)); if(!id||!PR_TRACKS[id]) return warn(`notes is for melody, bass or chords, like notes melody 1:A3:2 5:C4:1`);
       const out=[], bad=[];
@@ -5338,6 +5363,18 @@ function runScript(text){
     SLOTS.forEach(k=>{ if(!made.includes(k)) state.patterns[k]=blankPat(); });
     if(!songSet) state.songMode=false; }
   if(len!=null) SLOTS.forEach(k=>fitLen(state.patterns[k]));
+  // Your NI sounds in place of Beat Lab's own: a kit that fits the genre and the closest instrument for each part
+  const niPicked=[];
+  if(niAuto&&typeof NI!=="undefined"&&NI.lib&&!state.locks.sounds){
+    const words=vibe.join(" ").toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>=3);
+    let kit=null;
+    if(!kitGiven&&NI.kits.length){ kit=niGenreKit(words); if(kit){ const k=kit; jobs.unshift(()=>niUseKit(k,true)); niPicked.push("kit "+kitShort(k)); } }
+    const used=[];
+    [["a","chords",false],["b","chords 2",false],["mel","melody",false],["bass","bass",true]].forEach(([sl,label,isBass])=>{
+      const cur=state.inst[sl]; if(explicit.has(sl)||!cur||cur==="none"||/^(ni|au):/.test(cur)) return;
+      const best=scrNiBest(cur,isBass,kit,used); if(!best) return;
+      used.push(best.id); jobs.push(()=>niAssignInst(sl,best,true)); niPicked.push(`${label} ${best.name}`); });
+  }
   refreshAll(); renderGrid(); renderSlots();
   if(title&&typeof PROJ!=="undefined"&&!PROJ.path&&/^Untitled/.test(PROJ.name)){ PROJ.name=title; if(typeof projTitle==="function") projTitle(); }
   (async()=>{ for(const j of jobs){ try{ await j(); }catch(e){} } if(jobs.length){ syncSounds(); renderGrid(); renderPads(); if(typeof niPreloadCurrent==="function") niPreloadCurrent(); } })();
@@ -5346,6 +5383,7 @@ function runScript(text){
   ok.textContent=`✓ Loaded${title?` “${title}”`:""}: ${GENRES[state.genre].n}, ${state.bpm} BPM, ${NAMES[state.root]} ${MODES[state.mode].n}`
     +(made.length?`, pattern${made.length>1?"s":""} ${made.join(" ")}`:"")+(state.songMode?`, song ${state.song.join(" ")}`:"")+(warns.length?`. ${warns.length} line${warns.length>1?"s":""} skipped:`:".");
   rep.appendChild(ok);
+  if(niPicked.length){ const n=document.createElement("div"); n.className="ni"; n.textContent="Your NI sounds: "+niPicked.join(" · "); rep.appendChild(n); }
   if(warns.length){ const ul=document.createElement("ul"); warns.slice(0,30).forEach(w=>{ const li=document.createElement("li"); li.textContent=w; ul.appendChild(li); }); rep.appendChild(ul); }
   toast(title?`Loaded “${title}”`:"Script loaded");
   return {warns,made,title};
@@ -5438,6 +5476,8 @@ function setupScript(){
   ta.addEventListener("dragover",e=>{ if(e.dataTransfer.types.includes("Files")){ e.preventDefault(); ta.classList.add("drag"); } });
   ta.addEventListener("dragleave",()=>ta.classList.remove("drag"));
   ta.addEventListener("drop",e=>{ if(!e.dataTransfer.files.length) return; e.preventDefault(); ta.classList.remove("drag"); readFile(e.dataTransfer.files[0]); });
+  try{ $("scriptNI").checked=localStorage.getItem("beatlab.scriptNI")!=="off"; }catch(e){}
+  $("scriptNI").onchange=e=>{ try{ localStorage.setItem("beatlab.scriptNI",e.target.checked?"on":"off"); }catch(x){} };
   $("scriptClear").onclick=()=>{ ta.value=""; $("scriptReport").textContent=""; ta.focus(); };
   $("scriptExample").onclick=()=>{ ta.value=SCR_EXAMPLE; $("scriptReport").textContent="Example loaded in the box. Press Load script to hear it."; };
   $("scriptCopy").onclick=async()=>{ ta.value=beatToScript(); try{ await navigator.clipboard.writeText(ta.value); toast("Beat copied as a script"); }catch(e){ ta.select(); toast("Script is in the box. Copy it from there"); } };

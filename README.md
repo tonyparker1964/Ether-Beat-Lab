@@ -37,7 +37,7 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 
 ## Beat Script
 
-Ask Claude for a beat in plain words, paste the script it writes into **AI Producer → Beat Script** (or open a .txt file) and press **Load script**. It sets the genre, tempo, key, sounds (Beat Lab's own, your NI instruments and kits, and plug-ins), 16 or 32 steps, patterns A–D with piano-roll notes, the song order and the mix. Lines it can't use are listed by line number and skipped; Undo takes the whole script back. **Copy this beat as a script** and **Save as .txt** write any beat out the same way. The format is in [BEAT-SCRIPT.md](BEAT-SCRIPT.md).
+Ask Claude for a beat in plain words, paste the script it writes into **AI Producer → Beat Script** (or open a .txt file) and press **Load script**. It sets the genre, tempo, key, sounds (Beat Lab's own, your NI instruments and kits, and plug-ins), 16 or 32 steps, patterns A–D with piano-roll notes, the song order and the mix. With **Use my NI sounds** ticked, Beat Lab's own sounds in a script are swapped for the closest instruments and a genre-matched kit from your NI drive. Lines it can't use are listed by line number and skipped; Undo takes the whole script back. **Copy this beat as a script** and **Save as .txt** write any beat out the same way. The format is in [BEAT-SCRIPT.md](BEAT-SCRIPT.md).
 
 ## Projects: save, open and pick up where you left off
 
