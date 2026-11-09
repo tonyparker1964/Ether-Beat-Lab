@@ -902,6 +902,11 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       <label class="toggle"><input type="checkbox" id="expStems"> Stems <span class="dim">(a WAV for each track)</span></label>
       <label class="toggle"><input type="checkbox" id="expMidi" checked> MIDI <span class="dim">(beat.mid)</span></label>
     </div>
+    <div class="ni-row master-row" id="masterRow" hidden>
+      <label class="field" style="flex:1 1 260px"><span class="lbl">Master with</span><select id="masterSel" aria-label="Mastering plug-in"></select></label>
+      <button class="btn" id="masterOpen" hidden title="Open the plug-in to choose its preset">🎛 Open</button>
+      <p class="ni-status" id="masterNote" style="flex:1 1 100%;margin:0"></p>
+    </div>
     <button class="btn primary" id="export">Export</button>
     <p>Saves a .zip with <strong>beat.wav</strong> (44.1 kHz stereo) and <strong>beat-markers.json</strong> for Ether Cut (tempo, chords, sections, and every beat, bar, kick and snare time). <strong>Stems</strong> are one WAV per track that line up from the start in any DAW; <strong>MIDI</strong> has the drums, bass, chords and melody as notes. It sounds just like the Mixer (EQ, compression, pans, sends and solos); muted tracks stay out.</p>
     <div id="status" role="status"></div>
@@ -2142,7 +2147,8 @@ async function doExport(){
       if(useSong&&typeof arrStep==="function") arrStep(off,ch,g,g*sd);
     }
     if(typeof auExportPass==="function") await auExportPass(off,ch);
-    const buf=await off.startRendering();
+    let buf=await off.startRendering();
+    if(typeof masterPass==="function") buf=await masterPass(buf,status);
     const gg=G(), r3=x=>Math.round(x*1000)/1000;
     const beats=[], barT=[]; for(let b=0;b<bars*4;b++) beats.push(r3(b*4*sd)); for(let b=0;b<bars;b++) barT.push(r3(b*16*sd));
     const meta={app:"Ether Beat Lab",version:2,genre:gg.n,bpm:state.bpm,swing:state.swing/100,key:NAMES[state.root]+" "+MODES[state.mode].n,
@@ -4947,6 +4953,73 @@ async function auExportPass(off,ch){
     catch(e){ toast("A plug-in render couldn't be read"); }
   }
 }
+/* ---------- Mastering on export: the finished mix through an effect plug-in such as Ozone ----------
+   Pick it in Export → Master with, set it up in its own window, and Export runs beat.wav through it (stems stay as they are).
+   The choice and the plug-in's settings are saved with the project. */
+const MASTER={list:[],comp:"",state:null,ready:false};
+const masterName=()=>{ const p=MASTER.list.find(x=>x.id===MASTER.comp); return p?p.name:"plug-in"; };
+function masterUI(){
+  const sel=$("masterSel"), row=$("masterRow"); if(!sel) return;
+  row.hidden=!NATIVE; if(!NATIVE) return;
+  sel.innerHTML=""; sel.add(new Option("Nothing (Beat Lab's own mix)",""));
+  const izo=MASTER.list.filter(p=>/izotope|ozone/i.test(p.maker+" "+p.name)), rest=MASTER.list.filter(p=>!izo.includes(p));
+  [["iZotope",izo],["Other effects",rest]].forEach(([label,l])=>{ if(!l.length) return; const og=document.createElement("optgroup"); og.label=label;
+    l.forEach(p=>og.appendChild(new Option(p.maker&&label!=="iZotope"?`${p.name} — ${p.maker}`:p.name,p.id))); sel.appendChild(og); });
+  sel.value=MASTER.list.some(p=>p.id===MASTER.comp)?MASTER.comp:"";
+  $("masterOpen").hidden=!MASTER.comp;
+  $("masterNote").textContent=MASTER.comp?`Export runs beat.wav through ${masterName()}. Press 🎛 Open to choose its preset; stems stay unmastered.`
+    :MASTER.list.length?"Pick Ozone (or any effect) to master the exported beat.":"No effect plug-ins found on this Mac.";
+}
+async function masterSet(comp,state){
+  MASTER.comp=comp||""; MASTER.state=state||null;
+  if(!NATIVE) return;
+  if(!MASTER.comp){ await native("masterUnload").catch(()=>{}); masterUI(); return; }
+  const r=await native("masterLoad",{comp:MASTER.comp,state:MASTER.state}).catch(e=>({error:String(e)}));
+  if(r&&r.error){ toast(r.error); MASTER.comp=""; }
+  masterUI();
+}
+async function masterRefreshState(){ if(!NATIVE||!MASTER.comp) return; const r=await native("masterState").catch(()=>null); if(r&&r.state) MASTER.state=r.state; }
+function wavFloatBytes(buf){ // 32-bit float WAV, so nothing is clipped before the plug-in sees it
+  const ch=buf.numberOfChannels, n=buf.length, sr=buf.sampleRate, bytes=n*ch*4, ab=new ArrayBuffer(44+bytes), dv=new DataView(ab);
+  const ws=(o,s)=>{ for(let i=0;i<s.length;i++) dv.setUint8(o+i,s.charCodeAt(i)); };
+  ws(0,"RIFF"); dv.setUint32(4,36+bytes,true); ws(8,"WAVE"); ws(12,"fmt "); dv.setUint32(16,16,true); dv.setUint16(20,3,true); dv.setUint16(22,ch,true);
+  dv.setUint32(24,sr,true); dv.setUint32(28,sr*ch*4,true); dv.setUint16(32,ch*4,true); dv.setUint16(34,32,true); ws(36,"data"); dv.setUint32(40,bytes,true);
+  const data=[]; for(let c=0;c<ch;c++) data.push(buf.getChannelData(c));
+  let o=44; for(let i=0;i<n;i++) for(let c=0;c<ch;c++){ dv.setFloat32(o,data[c][i],true); o+=4; }
+  return new Uint8Array(ab);
+}
+function b64(u8){ let s=""; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); }
+/* Export: the mix through the plug-in. Same length as before, with the plug-in's delay trimmed so beats and markers line up. */
+async function masterPass(buf,status){
+  if(!NATIVE||!MASTER.comp) return buf;
+  const name=masterName(); if(status) status.textContent=`Mastering with ${name}…`;
+  await masterRefreshState();
+  const r=await native("masterProcess",{wav:b64(wavFloatBytes(buf))}).catch(e=>({error:String(e&&e.message||e)}));
+  if(!r||r.error){ toast(`${name} couldn't master the beat: ${(r&&r.error)||"unknown error"}. The export uses Beat Lab's own mix.`); return buf; }
+  try{
+    const res=await fetch(niURL(r.path)); const dec=await new OfflineAudioContext(buf.numberOfChannels,1,buf.sampleRate).decodeAudioData(await res.arrayBuffer());
+    const skip=Math.max(0,Math.round((+r.latency||0)*buf.sampleRate)), out=new AudioBuffer({length:buf.length,numberOfChannels:buf.numberOfChannels,sampleRate:buf.sampleRate});
+    for(let c=0;c<buf.numberOfChannels;c++){ const src=dec.getChannelData(Math.min(c,dec.numberOfChannels-1)), dst=out.getChannelData(c);
+      dst.set(src.subarray(skip,Math.min(src.length,skip+buf.length))); }
+    return out;
+  }catch(e){ toast(`The ${name} master couldn't be read. The export uses Beat Lab's own mix.`); return buf; }
+}
+function setupMaster(){
+  if(!$("masterSel")) return;
+  $("masterSel").onchange=e=>{ const c=e.target.value; masterSet(c,null); if(c) toast(`Export will be mastered with ${masterName()}. Press 🎛 Open to choose its preset`); };
+  $("masterOpen").onclick=()=>{ if(MASTER.comp) native("masterShow",{title:`${masterName()} — Master`}).catch(()=>{}); };
+  masterUI();
+  if(NATIVE) native("fxList").then(l=>{ MASTER.list=Array.isArray(l)?l:[]; masterUI(); }).catch(()=>{});
+}
+// Projects keep the mastering plug-in and its settings.
+{ const raw=projSave; projSave=async function(){ await masterRefreshState(); return raw.apply(this,arguments); }; }
+{ const raw=projBuild; projBuild=function(){ const d=raw.apply(this,arguments); if(MASTER.comp) d.master={comp:MASTER.comp,state:MASTER.state}; return d; }; }
+{ const raw=projLoad; projLoad=async function(data,meta){ const out=await raw.apply(this,arguments); const m=data&&data.master;
+    if(m&&m.comp){ if(!MASTER.list.length&&NATIVE) MASTER.list=await native("fxList").catch(()=>[])||[];
+      if(MASTER.list.some(p=>p.id===m.comp)) await masterSet(m.comp,m.state); else { toast("The mastering plug-in isn't on this Mac. Exporting without it."); await masterSet("",null); } }
+    else await masterSet("",null);
+    return out; }; }
+setupMaster();
 // Projects: plug-in choices are in the sound menus; their sounds are saved too.
 { const raw=projSave; projSave=async function(){ await auRefreshStates(); return raw.apply(this,arguments); }; }
 { const raw=projBuild; projBuild=function(){ const d=raw.apply(this,arguments); if(Object.keys(AUX.states).length) d.auStates=AUX.states; return d; }; }

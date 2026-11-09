@@ -146,6 +146,10 @@ final class Engine: NSObject {
     /// The plug-in's own window, where you pick its sound.
     func show(slot: String, title: String) {
         guard let unit = slots[slot] else { return }
+        showWindow(unit, key: slot, title: title)
+    }
+
+    private func showWindow(_ unit: AVAudioUnit, key slot: String, title: String) {
         if let w = windows[slot] { w.makeKeyAndOrderFront(nil); return }
         unit.auAudioUnit.requestViewController { vc in
             DispatchQueue.main.async {
@@ -250,6 +254,118 @@ final class Engine: NSObject {
                 }
                 eng.stop()
                 DispatchQueue.main.async { done(url.path, nil) }
+            }
+        }
+    }
+
+    // MARK: Mastering: an effect plug-in (Ozone, …) on the finished mix, applied on export
+
+    private var master: AVAudioUnit?
+    private var masterComp: String?
+
+    /// Every effect plug-in installed on this Mac (EQs, compressors, mastering suites).
+    func effects() -> [Plugin] {
+        var found: [Plugin] = []
+        for type in [kAudioUnitType_Effect, kAudioUnitType_MusicEffect] {
+            let d = AudioComponentDescription(componentType: type, componentSubType: 0, componentManufacturer: 0, componentFlags: 0, componentFlagsMask: 0)
+            for c in AVAudioUnitComponentManager.shared().components(matching: d) {
+                let id = Self.compID(c.audioComponentDescription)
+                if !found.contains(where: { $0.id == id }) { found.append(Plugin(id: id, name: c.name, maker: c.manufacturerName)) }
+            }
+        }
+        return found.sorted { ($0.maker, $0.name) < ($1.maker, $1.name) }
+    }
+
+    /// Opens the mastering plug-in (kept ready so its window can be shown and its settings saved).
+    func masterLoad(comp: String, state: String?, done: @escaping (String?) -> Void) {
+        if masterComp == comp, let unit = master {
+            if let state { Self.apply(state, to: unit) }
+            return done(nil)
+        }
+        masterUnload()
+        guard let d = Self.desc(comp) else { return done("That plug-in isn't installed.") }
+        AVAudioUnit.instantiate(with: d, options: []) { unit, error in
+            DispatchQueue.main.async {
+                guard let unit else { return done("The plug-in couldn't be opened: \(error?.localizedDescription ?? "unknown error")") }
+                // A stereo format on both sides so the plug-in is ready to show its window.
+                if let fmt = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 2) {
+                    if unit.auAudioUnit.inputBusses.count > 0 { try? unit.auAudioUnit.inputBusses[0].setFormat(fmt) }
+                    if unit.auAudioUnit.outputBusses.count > 0 { try? unit.auAudioUnit.outputBusses[0].setFormat(fmt) }
+                }
+                try? unit.auAudioUnit.allocateRenderResources()
+                self.master = unit
+                self.masterComp = comp
+                if let state { Self.apply(state, to: unit) }
+                done(nil)
+            }
+        }
+    }
+
+    func masterUnload() {
+        windows["master"]?.close(); windows["master"] = nil
+        master?.auAudioUnit.deallocateRenderResources()
+        master = nil; masterComp = nil
+    }
+
+    func masterShow(title: String) {
+        guard let unit = master else { return }
+        showWindow(unit, key: "master", title: title)
+    }
+
+    func masterState() -> String? {
+        guard let unit = master, let full = unit.auAudioUnit.fullState,
+              let data = try? PropertyListSerialization.data(fromPropertyList: full, format: .binary, options: 0) else { return nil }
+        return data.base64EncodedString()
+    }
+
+    /// Runs a WAV through a fresh copy of the mastering plug-in (with the settings from its window), faster than real time.
+    /// Returns the new file and the plug-in's delay in seconds, which the page trims so the beat stays on the grid.
+    func masterProcess(input: URL, done: @escaping (String?, Double, String?) -> Void) {
+        guard let comp = masterComp, let d = Self.desc(comp), let live = master else { return done(nil, 0, "Choose a plug-in in Master with first.") }
+        let saved = live.auAudioUnit.fullState
+        AVAudioUnit.instantiate(with: d, options: []) { unit, error in
+            guard let unit else { return DispatchQueue.main.async { done(nil, 0, error?.localizedDescription ?? "The plug-in couldn't be opened.") } }
+            DispatchQueue.global(qos: .userInitiated).async {
+                let url = Self.rendersDir.appendingPathComponent("master-\(Int(Date().timeIntervalSince1970 * 1000)).wav")
+                var latency = 0.0
+                do {
+                    let inFile = try AVAudioFile(forReading: input)
+                    let fmt = inFile.processingFormat
+                    let eng = AVAudioEngine()
+                    let player = AVAudioPlayerNode()
+                    try eng.enableManualRenderingMode(.offline, format: fmt, maximumFrameCount: 1024)
+                    eng.attach(player)
+                    eng.attach(unit)
+                    eng.connect(player, to: unit, format: fmt)
+                    eng.connect(unit, to: eng.mainMixerNode, format: fmt)
+                    if let saved { unit.auAudioUnit.fullState = saved }
+                    try eng.start()
+                    player.scheduleFile(inFile, at: nil)
+                    player.play()
+                    let sr = fmt.sampleRate
+                    latency = max(0, unit.auAudioUnit.latency)
+                    let settings: [String: Any] = [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: sr, AVNumberOfChannelsKey: fmt.channelCount,
+                                                   AVLinearPCMBitDepthKey: 32, AVLinearPCMIsFloatKey: true]
+                    let out = try AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false)
+                    guard let buf = AVAudioPCMBuffer(pcmFormat: eng.manualRenderingFormat, frameCapacity: eng.manualRenderingMaximumFrameCount) else {
+                        throw NSError(domain: "EtherBeatLab", code: 1, userInfo: [NSLocalizedDescriptionKey: "Audio buffer error"])
+                    }
+                    // the whole mix, plus the plug-in's delay and a little tail
+                    let total = inFile.length + Int64(latency * sr) + Int64(sr * 0.5)
+                    var pos: Int64 = 0
+                    while pos < total {
+                        let n = AVAudioFrameCount(min(Int64(eng.manualRenderingMaximumFrameCount), total - pos))
+                        guard (try? eng.renderOffline(n, to: buf)) == .success else { break }
+                        try out.write(from: buf)
+                        pos += Int64(n)
+                    }
+                    player.stop()
+                    eng.stop()
+                } catch {
+                    return DispatchQueue.main.async { done(nil, 0, "Mastering failed: \(error.localizedDescription)") }
+                }
+                try? FileManager.default.removeItem(at: input)
+                DispatchQueue.main.async { done(url.path, latency, nil) }
             }
         }
     }
@@ -414,6 +530,27 @@ final class Engine: NSObject {
             let events = (body["events"] as? [[Any]] ?? []).map { $0.compactMap { ($0 as? NSNumber)?.doubleValue } }
             render(slot: body["slot"] as? String ?? "", events: events, seconds: (body["seconds"] as? NSNumber)?.doubleValue ?? 10) { path, err in
                 enc(path.map { ["path": $0] as [String: Any] } ?? ["error": err ?? "Render failed"])
+            }
+        case "fxList":
+            DispatchQueue.global(qos: .userInitiated).async {
+                let list = self.effects()
+                let text = (try? JSONEncoder().encode(list)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+                DispatchQueue.main.async { reply(text, nil) }
+            }
+        case "masterLoad":
+            masterLoad(comp: body["comp"] as? String ?? "", state: body["state"] as? String) { err in enc(result(err)) }
+        case "masterUnload":
+            masterUnload(); enc(["ok": true])
+        case "masterShow":
+            masterShow(title: body["title"] as? String ?? "Mastering"); reply("{}", nil)
+        case "masterState":
+            enc(["state": masterState() ?? ""])
+        case "masterProcess":
+            guard let b64 = body["wav"] as? String, let data = Data(base64Encoded: b64) else { enc(["error": "No audio was sent."]); break }
+            let input = Self.rendersDir.appendingPathComponent("mix-\(Int(Date().timeIntervalSince1970 * 1000)).wav")
+            do { try data.write(to: input) } catch { enc(["error": "Couldn't save the mix: \(error.localizedDescription)"]); break }
+            masterProcess(input: input) { path, latency, err in
+                enc(path.map { ["path": $0, "latency": latency] as [String: Any] } ?? ["error": err ?? "Mastering failed"])
             }
         case "audioDevices":
             enc(outputDevices().map { ["id": $0.id, "name": $0.name, "current": $0.current] as [String: Any] })
