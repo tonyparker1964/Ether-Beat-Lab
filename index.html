@@ -372,6 +372,7 @@ body.studio .st-side .ni-row select{max-width:none;flex:1 1 120px}
 .script textarea{display:block;width:100%;min-height:220px;margin-top:10px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-family:var(--f-mono);font-size:13px;line-height:1.55;tab-size:4;white-space:pre;overflow-x:auto}
 .script textarea.drag{border-color:var(--accent)}
 .script-report{margin-top:10px;font-size:13px}
+.ai-prompt{display:block;width:100%;min-height:200px;margin-top:8px;resize:vertical;background:var(--ink);color:var(--dim);border:1px solid var(--line);border-radius:10px;padding:10px;font-family:var(--f-mono);font-size:12px;line-height:1.5;white-space:pre;overflow-x:auto}
 .script-report .ok{color:#8fe3a8}
 .script-report .ni{color:var(--text);margin-top:4px}
 .script-ni{font-size:13px;font-weight:500;color:var(--dim)}
@@ -649,6 +650,15 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
         <button class="mini" id="scriptClear" title="Empty the script box (your beat stays as it is)">Clear</button>
       </div>
       <div class="script-report" id="scriptReport" role="status"></div>
+      <details class="prod-set" id="aiPromptBox">
+        <summary class="lbl">Prompt for another AI</summary>
+        <p class="prod-note" style="margin-top:6px">Paste this into ChatGPT, Gemini or any AI once, then describe the beat you want. It answers with a script to paste above. It includes the names of your NI kits, NI instruments and plug-ins.</p>
+        <textarea id="aiPromptText" class="ai-prompt" spellcheck="false" wrap="off" readonly aria-label="Prompt for another AI"></textarea>
+        <div class="ni-row">
+          <button class="btn primary" id="aiPromptCopy">Copy prompt</button>
+          <button class="mini" id="aiPromptSave">Save as .md</button>
+        </div>
+      </details>
       <input type="file" id="scriptFile" accept=".txt,.ebs,text/plain" hidden>
     </details>
   </section>
@@ -5576,6 +5586,113 @@ function setupScript(){
 }
 
 setupScript();
+/* ---------- A prompt for another AI (ChatGPT, Gemini, a local model…) so it writes Beat Scripts ----------
+   The rules of the format, plus the names of your own NI kits, NI instruments and plug-ins, so it can use them. */
+const SCR_AI_RULES=`You write "Beat Scripts" for my beat maker, Ether Beat Lab. When I describe a beat,
+answer with ONLY the script inside one code block, then one short line about it.
+Follow these rules exactly. Lines that break them get skipped.
+
+SETTINGS (one per line)
+title <name>
+genre <Boom Bap | Lo-fi | Trap | Drill | House | Afrobeats | Dembow | Drum & Bass | Phonk>
+tempo <60-180>          (trap and drill: 130-150; boom bap 84-96; lo-fi 70-90; house 120-128)
+swing <0-60>
+key <note> <major | minor | dorian | phrygian | lydian | mixolydian | harmonic minor | hijaz | bhairav | hungarian minor | pelog>
+energy <0-100>   complexity <0-100>   wildness <0-100>   space <0-100>   echo <0-100>
+vintage <off | MPC60 | MPC3000 | SP-1200>
+steps <16 | 32>
+
+SOUNDS (Beat Lab's own; with "Use my NI sounds" on, each is swapped for the closest sound from my NI library)
+sound chords  <instrument> [+ <instrument> <blend>%]
+sound melody  <instrument>
+sound bass    <Sub bass | 808 | Distorted 808 | Upright bass | Electric bass | Synth bass | Pluck bass | Acid bass | Reese bass>
+sound voicing <Triads | 7ths | 9ths | Sus2 | Sus4 | Power | Open spread>
+sound rhythm  <Hold | Stabs | Arpeggio | Sequence>
+sound kick    <808 boom | Punchy | Deep house | Boom bap thump | Distorted | Soft lo-fi>
+sound snare   <Acoustic snare | Clap | Trap snare | Lo-fi snare | Finger snap | Rimshot | Gated snare>
+sound hat     <Closed hat | 808 hat | Lo-fi hat | Shaker | Tambourine>
+sound ohat    <Open hat | 808 open hat | Ride cymbal | Sizzle>
+sound tom     <Tom | Congas | 808 tom | Floor tom | Electronic tom>
+sound crash   <Crash | Splash | China | Swell hit | Gong>
+sound perc    <Rim | Shaker | Conga | Cowbell | Timbales | Bodhrán | Tabla | Darbuka | Djembe | Talking drum | Bongos | Gong>
+sound vox     <Vox ahh | Vox ooh | Vox ee | Hey shout | Choir chop>
+sound fx      <Impact | Riser | Downlifter | Sub drop | Reverse swell>
+Instruments: Piano, Rhodes, Soft piano, Dark piano, Organ, Music box, Kalimba, Vibraphone,
+Marimba, Synth bells, Steel drum, Electric guitar, Jazz guitar, Celtic harp, Synth pluck,
+Synth pad, String section, Choir, Voice ooh, Violin, Cello, Saxophone, Trumpet, Flute,
+Synth brass, Synth lead, Ether Choir, Silk Vox, Prism Vox, Ascend, Midnight Keys, Bloom,
+Twin Lead, Analog Dream, Fusion Keys, Tape Glow, Earth Pad, Dune Drone, Fable Pad, Haze,
+Glass, Dark Metal, Flux Mallet, Toybox, Tin whistle, Fiddle, Sitar, Bansuri, Oud, Kora,
+Balafon, Tres, Gamelan.
+
+MY OWN SOUNDS (only names from the lists at the end, written exactly)
+sound chords  "<NI instrument · expansion>"      (also chords2, melody, bass)
+kit "<NI kit>"                                    (drum kit on the pads)
+plugin <chords | chords2 | melody | bass> "<plug-in>"
+
+PATTERNS (A to D, each loops over 4 chords)
+pattern A
+progression <4 chord numbers 1-7, like 1 6 4 5, or roman numerals like i VI iv V>
+<track> <steps>
+pattern B = A        (copies A; then only write the lines that change)
+Tracks: kick snare hat ohat perc tom crash fx vox melody bass chords
+Steps: exactly 16 characters (or 32 with "steps 32"), grouped in 4s with spaces:
+  X = accent, x = soft hit, . = rest, r = hat roll (hat only)
+  bass and melody: digits 1-9 = note in the scale counted from the chord (1 root, 3 third, 5 fifth, 8 octave)
+  vox: digits 1-4 = chop pitch
+Exact notes (optional): notes melody 1:F4:2 3:Ab4:2 9:C5:4
+  (step 1-64 across 4 bars : note name, C3 = middle C : length in 16ths)
+Other lines: mutate 15%  |  reroll hat  |  clear perc
+
+SONG AND MIX
+song A A B A          (play order, up to 32)
+volume <track> <0-150>
+mute <track>
+effect <track> <Reverb | Delay | Chorus | Phaser | Overdrive | Bitcrusher | Lo-fi | Telephone | Compressor> <amount>% <mix>%
+
+Lines starting with # are notes. Kick on step 1 almost always. Snare or clap usually on steps 5 and 13.
+Keep the bass simple and on the chord roots; leave space between the melody and the chords.
+Write a verse, a hook and a break when I ask for a full song.
+
+EXAMPLE
+title Late Night Ether
+genre Lo-fi
+tempo 82
+key A minor
+sound chords  Rhodes
+sound bass    Electric bass
+pattern A
+progression 1 6 4 5
+kick    X... ..x. ..x. ....
+snare   .... X... .... X..x
+hat     x.x. x.xx x.x. x.x.
+bass    X... ..5. ..x. ...8
+melody  .... 5.3. .... 2...
+pattern B = A
+crash   X... .... .... ....
+song A A B A`;
+function scrAiPrompt(){
+  const parts=[SCR_AI_RULES];
+  if(typeof NI!=="undefined"&&NI.lib){
+    if(NI.kits.length) parts.push("MY NI DRUM KITS\n"+NI.kits.slice(0,120).join("\n"));
+    const byCat={};
+    NI.lib.instruments.filter(i=>i.zones.length>=3&&(typeof scrIsNotes!=="function"||scrIsNotes(i))).sort((a,b)=>b.zones.length-a.zones.length)
+      .forEach(i=>{ const c=NI_CATS[i.category]||i.category; (byCat[c]=byCat[c]||[]); if(byCat[c].length<25) byCat[c].push(`${i.name} · ${i.kit}`); });
+    const cats=Object.entries(byCat); if(cats.length) parts.push("MY NI INSTRUMENTS (name · expansion)\n"+cats.map(([c,l])=>c+":\n"+l.join("\n")).join("\n\n"));
+  }
+  if(typeof AUX!=="undefined"&&AUX.list.length) parts.push("MY PLUG-INS\n"+AUX.list.map(p=>p.name).join("\n"));
+  return parts.join("\n\n")+"\n";
+}
+function setupAiPrompt(){
+  const box=$("aiPromptText");
+  const fill=()=>{ box.value=scrAiPrompt(); };
+  $("aiPromptBox").addEventListener("toggle",()=>{ if($("aiPromptBox").open) fill(); });
+  box.addEventListener("keydown",e=>e.stopPropagation());
+  $("aiPromptCopy").onclick=async()=>{ fill(); try{ await navigator.clipboard.writeText(box.value); toast("Prompt copied. Paste it into the other AI"); }catch(e){ $("aiPromptBox").open=true; box.focus(); box.select(); toast("Press ⌘C to copy the selected prompt"); } };
+  $("aiPromptSave").onclick=()=>{ fill(); const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["# Ether Beat Lab: Beat Script prompt\n\nPaste everything below into another AI, then describe the beat you want.\n\n```\n"+box.value+"```\n"],{type:"text/markdown"}));
+    a.download="Beat Script prompt.md"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+}
+setupAiPrompt();
 </script>
 
 </body>
