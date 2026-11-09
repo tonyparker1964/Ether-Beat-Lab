@@ -73,6 +73,7 @@ h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
 #midiLearn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 body.midi-learning .mx-knob,body.midi-learning .mx-fader,body.midi-learning input[type=range]{outline:1px dashed var(--accent);outline-offset:2px}
 .au-open{margin-top:6px}
+.au-pick{display:flex;flex-direction:column;gap:8px}
 
 /* Arrangement */
 .arrp{display:flex;flex-direction:column;gap:8px}
@@ -580,6 +581,7 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
     </div>
     <div class="aud-sec" id="auBox"><h3 class="lbl">Plug-ins</h3>
       <p class="hint" id="auCount"></p>
+      <div id="auPick" class="au-pick"></div>
       <div id="auSlots"></div>
       <label class="field"><span class="lbl">Plug-in volume</span><input type="range" id="auVol" min="0" max="150" value="100"></label>
       <button class="mini" id="auRescan">Rescan plug-ins</button>
@@ -4873,7 +4875,7 @@ function auMenus(){
   }
 }
 { const raw=fillSoundSelects; fillSoundSelects=function(){ raw.apply(this,arguments); auMenus(); }; }
-{ const raw=syncSounds; syncSounds=function(){ raw.apply(this,arguments); auMenus(); for(const [id,slot] of Object.entries(AU_SEL)) if($(id)&&state.inst[slot]) $(id).value=state.inst[slot]; auButtons(); if(NATIVE) auSync(); }; }
+{ const raw=syncSounds; syncSounds=function(){ raw.apply(this,arguments); auMenus(); for(const [id,slot] of Object.entries(AU_SEL)) if($(id)&&state.inst[slot]) $(id).value=state.inst[slot]; auButtons(); if(NATIVE) auSync(); else auRenderPanel(); }; }
 // Randomize and Roll sounds never pick a plug-in by themselves.
 { const raw=rollSounds; rollSounds=function(){ const hidden={}; Object.keys(INST).filter(k=>k.startsWith("au:")).forEach(k=>{ hidden[k]=INST[k]; delete INST[k]; });
     const hb={}; Object.keys(BASSES).filter(k=>k.startsWith("au:")).forEach(k=>{ hb[k]=BASSES[k]; delete BASSES[k]; });
@@ -4996,12 +4998,33 @@ async function midiConnectWeb(){
 }
 
 /* ---------- Audio & MIDI panel ---------- */
+/* Audio/MIDI → Plug-ins: one menu per part, so plug-ins are easy to find. */
+function auRenderPickers(){
+  const box=$("auPick"); if(!box) return; box.innerHTML="";
+  if(!NATIVE||!AUX.list.length) return;
+  for(const [slot,label] of Object.entries(AU_SLOTS)){
+    const row=document.createElement("label"); row.className="field"; row.innerHTML=`<span class="lbl">${label}</span>`;
+    const sel=document.createElement("select"); sel.setAttribute("aria-label",label+" plug-in");
+    sel.add(new Option("Beat Lab sound (no plug-in)",""));
+    const byMaker=new Map(); AUX.list.forEach(p=>{ const m=p.maker||"Other"; if(!byMaker.has(m)) byMaker.set(m,[]); byMaker.get(m).push(p); });
+    byMaker.forEach((ps,m)=>{ const og=document.createElement("optgroup"); og.label=m; ps.forEach(p=>og.appendChild(new Option(p.name,auKey(slot,p.id)))); sel.appendChild(og); });
+    const cur=state.inst[slot]; sel.value=cur&&cur.startsWith("au:")?cur:"";
+    sel.onchange=()=>{ pushUndo(); const v=sel.value;
+      if(v) state.inst[slot]=v; else if((state.inst[slot]||"").startsWith("au:")){ const g=GSOUND[state.genre]||{}; state.inst[slot]=g[slot]||(slot==="b"?"none":slot==="bass"?"sub":slot==="mel"?"flute":"epiano"); }
+      if(v) auRegister(slot,auParse(v).comp);
+      syncSounds(); renderGrid(); toast(v?`${label}: ${sel.selectedOptions[0].text}. Press Open window to pick its sound.`:`${label}: back to a Beat Lab sound`); };
+    sel.addEventListener("keydown",e=>e.stopPropagation());
+    row.appendChild(sel); box.appendChild(row);
+  }
+}
 function auRenderPanel(){
   const box=$("auSlots"); if(!box) return; box.innerHTML="";
   if(!NATIVE){ box.textContent="Plug-ins play in the Mac app."; return; }
   const any=Object.entries(AU_SLOTS).filter(([s])=>auParse(state.inst[s]));
-  $("auCount").textContent=AUX.list.length?`${AUX.list.length} instrument plug-in${AUX.list.length===1?"":"s"} found on this Mac.`:"No instrument plug-ins found. Install Kontakt, Massive or another Audio Unit instrument, then press Rescan.";
-  if(!any.length){ box.textContent="Pick a plug-in in the Chords, Melody or Bass menu (Sounds & Kits) to play it."; return; }
+  $("auCount").textContent=AUX.list.length?`${AUX.list.length} instrument plug-in${AUX.list.length===1?"":"s"} found on this Mac: ${[...new Set(AUX.list.map(p=>p.name))].slice(0,8).join(", ")}${AUX.list.length>8?"…":""}. Choose one for a part below.`
+    :"No instrument plug-ins found on this Mac. Plug-ins load from the Mac Beat Lab runs on, so install Kontakt, Massive or another Audio Unit instrument here (Native Access), then press Rescan plug-ins.";
+  auRenderPickers();
+  if(!any.length){ box.textContent=""; return; }
   any.forEach(([slot,label])=>{ const p=auParse(state.inst[slot]); const r=document.createElement("div"); r.className="midi-row";
     r.innerHTML=`<span class="cc">${label}</span><span></span>`; r.children[1].textContent=auName(p.comp);
     const b=document.createElement("button"); b.className="mini"; b.textContent="Open window"; b.onclick=()=>auShow(slot); r.appendChild(b); box.appendChild(r); });

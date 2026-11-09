@@ -51,9 +51,26 @@ final class Engine: NSObject {
     func plugins() -> [Plugin] {
         let all = AudioComponentDescription(componentType: kAudioUnitType_MusicDevice, componentSubType: 0, componentManufacturer: 0,
                                             componentFlags: 0, componentFlagsMask: 0)
-        return AVAudioUnitComponentManager.shared().components(matching: all)
+        var found = AVAudioUnitComponentManager.shared().components(matching: all)
             .map { Plugin(id: Self.compID($0.audioComponentDescription), name: $0.name, maker: $0.manufacturerName) }
-            .sorted { ($0.maker, $0.name) < ($1.maker, $1.name) }
+        // Also ask Core Audio directly, which sees every registered instrument (some older plug-ins only show up here).
+        var desc = all
+        var comp: AudioComponent? = AudioComponentFindNext(nil, &desc)
+        while let c = comp {
+            var d = AudioComponentDescription()
+            if AudioComponentGetDescription(c, &d) == noErr {
+                let id = Self.compID(d)
+                if !found.contains(where: { $0.id == id }) {
+                    var cfName: Unmanaged<CFString>?
+                    var full = "Plug-in"
+                    if AudioComponentCopyName(c, &cfName) == noErr, let cf = cfName?.takeRetainedValue() { full = cf as String }
+                    let parts = full.components(separatedBy: ": ")
+                    found.append(Plugin(id: id, name: parts.count > 1 ? parts.dropFirst().joined(separator: ": ") : full, maker: parts.count > 1 ? parts[0] : ""))
+                }
+            }
+            comp = AudioComponentFindNext(c, &desc)
+        }
+        return found.sorted { ($0.maker, $0.name) < ($1.maker, $1.name) }
     }
 
     private func startEngine() {
