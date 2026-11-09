@@ -952,7 +952,17 @@ const isEmpty=p=>TRACKS.every(t=>p.steps[t].every(v=>!v));
 /* ---------- Undo ---------- */
 const undoStack=[];
 function pushUndo(){ undoStack.push(JSON.stringify(state)); if(undoStack.length>40) undoStack.shift(); $("undo").disabled=false; }
-function undo(){ const s=undoStack.pop(); if(!s) return; Object.assign(state,JSON.parse(s)); $("undo").disabled=!undoStack.length; refreshAll(); toast("Undone"); }
+/* Copy saved values into state, keeping each settings object (sounds, locks, mixer…) the same object,
+   so nothing that holds on to one (menus, handlers) is left pointing at an old copy. */
+function stateAssign(src){
+  for(const [k,v] of Object.entries(src)){
+    const cur=state[k];
+    if(v&&typeof v==="object"&&!Array.isArray(v)&&cur&&typeof cur==="object"&&!Array.isArray(cur)&&k!=="patterns"){
+      Object.keys(cur).forEach(x=>delete cur[x]); Object.assign(cur,v); }
+    else state[k]=v;
+  }
+}
+function undo(){ const s=undoStack.pop(); if(!s) return; stateAssign(JSON.parse(s)); $("undo").disabled=!undoStack.length; refreshAll(); toast("Undone"); }
 
 /* ---------- Generation ---------- */
 const R=Math.random;
@@ -1951,19 +1961,18 @@ function setupSounds(){
   Object.entries(PERCS).forEach(([k,n])=>$("percSel").add(new Option(n,k)));
   Object.entries(FXS).forEach(([k,n])=>$("fxSel").add(new Option(n,k)));
   Object.entries(KIT_IDS).forEach(([k,sid])=>{ Object.entries(KITS[k]).forEach(([v,n])=>$(sid).add(new Option(n,v)));
-    $(sid).onchange=e=>{ i[k]=e.target.value; syncSounds(); renderGrid(); renderPads(); audition(k); }; });
+    $(sid).onchange=e=>{ state.inst[k]=e.target.value; syncSounds(); renderGrid(); renderPads(); audition(k); }; });
   $("resetKit").onclick=()=>{ pushUndo(); resetKit(); syncSounds(); renderGrid(); renderPads(); toast("Drum kit back to "+G().n+" sounds"); };
-  const i=state.inst;
-  $("instA").onchange=e=>{ i.a=e.target.value; syncSounds(); preview("keys"); };
-  $("instB").onchange=e=>{ i.b=e.target.value; syncSounds(); preview("keys"); };
-  $("blend").oninput=e=>{ i.blend=e.target.value/100; syncSounds(); };
+  $("instA").onchange=e=>{ state.inst.a=e.target.value; syncSounds(); preview("keys"); };
+  $("instB").onchange=e=>{ state.inst.b=e.target.value; syncSounds(); preview("keys"); };
+  $("blend").oninput=e=>{ state.inst.blend=e.target.value/100; syncSounds(); };
   $("blend").onchange=()=>preview("keys");
-  $("voicing").onchange=e=>{ i.voicing=e.target.value; syncSounds(); renderProg(); renderPads(); preview("keys"); };
-  $("rhythm").onchange=e=>{ pushUndo(); i.rhythm=e.target.value; genTrack("keys"); syncSounds(); renderGrid(); };
-  $("percSel").onchange=e=>{ i.perc=e.target.value; syncSounds(); renderGrid(); renderPads(); preview("perc"); };
-  $("fxSel").onchange=e=>{ i.fx=e.target.value; syncSounds(); renderGrid(); preview("fx"); };
-  $("instMel").onchange=e=>{ i.mel=e.target.value; syncSounds(); renderPadEdit(); preview("mel"); };
-  $("instBass").onchange=e=>{ i.bass=e.target.value; syncSounds(); renderGrid(); renderPadEdit(); preview("bass"); };
+  $("voicing").onchange=e=>{ state.inst.voicing=e.target.value; syncSounds(); renderProg(); renderPads(); preview("keys"); };
+  $("rhythm").onchange=e=>{ pushUndo(); state.inst.rhythm=e.target.value; genTrack("keys"); syncSounds(); renderGrid(); };
+  $("percSel").onchange=e=>{ state.inst.perc=e.target.value; syncSounds(); renderGrid(); renderPads(); preview("perc"); };
+  $("fxSel").onchange=e=>{ state.inst.fx=e.target.value; syncSounds(); renderGrid(); preview("fx"); };
+  $("instMel").onchange=e=>{ state.inst.mel=e.target.value; syncSounds(); renderPadEdit(); preview("mel"); };
+  $("instBass").onchange=e=>{ state.inst.bass=e.target.value; syncSounds(); renderGrid(); renderPadEdit(); preview("bass"); };
   $("space").oninput=e=>{ state.space=e.target.value/100; syncSounds(); if(chain) applyChain(chain,ctx); };
   $("echo").oninput=e=>{ state.echo=e.target.value/100; syncSounds(); if(chain) applyChain(chain,ctx); };
   $("rollSounds").onclick=()=>{ pushUndo(); rollSounds(true); preview("keys"); };
@@ -3755,7 +3764,7 @@ async function projLoad(data,meta){
     await projWaitLibrary(6000);
     const missing=[];
     // Beat settings and patterns: anything the project doesn't mention keeps its current value.
-    for(const k of Object.keys(data.state)) state[k]=data.state[k];
+    stateAssign(data.state);
     if(!data.state.mix) state.mix=mixDefault(); if(!data.state.solo) state.solo={};
     for(const L of ["A","B","C","D"]) if(!state.patterns[L]) state.patterns[L]=blankPat();
     // Instruments from the NI drive: make sure they're known and their notes are loaded.
