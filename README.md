@@ -79,7 +79,7 @@ Melody, Bass and Chords can be edited note by note in the **Piano roll** (an edi
 The **Mixer** tab (in the editors along the bottom of Studio view, or its own section on the classic page) has a channel strip for every track and a master strip.
 
 - **Each track:** Lo, Mid and Hi EQ (±15 dB), **Comp** (compression, from off to heavy), **Verb** and **Echo** sends, **Pan**, a **fader** with a level meter, **M** (mute) and **S** (solo; ⌥-click solos just that track). Tap the track name to hear it.
-- **Master:** Verb and Echo returns, a **Limiter** (on by default, keeps the beat from clipping), the master fader with a meter, and **Reset mix**.
+- **Master:** Verb and Echo returns, **Vinyl** (the crackle and tape hiss some genres add, like Lo-fi and Boom Bap: turn it down or off, double-click for the genre's amount; it goes quiet by itself when every track is muted), a **Limiter** (on by default, keeps the beat from clipping), the master fader with a meter, and **Reset mix**.
 - Drag a knob or fader up and down (hold Shift for fine moves), scroll on it, or click it and use the arrow keys. Double-click (or Delete) resets it. Every move can be undone.
 - **Change the sound on any strip:** each strip has its track's sound menu, the same as Sounds & Kits (drum kit sounds, NI sounds, instruments, plug-ins), so you can swap instruments while you mix. The Chords strip has its second layer too, and **🎛 Plug-in** opens a plug-in's window.
 - Faders are the same as the volume sliders in the Pattern grid, and mutes are the same as the grid's M buttons.

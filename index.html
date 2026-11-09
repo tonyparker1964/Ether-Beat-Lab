@@ -1443,7 +1443,7 @@ function trigger(ctx,bus,id,t,v,o){
 
 /* ---------- Master chain ---------- */
 function crackleBuf(ctx){ const n=ctx.sampleRate*2, b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0);
-  for(let i=0;i<n;i++){ d[i]=(R()*2-1)*.03; if(R()<.0006) d[i]+=(R()*2-1)*.9; } return b; }
+  for(let i=0;i<n;i++){ d[i]=(R()*2-1)*.012; if(R()<.0006) d[i]+=(R()*2-1)*.9; } return b; }
 function buildChain(ctx,dest){
   const tone=filt(ctx,"lowpass",18000,.5), comp=ctx.createDynamicsCompressor(), out=ctx.createGain();
   comp.threshold.value=-14; comp.ratio.value=3; comp.attack.value=.005; comp.release.value=.18; out.gain.value=.9;
@@ -1461,13 +1461,16 @@ function buildChain(ctx,dest){
 }
 function applyChain(ch,c){ const g=G(), t=c.currentTime;
   ch.tone.frequency.setTargetAtTime(g.tone<.5?2600+5000*g.tone:18000,t,.05);
-  ch.crackle.gain.setTargetAtTime((c!==ctx||playing)?g.texture*.5:0,t,.05);
+  ch.crackle.gain.setTargetAtTime((c!==ctx||playing)&&!allMuted()?textureLevel()*.5:0,t,.05);
   ch.rv.gain.setTargetAtTime(state.space*1.1,t,.05); ch.dlv.gain.setTargetAtTime(state.echo*.7,t,.05);
   ch.dl.delayTime.setTargetAtTime(Math.min(1.9,3*60/state.bpm/4),t,.05);
   const sw=state.sweep||0;
   ch.sLP.frequency.setTargetAtTime(sw<0?120+19880*Math.pow(1+sw/100,2.6):20000,t,.03);
   ch.sHP.frequency.setTargetAtTime(sw>0?20+5000*Math.pow(sw/100,2.2):10,t,.03); }
 
+/* Vinyl/tape texture: the genre's amount unless you set your own (Mixer → Master → Vinyl). Silent when every track is muted. */
+function textureLevel(){ return state.texture==null?G().texture:state.texture; }
+function allMuted(){ return TRACKS.every(t=>state.mutes[t])&&!(state.arr&&state.arr.tracks||[]).some(t=>!t.mute&&t.clips.length&&songOn()); }
 /* ---------- Step scheduler (shared by playback and export) ---------- */
 const stepDur=()=>60/state.bpm/4;
 function hash(i){ const x=Math.sin(i*12.9898+state.seed)*43758.5453; return x-Math.floor(x); }
@@ -3768,6 +3771,11 @@ function mixRender(){
       onInput:v=>{ state[key]=+v.toFixed(2); const inp=$(key); if(inp){ inp.value=Math.round(v*100); const o=$(key+"Out"); if(o) o.textContent=Math.round(v*100)+"%"; } if(chain) applyChain(chain,ctx); }});
     const l=document.createElement("span"); l.className="mx-kl"; l.textContent=short; b.append(k,l); MIX.els["m."+key]=k; return b; };
   ret.append(retK("space","Reverb return (room size and level)","Verb"),retK("echo","Echo return","Echo"));
+  { const b=document.createElement("div"); b.className="mx-k"; const out=document.createElement("span");
+    const k=mxCtl("knob",{label:"Vinyl and tape texture (crackle and hiss; double-click for the genre's amount)",min:0,max:1,step:.01,value:textureLevel(),def:G().texture,fmt:x=>x<.01?"Off":fmtPct(x),out,
+      onStart:()=>mixUndo("mtex"),onInput:v=>{ state.texture=+v.toFixed(2); if(chain) applyChain(chain,ctx); }});
+    k.addEventListener("dblclick",()=>{ state.texture=null; k.setValue(textureLevel()); if(chain) applyChain(chain,ctx); });
+    const l=document.createElement("span"); l.className="mx-kl"; l.textContent="Vinyl"; b.append(k,l); MIX.els["m.texture"]=k; ret.appendChild(b); }
   const lim=document.createElement("button"); lim.className="mx-lim"; lim.textContent="Limiter"; lim.title="Keeps the mix from clipping (on is best for most beats)";
   lim.onclick=()=>{ pushUndo(); const mm=state.mix.master||(state.mix.master=mixDefault().master); mm.limiter=!(mm.limiter??true); if(chain) mixApplyMaster(chain,ctx); mixSync(); };
   const fz=document.createElement("div"); fz.className="mx-fz";
@@ -3778,7 +3786,7 @@ function mixRender(){
     onStart:()=>mixUndo("master"),onInput:v=>{ const mm=state.mix.master||(state.mix.master=mixDefault().master); mm.gain=v; if(chain) mixApplyMaster(chain,ctx); }});
   fz.append(fader,meter);
   const reset=document.createElement("button"); reset.className="mx-reset"; reset.textContent="Reset mix"; reset.title="Flat EQ, no compression, center pans, default sends, faders at 0 dB, no solos";
-  reset.onclick=()=>{ pushUndo(); state.mix=mixDefault(); state.solo={}; MIX_ORDER.forEach(id=>state.vol[id]=1); mixApplyAll(); refreshAll(); toast("Mix reset"); };
+  reset.onclick=()=>{ pushUndo(); state.mix=mixDefault(); state.solo={}; state.texture=null; MIX_ORDER.forEach(id=>state.vol[id]=1); mixApplyAll(); refreshAll(); toast("Mix reset"); };
   s.append(nm,ret,lim,fz,db,reset); box.appendChild(s);
   MIX.els.master={strip:s,fader,meter,lim,db};
   mixSync();
@@ -3798,6 +3806,8 @@ function mixSync(){
   const mm=Object.assign(mixDefault().master,state.mix.master||{});
   MIX.els.master.fader.setValue(mm.gain); MIX.els.master.lim.setAttribute("aria-pressed",mm.limiter);
   ["space","echo"].forEach(k=>{ const el=MIX.els["m."+k]; if(el) el.setValue(state[k]); });
+  if(MIX.els["m.texture"]) MIX.els["m.texture"].setValue(textureLevel());
+  if(chain&&ctx) applyChain(chain,ctx); // muting everything also quiets the texture
   $("mixSoloNote").hidden=!solo;
 }
 /* Meters: peak level with a slow fall, green to gold to red. */
@@ -3972,7 +3982,7 @@ function projNew(){
   VOICE.busy++;
   for(const k of Object.keys(samples)) delete samples[k];
   sampler.buf=null; sampler.name=""; sampler.bounds=[]; peaks=null; chopParams.forEach((p,i)=>chopParams[i]=defParams());
-  Object.assign(state,{mix:mixDefault(),solo:{},arr:{tracks:[],auto:[]},mutes:{},vol:{},pitch:{},trackLocks:{},fx:{},vintage:"off",sweep:0,songMode:false,song:["A","A","B","A"],cur:"A",
+  Object.assign(state,{mix:mixDefault(),solo:{},arr:{tracks:[],auto:[]},texture:null,mutes:{},vol:{},pitch:{},trackLocks:{},fx:{},vintage:"off",sweep:0,songMode:false,song:["A","A","B","A"],cur:"A",
     locks:{genre:false,tempo:false,key:false,chords:false,sounds:false}});
   ["A","B","C","D"].forEach(L=>state.patterns[L]=blankPat());
   NI.kit=null; if($("niKit")) $("niKit").value="";
@@ -4339,7 +4349,7 @@ function trackUsed(id,slots){ return !state.mutes[id]&&[...new Set(slots)].some(
 
 async function renderStem(id,bars,useSong,sr,len){
   const off=new OfflineAudioContext(2,len,sr), ch=buildChain(off,off.destination), sd=stepDur();
-  ch.crackle.gain.cancelScheduledValues(0); ch.crackle.gain.setValueAtTime(id==="texture"?G().texture*.5:0,0);
+  ch.crackle.gain.cancelScheduledValues(0); ch.crackle.gain.setValueAtTime(id==="texture"?textureLevel()*.5:0,0);
   const mutes=state.mutes, solo=state.solo;
   state.mutes=Object.fromEntries(TRACKS.map(t=>[t,t!==id])); state.solo={};
   try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null); } }
@@ -4350,7 +4360,7 @@ async function exportStems(files,o,status){
   const slots=exportSlots(o.bars,o.useSong), solo=anySolo();
   const ids=MIX_ORDER.filter(id=>trackUsed(id,slots)&&(!solo||state.solo[id]));
   const list=ids.map(id=>[id,trackLabel(id)]);
-  if(G().texture>0) list.push(["texture","Vinyl texture"]);
+  if(textureLevel()>0) list.push(["texture","Vinyl texture"]);
   for(let k=0;k<list.length;k++){
     const [id,label]=list[k];
     status.textContent=`Rendering stem ${k+1} of ${list.length}: ${label}…`;
@@ -4761,7 +4771,7 @@ function arrSetup(){
 // Export: the song export includes the arrangement, and stems include each audio track.
 { const raw=renderStem; renderStem=async function(id,bars,useSong,sr,len){
     const off=new OfflineAudioContext(2,len,sr), ch=buildChain(off,off.destination), sd=stepDur();
-    ch.crackle.gain.cancelScheduledValues(0); ch.crackle.gain.setValueAtTime(id==="texture"?G().texture*.5:0,0);
+    ch.crackle.gain.cancelScheduledValues(0); ch.crackle.gain.setValueAtTime(id==="texture"?textureLevel()*.5:0,0);
     const mutes=state.mutes, solo=state.solo; state.mutes=Object.fromEntries(TRACKS.map(t=>[t,t!==id])); state.solo={};
     try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null);
         if(useSong) arrStep(off,ch,g,g*sd,{only:id.startsWith("aud:")?id:"none"}); } }
