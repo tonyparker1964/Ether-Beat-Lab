@@ -10,10 +10,12 @@
 <style>
 /* Layout: hardware panel — top bar (brand, scope, transport + random tools), control deck, step sequencer with pattern slots, pads + song row, export strip. Committed dark look. */
 :root{
-  --ink:#0d1120; --panel:#151a2c; --panel-2:#1c2238; --line:#2a3150;
-  --text:#ebe8f4; --dim:#9195b0; --accent:#ffb36b; --accent-ink:#2a1708; --rec:#ff5d6c;
-  --h-kick:#ff7d6e; --h-snare:#ffb36b; --h-hat:#ffd970; --h-ohat:#c6e46e; --h-perc:#6fe0c4;
-  --h-tom:#ff9ec4; --h-crash:#e6e3f0; --h-chop:#f08bff; --h-mel:#5fd3ff; --h-fx:#ffcf9e; --h-chops:#ff9ad5; --h-bass:#8a94ff; --h-keys:#b79dff;
+  /* Black, gold, green and tan */
+  --ink:#0a0907; --panel:#14120e; --panel-2:#1e1b15; --line:#3a3227;
+  --text:#efe3c8; --dim:#a8977a; --accent:#d8ab3e; --accent-ink:#1c1405; --rec:#d4574b;
+  --green:#5fa877; --green-ink:#0b1a10; --tan:#c9a27c; --gold-2:#f0cf73;
+  --h-kick:#e3b448; --h-snare:#c98a3a; --h-hat:#ecd68c; --h-ohat:#c4c46a; --h-perc:#7fb36a;
+  --h-tom:#c9a27c; --h-crash:#efe3c8; --h-chop:#a7c98d; --h-mel:#6fc2a0; --h-fx:#e2c27f; --h-chops:#b9935a; --h-bass:#3f8f62; --h-keys:#98b862;
   --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -21,6 +23,7 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--ink);color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.45;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 40px}
 .app{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
@@ -44,8 +47,9 @@ h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn.big{font-family:var(--f-display);font-size:17px;padding:10px 20px}
 .btn .ic{font-size:12px}
-#rec[aria-pressed="true"]{background:var(--rec);border-color:var(--rec);color:#1c0508}
-#rec .ic{color:var(--rec)} #rec[aria-pressed="true"] .ic{color:#1c0508}
+#rec[aria-pressed="true"]{background:var(--rec);border-color:var(--rec);color:#1a0705}
+#rec .ic{color:var(--rec)} #rec[aria-pressed="true"] .ic{color:#1a0705}
+#play[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .spacer{flex:1}
 
 /* Control deck */
@@ -155,9 +159,25 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .ni-item select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:13px}
 .ni-empty{padding:14px;color:var(--dim);font-size:14px}
 .fav{border:0;background:none;padding:0 4px;font-size:17px;line-height:1;color:var(--dim);cursor:pointer}
-.fav[aria-pressed="true"]{color:var(--h-kick)}
+.fav[aria-pressed="true"]{color:var(--accent)}
 .fav:hover{color:var(--text)}
 .field .head-fav{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.favp-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.favp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.favp-chips button{border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--dim)}
+.favp-chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.favp-group{margin-top:14px}
+.favp-group h3{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--green);margin:0 0 6px;font-weight:500}
+.favp-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:6px 6px;border-radius:9px}
+.favp-item:hover{background:var(--panel-2)}
+.favp-item .nm{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.favp-item .meta{display:block;font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.favp-item .use{border:1px solid color-mix(in srgb,var(--green) 60%,var(--line));background:none;color:var(--green);border-radius:7px;padding:3px 8px;font-size:12px;font-weight:600}
+.favp-item .use:hover{background:var(--green);color:var(--green-ink)}
+.favp-item select{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:3px 4px;font-size:12px;max-width:92px}
+.favp-play{border:0;background:none;color:var(--accent);font-size:12px;width:22px;padding:0}
+.favp-play:disabled{opacity:.25}
+.favp-empty{color:var(--dim);font-size:14px;margin-top:12px}
 .prod-note{margin:10px 0 0;font-size:14px;color:var(--dim);min-height:1.2em}
 .prod-set{margin-top:10px}
 .prod-set summary{cursor:pointer}
@@ -205,9 +225,12 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .st-lcd,.st-tog,.st-tabs,.st-grip,.st-only{display:none}
 body.studio{padding:0;margin:0;height:100vh;overflow:hidden}
 body.studio .app{max-width:none;height:100vh;margin:0;display:grid;gap:0;
-  grid-template-columns:var(--side-w,340px) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) var(--edit-h,42vh);
-  grid-template-areas:"bar bar" "side main" "side edit"}
-body.studio.st-noside .app{grid-template-columns:0 minmax(0,1fr)}
+  grid-template-columns:var(--side-w,340px) minmax(0,1fr) var(--fav-w,300px);grid-template-rows:auto minmax(0,1fr) var(--edit-h,42vh);
+  grid-template-areas:"bar bar bar" "side main fav" "side edit fav"}
+body.studio.st-noside{--side-w:0px}
+body.studio.st-nofav{--fav-w:0px}
+body.studio.st-nofav .st-fav{display:none}
+@media (max-width:1250px){ body.studio{--fav-w:260px} }
 body.studio.st-noedit .app{grid-template-rows:auto minmax(0,1fr) 0}
 body.studio.st-noside .st-side,body.studio.st-noedit .st-edit{display:none}
 body.studio header.top{grid-area:bar;border-radius:0;border-width:0 0 1px;display:flex;align-items:center;gap:12px;padding:10px 14px;
@@ -220,17 +243,19 @@ body.studio .transport .btn{padding:7px 11px;white-space:nowrap;font-size:14px}
 body.studio .transport .btn.big{font-size:15px;padding:7px 14px}
 body.studio .transport .mini{white-space:nowrap}
 body.studio .transport .spacer{flex:1}
-body.studio .st-lcd{display:flex;gap:2px;background:#070912;border:1px solid var(--line);border-radius:10px;padding:5px 6px;
+body.studio .st-lcd{display:flex;gap:2px;background:#050403;border:1px solid var(--line);border-radius:10px;padding:5px 6px;
   box-shadow:inset 0 1px 6px rgba(0,0,0,.6)}
-.st-lcd>div{display:flex;flex-direction:column;align-items:center;padding:0 10px;border-right:1px solid #1d2238;min-width:58px}
+.st-lcd>div{display:flex;flex-direction:column;align-items:center;padding:0 10px;border-right:1px solid #2a241b;min-width:58px}
 .st-lcd>div:last-child{border-right:0}
 .st-lcd .v{font-family:var(--f-mono);font-size:16px;font-weight:500;color:var(--accent);letter-spacing:.04em;white-space:nowrap;line-height:1.2}
 .st-lcd .k{font-family:var(--f-mono);font-size:8.5px;letter-spacing:.18em;color:var(--dim);white-space:nowrap}
 body.studio .st-tog{display:inline-flex}
 .st-tog{border:1px solid var(--line);background:var(--panel-2);border-radius:8px;width:38px;height:34px;align-items:center;justify-content:center;font-size:16px;color:var(--dim)}
-.st-tog[aria-pressed="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.st-tog[aria-pressed="true"]{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--line))}
 .st-side{grid-area:side;overflow:auto;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-width:0}
 .st-main{grid-area:main;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.st-fav{grid-area:fav;overflow:auto;border-left:1px solid var(--line);background:var(--panel);min-width:0}
+body.studio .st-fav .panel{border:0;border-radius:0;background:none}
 .st-edit{grid-area:edit;display:flex;flex-direction:column;border-top:1px solid var(--line);background:var(--panel);min-height:0;min-width:0;position:relative}
 body.studio .st-tabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid var(--line);background:var(--panel-2);position:sticky;top:0;z-index:2}
 .st-tabs button{border:0;background:none;padding:8px 14px;border-radius:8px 8px 0 0;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
@@ -263,7 +288,7 @@ body.studio .pads-wrap{grid-template-columns:minmax(0,1fr) 230px}
 body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height:180px}
 .viz-box canvas{width:100%;height:100%;display:block}
 .viz-box:fullscreen{height:100vh;border-radius:0}
-.viz-cap{position:absolute;left:14px;bottom:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:rgba(235,232,244,.55);pointer-events:none}
+.viz-cap{position:absolute;left:14px;bottom:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:rgba(239,227,200,.55);pointer-events:none}
 .viz-side{display:flex;flex-direction:column;gap:10px;min-width:0}
 .viz-name{margin:0;font-family:var(--f-display);font-weight:600;font-size:16px}
 .viz-desc{margin:0;color:var(--dim);font-size:13px}
@@ -400,6 +425,12 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       <label class="field st-voice" id="voiceField" hidden><span class="lbl">Chop singer (natural voice)</span><select id="voiceSel"></select></label>
       <label class="field" id="voiceWordField" hidden><span class="lbl">Your own word</span><input type="text" id="voiceWord" class="ni-input" maxlength="40" placeholder="e.g. yeah, oh baby, ether" aria-label="Word for the vocal chop"></label>
     </div>
+  </section>
+
+  <section class="panel" id="favPanel" aria-label="Favorites">
+    <div class="favp-head"><h2>♥ Favorites</h2><span class="lbl" id="favCount"></span></div>
+    <div class="favp-chips" id="favChips" role="group" aria-label="Show"></div>
+    <div id="favList"></div>
   </section>
 
   <section class="seq panel" aria-label="Pattern">
@@ -2026,7 +2057,7 @@ function niStatus(){
   if(NI.kit) s+=` · playing kit: ${NI.kit}`;
   el.textContent=s;
   const kn=$("niKitNote"); kn.hidden=!NI.kit;
-  kn.textContent=NI.kit?`Playing the Native Instruments kit “${NI.kit}”. The choices below are Beat Lab's synth drums, used for any sound the kit doesn't have and when you go back to synth drums.`:"";
+  kn.textContent=NI.kit?`Playing the Native Instruments kit “${NI.kit}”. Swap any single sound below, or press ♡ to keep one in your favorites.`:"";
 }
 function niEntries(){
   if(!NI.lib) return [];
@@ -2420,6 +2451,83 @@ function favSetup(){
   favLoad();
 }
 favSetup();
+
+/* ---------- Favorites list (right side) ---------- */
+// Every favorite in one place, grouped by what it is. "Use" puts it to work in its usual spot.
+const FAVP={filter:"all"};
+const ROLE_SEL={kick:"kitKick",snare:"kitSnare",clap:"kitSnare",rim:"kitSnare",snap:"kitSnare",closedHat:"kitHat",shaker:"kitHat",
+  openHat:"kitOhat",ride:"kitOhat",perc:"percSel",tom:"kitTom",crash:"kitCrash",cymbal:"kitCrash",vocal:"kitChop"};
+const SEL_GROUP={kitKick:"Kicks",kitSnare:"Snares & claps",kitHat:"Hi-hats & shakers",kitOhat:"Open hats & rides",percSel:"Percussion",
+  kitTom:"Toms",kitCrash:"Cymbals",kitChop:"Vocal chops",fxSel:"Transitions",instA:"Instruments",instBass:"Bass",niKit:"Drum kits"};
+const GROUP_ORDER=["Drum kits","Kicks","Snares & claps","Hi-hats & shakers","Open hats & rides","Percussion","Toms","Cymbals","Vocal chops","Transitions","Instruments","Bass"];
+const MELODY_CATS=["lead","bell","pluck"];
+function favItem(key){
+  // Works out which menu a favorite belongs to and what it's called.
+  let selId=null, value=key, f=null, inst=null;
+  if(key.startsWith("nid:")){ f=NI.drumByPath&&NI.drumByPath.get(key.slice(4)); if(!f) return null; selId=ROLE_SEL[f.role]; }
+  else if(key.startsWith("ni:")){ const d=INST[key]; if(!d||!d.ni) return null; inst=d.ni; selId=inst.category==="bass"?"instBass":"instA"; }
+  else if(key.startsWith("inst:")){ value=key.slice(5); if(!INST[value]) return null; selId="instA"; }
+  else if(key.startsWith("bass:")){ value=key.slice(5); if(!BASSES[value]) return null; selId="instBass"; }
+  else if(key.startsWith("kit:")){ value=key.slice(4); if(!NI.kits.includes(value)) return null; selId="niKit"; }
+  else { const i=key.indexOf(":"); selId=key.slice(0,i); value=key.slice(i+1); }
+  const sel=$(selId); if(!sel) return null;
+  const opt=[...sel.options].find(o=>o.value===value&&!o.parentElement.classList.contains("favs")); if(!opt) return null;
+  let name=opt.text.replace(/^♥ /,""), meta="";
+  if(f){ name=f.name; meta=`${NI_ROLE_LABEL[f.role]} · ${kitShort(f.kit)}`; }
+  else if(inst){ name=inst.name; meta=`${NI_CATS[inst.category]||"Instrument"} · ${kitShort(inst.kit)}`; }
+  else if(selId==="niKit") meta="Native Instruments kit";
+  else if(value.startsWith("voice:")) meta="Natural voice · "+(VOICE.singer||"");
+  else if(selId==="instA"){ const c=INST_CAT[value]; meta=(NI_CATS[c]||"Instrument")+" · Beat Lab"; name=name.replace(/^✦ /,"✦ "); }
+  else meta=(SEL_GROUP[selId]||"Sound")+" · Beat Lab";
+  const kind=selId==="niKit"?"kits":selId==="instA"||selId==="instBass"?"inst":"drums";
+  return {key,selId,value,f,inst,name,meta,kind,group:SEL_GROUP[selId]||"More"};
+}
+function favUse(it,slot){
+  const id=it.selId==="instA"?({a:"instA",b:"instB",mel:"instMel"}[slot]||"instA"):it.selId, sel=$(id);
+  if(!sel) return;
+  sel.value=it.value; sel.dispatchEvent(new Event("change",{bubbles:true}));
+  toast(`${it.name} → ${({instA:"Chords",instB:"Chords layer 2",instMel:"Melody",instBass:"Bass",niKit:"drum kit"})[id]||SEL_GROUP[id]||"track"}`);
+}
+function favRenderPanel(){
+  const list=$("favList"); if(!list) return;
+  const items=[...FAV].map(favItem).filter(Boolean);
+  $("favCount").textContent=items.length?`${items.length} sound${items.length===1?"":"s"}`:"";
+  const chips=$("favChips"); chips.innerHTML="";
+  [["all","All"],["drums","Drums"],["inst","Instruments"],["kits","Kits"]].forEach(([k,label])=>{ const b=document.createElement("button"); b.type="button"; b.textContent=label;
+    b.setAttribute("aria-pressed",FAVP.filter===k); b.onclick=()=>{ FAVP.filter=k; favRenderPanel(); }; chips.appendChild(b); });
+  list.innerHTML="";
+  const shown=items.filter(it=>FAVP.filter==="all"||it.kind===FAVP.filter);
+  if(!shown.length){ const p=document.createElement("p"); p.className="favp-empty";
+    p.textContent=items.length?"Nothing here yet in this filter.":"Press ♡ beside any sound, menu or kit to keep it here."; list.appendChild(p); return; }
+  const groups=new Map(); shown.forEach(it=>{ if(!groups.has(it.group)) groups.set(it.group,[]); groups.get(it.group).push(it); });
+  [...groups.keys()].sort((a,b)=>GROUP_ORDER.indexOf(a)-GROUP_ORDER.indexOf(b)).forEach(g=>{
+    const sec=document.createElement("div"); sec.className="favp-group"; const h=document.createElement("h3"); h.textContent=g; sec.appendChild(h);
+    groups.get(g).sort((a,b)=>a.name.localeCompare(b.name)).forEach(it=>{
+      const row=document.createElement("div"); row.className="favp-item";
+      const play=document.createElement("button"); play.type="button"; play.className="favp-play"; play.textContent="▶";
+      if(it.f){ play.title="Listen"; play.onclick=()=>niAuditionDrum(it.f); }
+      else if(it.inst){ play.title="Listen"; play.onclick=()=>niAuditionInst(it.inst); }
+      else { play.disabled=true; play.title="Use it to hear it"; }
+      const txt=document.createElement("div"), nm=document.createElement("span"), meta=document.createElement("span");
+      nm.className="nm"; meta.className="meta"; nm.textContent=it.name; meta.textContent=it.meta; nm.title=it.name; txt.append(nm,meta);
+      let use;
+      if(it.selId==="instA"){
+        use=document.createElement("select"); use.setAttribute("aria-label","Use "+it.name+" on");
+        use.add(new Option("Use on…","")); [["a","Chords"],["b","Chords layer 2"],["mel","Melody"]].forEach(([k,l])=>use.add(new Option(l,k)));
+        use.onchange=()=>{ const v=use.value; use.value=""; if(v) favUse(it,v); };
+      } else {
+        use=document.createElement("button"); use.type="button"; use.className="use"; use.textContent="Use";
+        use.title=`Use on ${it.group==="Drum kits"?"the drum kit":it.group.toLowerCase()}`; use.onclick=()=>favUse(it);
+      }
+      const heart=favButton(it.key,()=>it.name);
+      row.append(play,txt,use,heart); sec.appendChild(row);
+    });
+    list.appendChild(sec);
+  });
+}
+{ const raw=favRefresh; favRefresh=function(...a){ raw.apply(this,a); favRenderPanel(); }; }
+{ const raw=niApplyLibrary; niApplyLibrary=function(...a){ raw.apply(this,a); favRenderPanel(); }; }
+favRenderPanel();
 
 </script>
 <script>
@@ -2971,7 +3079,7 @@ function stEl(tag,cls,html){ const e=document.createElement(tag); if(cls) e.clas
 function stPanels(){
   return {bar:stQ("header.top"),deck:stQ('[aria-label="Beat settings"]'),prod:stQ('[aria-label="AI Producer"]'),ni:stQ("#niPanel"),
     sounds:stQ('[aria-label="Sounds"]'),seq:stQ('[aria-label="Pattern"]'),pads:stQ('[aria-label="Pads"]'),song:stQ('[aria-label="Song"]'),
-    sampler:stQ('[aria-label="Sampler"]'),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo")};
+    sampler:stQ('[aria-label="Sampler"]'),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo"),fav:stQ("#favPanel")};
 }
 function stTabs(host,tabs,current,onPick){
   const bar=stEl("div","st-tabs"); bar.setAttribute("role","tablist");
@@ -3001,7 +3109,8 @@ function studioOn(){
   STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["sounds","Sounds & Kits",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
     STUDIO.editTab,k=>{ STUDIO.editTab=k; stSave(); if(k==="sampler"&&typeof drawWave==="function") setTimeout(drawWave,30); });
   [...app.children].forEach(c=>c.remove());
-  app.append(P.bar,side,main,edit);
+  const favCol=stEl("aside","st-fav"); favCol.setAttribute("aria-label","Favorites list"); favCol.appendChild(P.fav);
+  app.append(P.bar,side,main,favCol,edit);
   stGrip(grip);
   document.body.classList.add("studio"); STUDIO.on=true; stSyncToggles(); stSave();
 }
@@ -3010,8 +3119,8 @@ function studioOff(){
   duo.append(P.pads,P.song);
   [...app.children].forEach(c=>c.remove());
   // Back to the classic page order.
-  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.seq,duo,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
-  document.body.classList.remove("studio","st-noside","st-noedit"); STUDIO.on=false; stSyncToggles(); stSave();
+  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.fav,P.seq,duo,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
+  document.body.classList.remove("studio","st-noside","st-noedit","st-nofav"); STUDIO.on=false; stSyncToggles(); stSave();
 }
 function stGrip(grip){
   grip.addEventListener("pointerdown",e=>{
@@ -3025,11 +3134,12 @@ function stGrip(grip){
 }
 function stSyncToggles(){
   $("stSide").setAttribute("aria-pressed",STUDIO.on&&!document.body.classList.contains("st-noside"));
+  $("stFav").setAttribute("aria-pressed",STUDIO.on&&!document.body.classList.contains("st-nofav"));
   $("stEdit").setAttribute("aria-pressed",STUDIO.on&&!document.body.classList.contains("st-noedit"));
   $("stView").textContent=STUDIO.on?"Classic view":"Studio view";
 }
 function stSave(){ try{ localStorage.setItem("beatlab.studio",JSON.stringify({on:STUDIO.on,side:STUDIO.sideTab,edit:STUDIO.editTab,
-  noside:document.body.classList.contains("st-noside"),noedit:document.body.classList.contains("st-noedit")})); }catch(e){} }
+  noside:document.body.classList.contains("st-noside"),noedit:document.body.classList.contains("st-noedit"),nofav:document.body.classList.contains("st-nofav")})); }catch(e){} }
 /* The display in the control bar: position, tempo, key and genre at a glance. */
 function stLCD(){
   requestAnimationFrame(stLCD); if(!STUDIO.on) return;
@@ -3050,7 +3160,9 @@ function studioSetup(){
   const edit=stEl("button","st-tog","⬓"); edit.id="stEdit"; edit.title="Show or hide the editors (pads, sounds, sampler, visualizer, export)";
   const view=stEl("button","mini",""); view.id="stView"; view.title="Switch between the studio layout and the classic page";
   stQ(".brand").after(side);
-  tr.append(edit,view);
+  const favT=stEl("button","st-tog","♥"); favT.id="stFav"; favT.title="Show or hide the favorites list";
+  tr.append(edit,favT,view);
+  favT.onclick=()=>{ if(!STUDIO.on) return; document.body.classList.toggle("st-nofav"); stSyncToggles(); stSave(); };
   side.onclick=()=>{ if(!STUDIO.on) return; document.body.classList.toggle("st-noside"); stSyncToggles(); stSave(); };
   edit.onclick=()=>{ if(!STUDIO.on) return; document.body.classList.toggle("st-noedit"); stSyncToggles(); stSave(); };
   view.onclick=()=>{ STUDIO.on?studioOff():studioOn(); };
@@ -3058,7 +3170,7 @@ function studioSetup(){
   if(saved){ STUDIO.sideTab=saved.side||STUDIO.sideTab; STUDIO.editTab=saved.edit||STUDIO.editTab; }
   // Studio is the default in the Mac app and on wide screens.
   const want=saved?saved.on:(NATIVE||window.innerWidth>=1200);
-  if(want&&window.innerWidth>=900){ studioOn(); if(saved){ document.body.classList.toggle("st-noside",!!saved.noside); document.body.classList.toggle("st-noedit",!!saved.noedit); stSyncToggles(); } }
+  if(want&&window.innerWidth>=900){ studioOn(); if(saved){ document.body.classList.toggle("st-noside",!!saved.noside); document.body.classList.toggle("st-noedit",!!saved.noedit); document.body.classList.toggle("st-nofav",!!saved.nofav); stSyncToggles(); } }
   stSyncToggles();
   requestAnimationFrame(stLCD);
 }

@@ -359,7 +359,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 900),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "Ether Beat Lab"
-        window.backgroundColor = NSColor(red: 0.05, green: 0.07, blue: 0.125, alpha: 1)
+        window.backgroundColor = NSColor(red: 0.04, green: 0.035, blue: 0.027, alpha: 1)
         window.contentView = webView
         window.setFrameAutosaveName("EtherBeatLabWindow")
         if !window.setFrameUsingName("EtherBeatLabWindow") { window.center() }
@@ -367,7 +367,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         bridge.window = window
 
         if AppFiles.webPage == nil {
-            webView.loadHTMLString("<body style='background:#0d1120;color:#eee;font:16px system-ui;padding:40px'>The Beat Lab page (index.html) wasn't found. Reinstall with install-mac-app.sh.</body>", baseURL: nil)
+            webView.loadHTMLString("<body style='background:#0a0907;color:#efe3c8;font:16px system-ui;padding:40px'>The Beat Lab page (index.html) wasn't found. Reinstall with install-mac-app.sh.</body>", baseURL: nil)
         } else {
             webView.load(URLRequest(url: URL(string: "ether://app/index.html")!))
         }
