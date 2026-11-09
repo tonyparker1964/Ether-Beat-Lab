@@ -6153,30 +6153,37 @@ function dwbItems(cat){
   const hasNI=typeof NI!=="undefined"&&NI.lib, out=[];
   const melSlot=()=>DW.sel==="mel"?"mel":DW.sel==="bass"?"bass":"a";
   if(cat==="kits"){
-    out.push({name:"Beat Lab kit",sub:"KITS · "+G().n.toUpperCase(),use:()=>{ DRUMS.forEach(t=>{ if(KITS[t]) state.inst[t]="auto"; }); if(hasNI&&typeof niSynthKit==="function") niSynthKit(); return "Beat Lab's own kit for "+G().n; }});
+    out.push({name:"Beat Lab kit",sub:"KITS · "+G().n.toUpperCase(),prev:()=>dwSeq(["kick","snare","hat","kick"].map(t=>()=>dwHear(t,{inst:"auto"}))),use:()=>{ DRUMS.forEach(t=>{ if(KITS[t]) state.inst[t]="auto"; }); if(hasNI&&typeof niSynthKit==="function") niSynthKit(); return "Beat Lab's own kit for "+G().n; }});
     if(hasNI) NI.kits.forEach(k=>out.push({name:kitShort(k),sub:"KITS · NATIVE INSTRUMENTS",use:async()=>{ await niUseKit(k,true); return kitShort(k)+" is on the pads"; },
-      prev:()=>{ const f=NI.lib.drums.find(d=>d.kit===k&&d.role==="kick")||NI.lib.drums.find(d=>d.kit===k); if(f) dwPrevFile(f.path); }}));
+      prev:()=>{ const pick=r=>NI.lib.drums.find(d=>d.kit===k&&NI_TRACKS[r].includes(d.role)); dwSeq(["kick","snare","hat","kick"].map(r=>pick(r)).filter(Boolean).map(f=>()=>dwPrevFile(f.path))); }}));
   } else if(cat==="samples"){
     if(hasNI) NI.lib.drums.forEach(f=>{ const t=Object.keys(NI_TRACKS).find(x=>NI_TRACKS[x].includes(f.role))||"perc";
       out.push({name:f.name,sub:`SAMPLES · ${trackLabel(t).toUpperCase()} · ${kitShort(f.kit).toUpperCase()}`,prev:()=>dwPrevFile(f.path),
         use:async()=>{ await niAssignDrum(t,f); dwSelect(t); return `${f.name} is on the ${trackLabel(t)} pad`; }}); });
     Object.keys(KITS).forEach(t=>Object.entries(KITS[t]).forEach(([k,n])=>{ if(k==="auto") return;
-      out.push({name:n,sub:`SAMPLES · ${trackLabel(t).toUpperCase()} · BEAT LAB`,prev:()=>{ const o=state.inst[t]; state.inst[t]=k; try{ audition(t); }finally{ state.inst[t]=o; } },
+      out.push({name:n,sub:`SAMPLES · ${trackLabel(t).toUpperCase()} · BEAT LAB`,prev:()=>dwHear(t,{inst:k}),
         use:()=>{ state.inst[t]=k; if(samples[t]&&samples[t].ni&&!samples[t].voice) delete samples[t]; return `${n} on the ${trackLabel(t)}`; }}); }));
   } else if(cat==="instruments"){
-    Object.entries(INST).forEach(([k,d])=>{ if(/^(ni|au):/.test(k)) return;
+    Object.entries(INST).forEach(([k,d])=>{ if(/^(ni|au):/.test(k)||k==="none"||typeof d.play!=="function") return;
       out.push({name:d.n,sub:`INSTRUMENTS · ${(INST_CAT[k]||"synth").toUpperCase()}`,prev:()=>dwPrevInst(k),use:()=>{ const s=melSlot()==="bass"?"a":melSlot(); state.inst[s]=k; return `${d.n} on ${AU_SLOTS[s]||s}`; }}); });
     Object.entries(BASSES).forEach(([k,n])=>{ if(/^(ni|au):/.test(k)) return; out.push({name:n,sub:"INSTRUMENTS · BASS",prev:()=>dwPrevBass(k),use:()=>{ state.inst.bass=k; return `${n} on the bass`; }}); });
     if(hasNI) NI.lib.instruments.filter(i=>i.zones.length>=2&&(typeof scrIsNotes!=="function"||scrIsNotes(i))).forEach(i=>out.push({name:i.name,sub:`INSTRUMENTS · ${(i.category||"").toUpperCase()} · ${kitShort(i.kit).toUpperCase()}`,
       prev:()=>dwPrevNI(i),use:async()=>{ const s=i.category==="bass"?"bass":melSlot()==="bass"?"a":melSlot(); await niAssignInst(s,i,true); return `${i.name} on ${AU_SLOTS[s]||s}`; }}));
-    if(typeof AUX!=="undefined") AUX.list.forEach(p=>out.push({name:p.name,sub:`PLUG-IN · ${(p.maker||"").toUpperCase()}`,use:()=>{ const s=melSlot(); auRegister(s,p.id); state.inst[s]=auKey(s,p.id); return `${p.name} on ${AU_SLOTS[s]}. Open its window to pick a sound`; }}));
+    if(typeof AUX!=="undefined") AUX.list.forEach(p=>{ const slot=Object.keys(AUX.loaded||{}).find(s=>AUX.loaded[s]===p.id), tr={a:"keys",b:"keys",mel:"mel",bass:"bass"}[slot];
+      out.push({name:p.name,sub:`PLUG-IN · ${(p.maker||"").toUpperCase()}${slot?"":" · PICK IT TO HEAR IT"}`,prev:slot?()=>audition(tr):null,use:()=>{ const s=melSlot(); auRegister(s,p.id); state.inst[s]=auKey(s,p.id); return `${p.name} on ${AU_SLOTS[s]}. Open its window to pick a sound`; }}); });
   } else if(cat==="effects"){
     Object.entries(PADFX).forEach(([k,[n,kind]])=>{ if(k==="none") return; out.push({name:n,sub:`EFFECTS · INSERT${kind?" · "+kind.toUpperCase():""}`,
+      prev:()=>dwHear(DW.sel,{fx:{type:k,amt:.6,mix:Math.max(.5,FX_MIX[k]??1)}}),
       use:()=>{ state.fx[DW.sel]={type:k,amt:.5,mix:FX_MIX[k]??1}; return `${n} on the ${trackLabel(DW.sel)}`; }}); });
-    if(typeof MASTER!=="undefined") MASTER.list.forEach(p=>out.push({name:p.name,sub:`EFFECTS · MASTER · ${(p.maker||"").toUpperCase()}`,use:async()=>{ await masterSet(p.id,null); return `Exports will be mastered with ${p.name}`; }}));
+    if(typeof MASTER!=="undefined") MASTER.list.forEach(p=>out.push({name:p.name,sub:`EFFECTS · MASTER ON EXPORT · ${(p.maker||"").toUpperCase()}`,use:async()=>{ await masterSet(p.id,null); return `Exports will be mastered with ${p.name}`; }}));
   }
   return out;
 }
+/* Hear a track with another sound or effect swapped in for this one hit (a loaded NI sample is set aside so the Beat Lab sound is heard). */
+function dwHear(t,o){ o=o||{}; const keep={inst:state.inst[t],smp:samples[t],fx:state.fx[t]};
+  try{ if(o.inst!=null){ state.inst[t]=o.inst; delete samples[t]; } if(o.noSample) delete samples[t]; if(o.fx) state.fx[t]=o.fx; audition(t); }
+  finally{ state.inst[t]=keep.inst; if(keep.smp) samples[t]=keep.smp; else delete samples[t]; if(keep.fx) state.fx[t]=keep.fx; else delete state.fx[t]; } }
+const dwSeq=fns=>fns.forEach((f,k)=>setTimeout(()=>{ try{ f(); }catch(e){} },k*260));
 const dwOut=()=>{ ensureCtx(); ctx.resume(); return analyser||ctx.destination; };
 function dwPrevInst(k){ const c=ctx||(ensureCtx(),ctx); INST[k].play(c,dwOut(),c.currentTime+.02,261.63,.8,.7); }
 function dwPrevBass(k){ const c=ctx||(ensureCtx(),ctx); V.bass(c,dwOut(),c.currentTime+.02,.9,65.41,.7,k,0); }
@@ -6187,6 +6194,7 @@ function dwbRender(){
   const box=DW.browser; if(!box) return; const list=box.querySelector(".dwb-list"), q=DW.q.toLowerCase().trim();
   box.querySelectorAll(".dwb-cats button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.cat===DW.cat&&!q));
   let items=q?DWB_CATS.flatMap(([c])=>dwbItems(c)):dwbItems(DW.cat);
+  const hint=box.querySelector(".dwb-hint"); if(hint) hint.textContent=DW.cat==="effects"&&!q?`▶ plays the ${trackLabel(DW.sel)} through the effect; click to put it on the ${trackLabel(DW.sel)}.`:"";
   if(q){ const words=q.split(/\s+/); items=items.filter(it=>words.every(w=>(it.name+" "+it.sub).toLowerCase().includes(w))); }
   list.innerHTML="";
   if(!items.length){ list.innerHTML=`<p class="dwb-empty">${q?"Nothing matches. Try another word.":"Nothing here yet."+(NATIVE?"":" Your Native Instruments sounds show up in the Mac app.")}</p>`; return; }
@@ -6203,7 +6211,7 @@ function dwbRender(){
 }
 function dwbBuild(){
   const box=document.createElement("div"); box.className="dwb";
-  box.innerHTML=`<h3>Sound Browser</h3><label class="dwb-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search sounds…" aria-label="Search sounds"></label><div class="dwb-cats"></div><div class="dwb-list" role="list"></div>`;
+  box.innerHTML=`<h3>Sound Browser</h3><label class="dwb-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search sounds…" aria-label="Search sounds"></label><div class="dwb-cats"></div><p class="dwb-hint dwb-more"></p><div class="dwb-list" role="list"></div>`;
   const cats=box.querySelector(".dwb-cats");
   DWB_CATS.forEach(([k,l,ic])=>{ const b=document.createElement("button"); b.dataset.cat=k; b.innerHTML=`<span class="ic">${ic}</span><span>${l}</span><span class="car">›</span>`;
     b.onclick=()=>{ DW.cat=k; DW.q=""; box.querySelector("input").value=""; dwSave(); dwbRender(); }; cats.appendChild(b); });
@@ -6275,7 +6283,7 @@ function dwInspector(){
       const lab=document.createElement("span"); lab.className="dwi-note"; lab.textContent=l; b.append(lab,w); }); } },
     on=>{ if(on) state.fx[id]=saved.insert||{type:"reverb",amt:.5,mix:FX_MIX.reverb}; else { keep("insert",state.fx[id]); state.fx[id]={type:"none",amt:.5,mix:1}; } renderPads(); });
 }
-function dwSelect(id){ if(!TRACKS.includes(id)) return; DW.sel=id; dwSave(); dwInspector(); }
+function dwSelect(id){ if(!TRACKS.includes(id)) return; DW.sel=id; dwSave(); dwInspector(); if(DW.cat==="effects") dwbRender(); }
 // Clicking a track's name in the grid or the mixer picks it for the inspector
 document.addEventListener("click",e=>{ const el=e.target.closest&&e.target.closest('[id^="mute-"],.mx-strip,[id^="tl-"]'); if(!el) return;
   const id=el.dataset.track||(el.id||"").replace(/^(mute|tl)-/,""); if(TRACKS.includes(id)) dwSelect(id); },true);
