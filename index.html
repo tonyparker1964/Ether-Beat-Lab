@@ -368,6 +368,9 @@ body.studio .st-side .ni-row select{max-width:none;flex:1 1 120px}
 .favp-empty{color:var(--dim);font-size:14px;margin-top:12px}
 .prod-note{margin:10px 0 0;font-size:14px;color:var(--dim);min-height:1.2em}
 .prod-set{margin-top:10px}
+#prodModelRow{flex-wrap:wrap}
+#prodModelRow .ni-input{flex:1 1 100%}
+#prodModelPick{flex:1 1 100%;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px}
 .prod-set summary{cursor:pointer}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
 .seg button{background:none;border:0;padding:6px 14px;font-weight:600;font-size:13px;color:var(--dim)}
@@ -613,7 +616,8 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
         <button class="mini" id="prodServerCheck" title="Look for the models this app has">Find models</button>
       </div>
       <div class="ni-row" id="prodModelRow">
-        <input type="text" id="prodModel" class="ni-input" list="prodModels" aria-label="Model">
+        <select id="prodModelPick" aria-label="Model" hidden></select>
+        <input type="text" id="prodModel" class="ni-input" aria-label="Model name">
         <datalist id="prodModels"></datalist>
       </div>
       <div class="ni-row" id="prodKeyRow" hidden>
@@ -2641,11 +2645,11 @@ async function prodEngineUI(){
   prodSet("prodEngine",eng);
   $("prodModelRow").hidden=eng==="builtin"; $("prodKeyRow").hidden=!cloud; $("prodServerRow").hidden=eng!=="local";
   const mi=$("prodModel");
-  mi.placeholder=eng==="local"?"LM Studio model (blank = the one that's loaded)":cloud?`Model (blank = ${PROD_DEFAULT_MODEL[eng]})`:"";
+  mi.placeholder=eng==="local"?"Model name, exactly as your AI app shows it":cloud?`Model (blank = ${PROD_DEFAULT_MODEL[eng]})`:"";
   mi.value=eng==="local"?(prodGet("prodModel.local",null)??mi.dataset.local??""):prodGet("prodModel."+eng,"");
-  $("prodModels").innerHTML="";
+  $("prodModels").innerHTML=""; prodModelMenu([]);
   const site={claude:"console.anthropic.com",openai:"platform.openai.com"}[eng];
-  const notes={local:"Any model you run on this Mac with LM Studio, Ollama, Jan, a llama.cpp or MLX server, or any app with an OpenAI-style server. Pick the app, press Find models and choose one (blank = the one that's loaded). No API key, nothing leaves your computer. If the app isn't running, the built-in producer answers instead.",
+  const notes={local:"Pick your AI app, then a model from the Model menu. To add a model, get it in the app itself (Ollama: in Terminal run ollama pull and the model name, e.g. ollama pull qwen3; LM Studio: the Discover tab), then press ↻ to see it here. No API key, nothing leaves your computer. If the app isn't running, the built-in producer answers instead.",
     builtin:"No AI: reads the genre, mood and speed words in your vibe. Works offline.",
     claude:"",openai:""};
   let text=notes[eng];
@@ -2672,6 +2676,20 @@ async function prodLoadModels(eng){
   }catch(e){ list=[]; }
   if(prodEngine()!==eng) return;
   const dl=$("prodModels"); dl.innerHTML=""; (list||[]).forEach(id=>dl.appendChild(new Option(id,id)));
+  prodModelMenu(list||[]);
+}
+/* The model menu: the models found, "whatever is loaded", or type a name. */
+function prodModelMenu(models){
+  const pick=$("prodModelPick"), inp=$("prodModel"), eng=prodEngine(), cur=inp.value.trim();
+  pick.innerHTML="";
+  const first=eng==="local"?"Whichever model is loaded":`Default (${PROD_DEFAULT_MODEL[eng]||"recommended"})`;
+  pick.add(new Option(first,""));
+  (models||[]).forEach(id=>pick.add(new Option(id,id)));
+  pick.add(new Option("Type a model name…","__type"));
+  const known=!cur||(models||[]).includes(cur);
+  pick.value=known?cur:"__type";
+  pick.hidden=!(models&&models.length);
+  inp.hidden=!pick.hidden&&known;
 }
 /* Local AI app: which server, and the models it has. */
 function prodServerURL(){ const v=$("prodServer").value; return (v==="custom"?$("prodServerURL").value.trim():v).replace(/\/+$/,""); }
@@ -2683,9 +2701,11 @@ async function prodLocalModels(quiet){
   }catch(e){ reach=false; }
   if(prodEngine()!=="local") return;
   const dl=$("prodModels"); dl.innerHTML=""; models.forEach(id=>dl.appendChild(new Option(id,id)));
+  prodModelMenu(models);
   const name=$("prodServer").selectedOptions[0].text;
-  $("prodServerCheck").textContent=reach?`${models.length} model${models.length===1?"":"s"} found`:"Find models";
-  if(!quiet) toast(reach?`${name}: ${models.length} model${models.length===1?"":"s"}. Click the model box to pick one.`:`Nothing is answering at ${url}. Start ${name==="Other address…"?"the app":name} and its server first.`);
+  $("prodServerCheck").textContent=reach?`↻ ${models.length} model${models.length===1?"":"s"} found`:"Find models";
+  $("prodServerCheck").title=reach?"Look again (after you add a model to the app)":"Look for the models this app has";
+  if(!quiet) toast(reach?`${name}: ${models.length} model${models.length===1?"":"s"}. Pick one in the Model menu.`:`Nothing is answering at ${url}. Start ${name==="Other address…"?"the app":name} and its server first.`);
 }
 function prodSetup(){
   $("prodGo").onclick=produce;
@@ -2696,6 +2716,9 @@ function prodSetup(){
   sel.value=prodGet("prodEngine",NATIVE?"local":"builtin"); if(sel.selectedOptions[0]&&sel.selectedOptions[0].disabled||!sel.value) sel.value="builtin";
   sel.onchange=prodEngineUI;
   $("prodModel").addEventListener("change",()=>{ const v=$("prodModel").value.trim(); prodSet("prodModel."+prodEngine(),v||null); });
+  $("prodModelPick").onchange=()=>{ const v=$("prodModelPick").value, inp=$("prodModel");
+    if(v==="__type"){ inp.hidden=false; inp.value=""; inp.focus(); return; }
+    inp.hidden=true; inp.value=v; prodSet("prodModel."+prodEngine(),v||null); toast(v?"Model: "+v:"Using whichever model is loaded"); };
   // local AI app
   const saved=prodGet("prodServer","http://127.0.0.1:1234"), srv=$("prodServer");
   if([...srv.options].some(o=>o.value===saved)) srv.value=saved; else { srv.value="custom"; $("prodServerURL").value=saved; }
