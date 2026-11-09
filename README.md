@@ -45,6 +45,16 @@ The **Project** button at the left of the top bar shows your beat's name (a gold
 - **Autosave:** your beat is kept automatically every few seconds. Close the app (or lose power) and next time it opens right where you left off; unsaved changes still show as unsaved. New beat and Open ask before replacing unsaved work.
 - If a project uses NI sounds and the drive isn't connected, it still opens and tells you which sounds it couldn't find.
 
+## Mixer
+
+The **Mixer** tab (in the editors along the bottom of Studio view, or its own section on the classic page) has a channel strip for every track and a master strip.
+
+- **Each track:** Lo, Mid and Hi EQ (±15 dB), **Comp** (compression, from off to heavy), **Verb** and **Echo** sends, **Pan**, a **fader** with a level meter, **M** (mute) and **S** (solo; ⌥-click solos just that track). Tap the track name to hear it.
+- **Master:** Verb and Echo returns, a **Limiter** (on by default, keeps the beat from clipping), the master fader with a meter, and **Reset mix**.
+- Drag a knob or fader up and down (hold Shift for fine moves), scroll on it, or click it and use the arrow keys. Double-click (or Delete) resets it. Every move can be undone.
+- Faders are the same as the volume sliders in the Pattern grid, and mutes are the same as the grid's M buttons.
+- The mix is saved with your project, and the export sounds exactly like the mixer (including solos).
+
 ## Studio view and visualizer
 
 On a wide window (and always in the Mac app) Beat Lab opens in **Studio view**, a full-window workspace: a control bar with transport and a display (bar and beat, tempo, key, genre, what's playing), a **library** on the left (AI Producer, Native Instruments, beat settings), the **tracks** in the middle, and **editors** along the bottom (Pads, Sounds, Sampler, Visualizer, Export). The ◧ and ⬓ buttons show or hide the library and editors, the line above the editors drags to resize them, and **Classic view** goes back to the single page. Your layout is remembered.

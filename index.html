@@ -51,6 +51,54 @@ h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
 #rec .ic{color:var(--rec)} #rec[aria-pressed="true"] .ic{color:#1a0705}
 #play[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .spacer{flex:1}
+/* Mixer */
+.mx-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.mx-top .hint{margin:0;flex:1;min-width:240px}
+.mx-solo{display:inline-flex;align-items:center;gap:8px;color:var(--accent);font-weight:600;font-size:13px}
+.mx-strips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;align-items:stretch}
+.mx-strip>*{flex:none}
+.mx-strip{flex:none;width:90px;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);
+  border-top:3px solid var(--c);border-radius:10px;padding:6px 5px 7px;transition:opacity .15s}
+.mx-strip.off{opacity:.45}
+.mx-master{width:112px;border-color:color-mix(in srgb,var(--accent) 45%,var(--line));margin-left:6px}
+.mx-name{border:0;background:none;padding:2px 4px;font-weight:600;font-size:12.5px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+button.mx-name:hover{color:var(--c)}
+.mx-row{display:flex;gap:3px;justify-content:center}
+.mx-k{display:flex;flex-direction:column;align-items:center;gap:1px;width:26px}
+.mx-kl{font-family:var(--f-mono);font-size:8.5px;letter-spacing:.06em;color:var(--dim);text-transform:uppercase}
+.mx-kv{display:none}
+.mx-knob{--p:.5;width:24px;height:24px;border-radius:50%;position:relative;cursor:ns-resize;touch-action:none;
+  background:conic-gradient(from var(--from,225deg),var(--c) 0 var(--span,0deg),transparent var(--span,0deg)),conic-gradient(from 225deg,var(--line) 0 270deg,transparent 270deg)}
+.mx-knob::after{content:"";position:absolute;inset:4px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#2a251d,#120f0b)}
+.mx-dial{position:absolute;inset:0;z-index:1;transform:rotate(var(--a,0deg))}
+.mx-dial::before{content:"";position:absolute;left:50%;top:5px;width:2px;height:7px;margin-left:-1px;border-radius:1px;background:var(--text)}
+.mx-knob:focus-visible,.mx-fader:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mx-panrow .mx-k{width:auto}
+.mx-strip>.mx-fz{flex:1 1 auto;min-height:80px;display:flex;gap:6px;align-items:stretch;justify-content:center;width:100%}
+.mx-fader{--p:.8;position:relative;width:26px;cursor:ns-resize;touch-action:none}
+.mx-rail{position:absolute;left:50%;top:7px;bottom:7px;width:4px;margin-left:-2px;border-radius:2px;background:#0a0907;box-shadow:inset 0 0 0 1px var(--line)}
+.mx-fill{position:absolute;left:50%;bottom:7px;width:4px;margin-left:-2px;border-radius:2px;background:color-mix(in srgb,var(--c) 70%,transparent);height:calc((100% - 14px)*var(--p))}
+.mx-thumb{position:absolute;left:0;right:0;height:14px;border-radius:4px;bottom:calc((100% - 14px)*var(--p));
+  background:linear-gradient(#e9dcbf,#a8977a);box-shadow:0 2px 4px rgba(0,0,0,.5),inset 0 -1px 0 rgba(0,0,0,.25)}
+.mx-thumb::after{content:"";position:absolute;left:4px;right:4px;top:6px;height:2px;background:#3a3227}
+.mx-meter{width:8px;height:auto;border-radius:3px;background:#0a0907}
+.mx-meter.st{width:14px}
+.mx-db{font-family:var(--f-mono);font-size:10.5px;color:var(--dim);white-space:nowrap}
+.mx-ms{display:flex;gap:4px}
+.mx-ms button,.mx-lim,.mx-reset{border:1px solid var(--line);background:var(--panel);border-radius:6px;font-family:var(--f-mono);font-size:11px;font-weight:600;color:var(--dim)}
+.mx-ms button{width:30px;height:24px}
+.mx-m[aria-pressed="true"]{background:#d9573b;border-color:#d9573b;color:#1a0705}
+.mx-s[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.mx-lim{padding:4px 8px}
+.mx-lim[aria-pressed="true"]{color:var(--green);border-color:color-mix(in srgb,var(--green) 55%,var(--line))}
+.mx-reset{padding:4px 6px;font-size:10px}
+body.studio .st-pane>.mixer{display:flex;flex-direction:column;height:100%;box-sizing:border-box;padding:10px 12px}
+body.studio .st-pane>.mixer .mx-strips{flex:1;min-height:0}
+body.studio .mx-top{margin-bottom:6px}
+body.studio .mx-top h2,body.studio .mx-top .hint{display:none}
+body.studio .mx-top:has(.mx-solo[hidden]){display:none}
+body:not(.studio) .mx-strips{height:330px}
+
 /* Project button and menu */
 .proj{position:relative;display:flex}
 .proj-btn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:5px 11px 5px 9px;max-width:240px;min-width:0}
@@ -529,6 +577,13 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
     </section>
   </div>
 
+  <section class="panel mixer" aria-label="Mixer" id="mixPanel">
+    <div class="mx-top"><h2>Mixer</h2>
+      <p class="hint">Drag a knob or fader up and down (hold Shift for fine moves), scroll on it, or click it and use the arrow keys. Double-click resets. <b>M</b> mutes, <b>S</b> solos.</p>
+      <span class="mx-solo" id="mixSoloNote" hidden>Solo is on <button class="mini" id="mixSoloOff">Clear solos</button></span></div>
+    <div class="mx-strips" id="mixStrips" role="group" aria-label="Channel strips"></div>
+  </section>
+
   <section class="panel" aria-label="Sampler">
     <div class="sounds-head">
       <h2>Sampler</h2>
@@ -590,7 +645,7 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       <select id="bars"><option value="8">8 bars</option><option value="16" selected>16 bars</option><option value="32">32 bars</option><option value="song">Whole song</option></select>
     </label>
     <button class="btn primary" id="export">Export for Ether Cut</button>
-    <p>Saves a .zip with <strong>beat.wav</strong> (44.1 kHz stereo) and <strong>beat-markers.json</strong>: tempo, chords, sections, and every beat, bar, kick and snare time. Muted tracks stay out of the mix.</p>
+    <p>Saves a .zip with <strong>beat.wav</strong> (44.1 kHz stereo) and <strong>beat-markers.json</strong>: tempo, chords, sections, and every beat, bar, kick and snare time. It sounds just like the Mixer (EQ, compression, pans, sends and solos); muted tracks stay out.</p>
     <div id="status" role="status"></div>
   </section>
 </div>
@@ -1122,7 +1177,7 @@ function insertFor(ctx,bus,id){
   if(cfg.type&&cfg.type!=="none"&&FXB[cfg.type]){ const mix=cfg.mix??1, dry=ctx.createGain(), wet=ctx.createGain(); dry.gain.value=1-mix; wet.gain.value=mix;
     head.connect(dry).connect(out); FXB[cfg.type](ctx,head,cfg.amt??.5).connect(wet).connect(out); }
   else head.connect(out);
-  out.connect(bus.dry); if(SEND[id]){ const sg=ctx.createGain(); sg.gain.value=SEND[id]; out.connect(sg).connect(bus.fx); }
+  out.connect(stripFor(ctx,bus,id).inp); // through the track's mixer strip
   map[id]={key,bus,input,out}; return input;
 }
 
@@ -1173,7 +1228,7 @@ function buildChain(ctx,dest){
   for(let c=0;c<2;c++){ const d=ir.getChannelData(c); for(let i=0;i<d.length;i++) d[i]=(R()*2-1)*Math.pow(1-i/d.length,3.2); }
   conv.buffer=ir; fx.connect(conv).connect(rv).connect(sLP);
   fx.connect(dlv).connect(dl); dl.connect(dlf).connect(fb).connect(dl); dlf.connect(sLP); fb.gain.value=.38;
-  const ch={input:tone,dry:tone,fx,tone,crackle:cg,rv,dlv,dl,out,sLP,sHP}; applyChain(ch,ctx); return ch;
+  const ch={input:tone,dry:tone,fx,tone,crackle:cg,rv,dlv,dl,out,sLP,sHP,conv}; applyChain(ch,ctx); return ch;
 }
 function applyChain(ch,c){ const g=G(), t=c.currentTime;
   ch.tone.frequency.setTargetAtTime(g.tone<.5?2600+5000*g.tone:18000,t,.05);
@@ -3131,7 +3186,7 @@ function stEl(tag,cls,html){ const e=document.createElement(tag); if(cls) e.clas
 function stPanels(){
   return {bar:stQ("header.top"),deck:stQ('[aria-label="Beat settings"]'),prod:stQ('[aria-label="AI Producer"]'),ni:stQ("#niPanel"),
     sounds:stQ('[aria-label="Sounds"]'),seq:stQ('[aria-label="Pattern"]'),pads:stQ('[aria-label="Pads"]'),song:stQ('[aria-label="Song"]'),
-    sampler:stQ('[aria-label="Sampler"]'),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo"),fav:stQ("#favPanel")};
+    sampler:stQ('[aria-label="Sampler"]'),mix:stQ("#mixPanel"),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo"),fav:stQ("#favPanel")};
 }
 function stTabs(host,tabs,current,onPick){
   const bar=stEl("div","st-tabs"); bar.setAttribute("role","tablist");
@@ -3158,7 +3213,7 @@ function studioOn(){
   STUDIO.pickSide=stTabs(side,sideTabs,STUDIO.sideTab,k=>{ STUDIO.sideTab=k; stSave(); });
   main.append(P.seq,P.song);
   const grip=stEl("div","st-grip"); grip.title="Drag to resize"; edit.appendChild(grip);
-  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["sounds","Sounds & Kits",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
+  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["mix","Mixer",P.mix],["sounds","Sounds & Kits",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
     STUDIO.editTab,k=>{ STUDIO.editTab=k; stSave(); if(k==="sampler"&&typeof drawWave==="function") setTimeout(drawWave,30); });
   [...app.children].forEach(c=>c.remove());
   const favCol=stEl("aside","st-fav"); favCol.setAttribute("aria-label","Favorites list"); favCol.appendChild(P.fav);
@@ -3171,7 +3226,7 @@ function studioOff(){
   duo.append(P.pads,P.song);
   [...app.children].forEach(c=>c.remove());
   // Back to the classic page order.
-  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.fav,P.seq,duo,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
+  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.fav,P.seq,duo,P.mix,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
   document.body.classList.remove("studio","st-noside","st-noedit","st-nofav"); STUDIO.on=false; stSyncToggles(); stSave();
 }
 function stGrip(grip){
@@ -3231,6 +3286,215 @@ studioSetup();
 </script>
 
 <script>
+/* ---------- Mixer ----------
+   Every track runs through its own channel strip: 3-band EQ, compressor, fader, pan, mute and solo, and sends to the
+   reverb and echo. The master strip has the output level and a limiter. The same strips are built for the export,
+   so what you hear is what you get. Faders are the same volumes as the sliders in the Pattern grid. */
+const MIX_ORDER=["kick","snare","hat","ohat","perc","tom","crash","chop","chops","fx","bass","keys","mel"];
+const mixDefault=()=>({tracks:{},master:{gain:0,limiter:true}});
+const mixTrackDefault=id=>({lo:0,mid:0,hi:0,comp:0,pan:0,rev:SEND[id]||0,echo:SEND[id]||0});
+if(!state.mix) state.mix=mixDefault();
+if(!state.solo) state.solo={};
+function mixT(id){ return Object.assign(mixTrackDefault(id),(state.mix.tracks||{})[id]||{}); }
+function mixSet(id,key,v){ const t=state.mix.tracks||(state.mix.tracks={}); t[id]=Object.assign(t[id]||{},{[key]:v}); }
+const dbToGain=db=>Math.pow(10,db/20);
+const anySolo=()=>MIX_ORDER.some(id=>state.solo[id]);
+
+/* One strip per track per audio context (playback and each export get their own). */
+function stripFor(c,bus,id){
+  const map=c.__strips||(c.__strips={}); let s=map[id]; if(s&&s.bus===bus) return s;
+  const inp=c.createGain(), lo=c.createBiquadFilter(), mid=c.createBiquadFilter(), hi=c.createBiquadFilter(), comp=c.createDynamicsCompressor(),
+    solo=c.createGain(), pan=c.createStereoPanner(), rv=c.createGain(), dl=c.createGain();
+  lo.type="lowshelf"; lo.frequency.value=150; mid.type="peaking"; mid.frequency.value=1200; mid.Q.value=.8; hi.type="highshelf"; hi.frequency.value=7000;
+  comp.knee.value=8; comp.attack.value=.006; comp.release.value=.16;
+  inp.connect(lo).connect(mid).connect(hi).connect(comp).connect(solo).connect(pan).connect(bus.dry);
+  pan.connect(rv).connect(bus.rvIn||bus.fx); pan.connect(dl).connect(bus.dlIn||bus.fx);
+  s={bus,inp,lo,mid,hi,comp,solo,pan,rv,dl,meter:null,peak:0,hold:0};
+  if(c===ctx){ s.meter=c.createAnalyser(); s.meter.fftSize=512; pan.connect(s.meter); }
+  map[id]=s; mixApplyStrip(c,id,true); return s;
+}
+function mixApplyStrip(c,id,now){
+  const s=c.__strips&&c.__strips[id]; if(!s) return;
+  const m=mixT(id), t=c.currentTime, set=(p,v)=>now?p.setValueAtTime(v,t):p.setTargetAtTime(v,t,.02);
+  set(s.lo.gain,m.lo); set(s.mid.gain,m.mid); set(s.hi.gain,m.hi);
+  set(s.comp.threshold,-m.comp*32); set(s.comp.ratio,1+m.comp*7);
+  set(s.pan.pan,m.pan); set(s.rv.gain,m.rev); set(s.dl.gain,m.echo);
+  set(s.solo.gain,anySolo()&&!state.solo[id]?0:1);
+}
+function mixApplyAll(c){ c=c||ctx; if(!c) return; MIX_ORDER.forEach(id=>mixApplyStrip(c,id)); if(c===ctx&&chain) mixApplyMaster(chain,c); }
+function mixApplyMaster(ch,c){
+  if(!ch.lim) return; const m=Object.assign(mixDefault().master,state.mix.master||{}), t=c.currentTime;
+  ch.out.gain.setTargetAtTime(.9*dbToGain(m.gain),t,.02);
+  ch.lim.threshold.setValueAtTime(m.limiter?-1:0,t); ch.lim.ratio.setValueAtTime(m.limiter?20:1,t);
+}
+// Master limiter and separate reverb and echo inputs on the master chain.
+function mixUpgradeChain(ch,c,dest){
+  if(ch.lim) return ch;
+  const lim=c.createDynamicsCompressor(); lim.knee.value=0; lim.attack.value=.002; lim.release.value=.12;
+  ch.out.disconnect(); ch.out.connect(lim).connect(dest); ch.lim=lim;
+  // reverb and echo inputs, so each track can send to them separately
+  ch.rvIn=c.createGain(); ch.dlIn=c.createGain(); ch.rvIn.connect(ch.conv); ch.dlIn.connect(ch.dlv);
+  mixApplyMaster(ch,c); return ch;
+}
+{ const raw=buildChain; buildChain=function(c,dest){ return mixUpgradeChain(raw(c,dest),c,dest); }; }
+{ const raw=applyChain; applyChain=function(ch,c){ raw(ch,c); mixApplyMaster(ch,c); }; }
+
+/* ---------- Mixer controls: knobs and faders ---------- */
+function mxCtl(kind,o){
+  const el=document.createElement("div"); el.className="mx-"+kind+(o.bip?" bip":""); el.tabIndex=0; el.setAttribute("role","slider");
+  el.setAttribute("aria-label",o.label); el.setAttribute("aria-valuemin",o.min); el.setAttribute("aria-valuemax",o.max);
+  if(kind==="knob") el.innerHTML='<i class="mx-dial"></i>'; else el.innerHTML='<i class="mx-rail"></i><i class="mx-fill"></i><i class="mx-thumb"></i>';
+  let v=o.value;
+  const step=o.step||((o.max-o.min)/100);
+  const toP=x=>o.toP?o.toP(x):(x-o.min)/(o.max-o.min), fromP=p=>o.fromP?o.fromP(p):o.min+p*(o.max-o.min);
+  const paint=()=>{ const p=toP(v); el.style.setProperty("--p",p);
+    if(kind==="knob"){ const a=-135+270*p, z=o.bip?0:-135, from=Math.min(a,z), span=Math.abs(a-z);
+      el.style.setProperty("--a",a+"deg"); el.style.setProperty("--from",((from%360)+360)%360+"deg"); el.style.setProperty("--span",span+"deg"); }
+    el.setAttribute("aria-valuenow",Math.round(v*100)/100); el.setAttribute("aria-valuetext",o.fmt(v)); el.title=`${o.label}: ${o.fmt(v)} · drag, scroll or use arrow keys · double-click to reset`; };
+  const set=(x,fire)=>{ x=Math.max(o.min,Math.min(o.max,x)); if(o.snap) x=Math.round(x/o.snap)*o.snap; if(x===v&&fire) return; v=x; paint(); if(fire){ o.onInput(v); if(o.out) o.out.textContent=o.fmt(v); } };
+  el.addEventListener("pointerdown",e=>{ if(e.button) return; e.preventDefault(); el.focus(); el.setPointerCapture(e.pointerId); o.onStart&&o.onStart();
+    const y0=e.clientY, p0=toP(v), h=kind==="fader"?el.clientHeight-14:160;
+    if(kind==="fader"&&!e.target.classList.contains("mx-thumb")){ const r=el.getBoundingClientRect(); set(fromP(1-(e.clientY-r.top-7)/h),true); }
+    const pStart=toP(v);
+    const mv=ev=>{ const fine=ev.shiftKey?.25:1; set(fromP(Math.max(0,Math.min(1,(kind==="fader"?pStart:p0)+(y0-ev.clientY)/h*fine))),true); };
+    const up=()=>{ el.removeEventListener("pointermove",mv); el.removeEventListener("pointerup",up); el.removeEventListener("pointercancel",up); };
+    el.addEventListener("pointermove",mv); el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up); });
+  el.addEventListener("dblclick",()=>{ o.onStart&&o.onStart(); set(o.def,true); });
+  el.addEventListener("keydown",e=>{ const k=e.key; let d=0;
+    if(k==="ArrowUp"||k==="ArrowRight") d=1; else if(k==="ArrowDown"||k==="ArrowLeft") d=-1;
+    else if(k==="Home"){ e.preventDefault(); e.stopPropagation(); o.onStart&&o.onStart(); set(o.min,true); return; }
+    else if(k==="End"){ e.preventDefault(); e.stopPropagation(); o.onStart&&o.onStart(); set(o.max,true); return; }
+    else if(k==="Delete"||k==="Backspace"){ e.preventDefault(); e.stopPropagation(); o.onStart&&o.onStart(); set(o.def,true); return; }
+    if(!d) return; e.preventDefault(); e.stopPropagation(); o.onStart&&o.onStart();
+    set(o.toP?fromP(toP(v)+d*(e.shiftKey?.1:.02)):v+d*step*(e.shiftKey?5:1),true); });
+  let wt=0; el.addEventListener("wheel",e=>{ e.preventDefault(); if(Date.now()-wt>600) o.onStart&&o.onStart(); wt=Date.now();
+    const d=e.deltaY<0?1:-1; set(o.toP?fromP(toP(v)+d*.02):v+d*step,true); },{passive:false});
+  el.setValue=x=>{ v=x; paint(); if(o.out) o.out.textContent=o.fmt(v); };
+  el.setValue(v); return el;
+}
+const fmtDb=x=>(x>0?"+":"")+(Math.abs(x)<.05?"0.0":x.toFixed(1))+" dB";
+const fmtVol=x=>x<=.0005?"−∞":fmtDb(20*Math.log10(x));
+const fmtPan=x=>Math.abs(x)<.01?"Center":(x<0?"L ":"R ")+Math.round(Math.abs(x)*100);
+const fmtPct=x=>Math.round(x*100)+"%";
+// Faders feel like a console: more room near unity.
+const volToP=v=>Math.sqrt(v/1.5), pToVol=p=>1.5*p*p;
+
+const MIX={els:{},undoKey:null,undoT:0};
+// One undo step per gesture on a control (a drag, or a run of arrow presses), and a new one when you move to another control.
+function mixUndo(key){ if(key!==MIX.undoKey||Date.now()-MIX.undoT>700) pushUndo(); MIX.undoKey=key; MIX.undoT=Date.now(); }
+{ const raw=pushUndo; pushUndo=function(){ raw.apply(this,arguments); MIX.undoKey=null; }; }
+function mixKnob(id,key,label,short,o){
+  const box=document.createElement("div"); box.className="mx-k";
+  const out=document.createElement("span"); out.className="mx-kv";
+  const k=mxCtl("knob",Object.assign({label:`${trackLabel(id)} ${label}`,value:mixT(id)[key],def:mixTrackDefault(id)[key],out,
+    onStart:()=>mixUndo(id+key),onInput:v=>{ mixSet(id,key,v); if(ctx) mixApplyStrip(ctx,id); }},o));
+  const l=document.createElement("span"); l.className="mx-kl"; l.textContent=short;
+  box.append(k,l); MIX.els[id+"."+key]=k; return box;
+}
+function mixRender(){
+  const box=$("mixStrips"); if(!box) return; box.innerHTML=""; MIX.els={};
+  for(const id of MIX_ORDER){
+    const s=document.createElement("div"); s.className="mx-strip"; s.dataset.track=id; s.style.setProperty("--c",`var(--h-${id})`);
+    const nm=document.createElement("button"); nm.className="mx-name"; nm.textContent=trackLabel(id)||id; nm.title=`Hear the ${trackLabel(id)}`;
+    nm.onclick=()=>{ if(typeof audition==="function") audition(id); };
+    const eq=document.createElement("div"); eq.className="mx-row";
+    const eqO={min:-15,max:15,step:.5,snap:.5,bip:true,fmt:fmtDb};
+    eq.append(mixKnob(id,"lo","low EQ","Lo",eqO),mixKnob(id,"mid","mid EQ","Mid",eqO),mixKnob(id,"hi","high EQ","Hi",eqO));
+    const dyn=document.createElement("div"); dyn.className="mx-row";
+    dyn.append(mixKnob(id,"comp","compressor","Comp",{min:0,max:1,step:.01,fmt:x=>x<.01?"Off":fmtPct(x)}),
+      mixKnob(id,"rev","reverb send","Verb",{min:0,max:1.5,step:.01,fmt:fmtPct}),mixKnob(id,"echo","echo send","Echo",{min:0,max:1.5,step:.01,fmt:fmtPct}));
+    const pan=document.createElement("div"); pan.className="mx-row mx-panrow"; pan.append(mixKnob(id,"pan","pan","Pan",{min:-1,max:1,step:.02,snap:.01,bip:true,fmt:fmtPan}));
+    const fz=document.createElement("div"); fz.className="mx-fz";
+    const meter=document.createElement("canvas"); meter.className="mx-meter"; meter.width=8; meter.height=100; meter.setAttribute("aria-hidden","true");
+    const db=document.createElement("output"); db.className="mx-db";
+    const fader=mxCtl("fader",{label:`${trackLabel(id)} volume`,min:0,max:1.5,value:state.vol[id]??1,def:1,out:db,toP:volToP,fromP:pToVol,fmt:fmtVol,
+      onStart:()=>mixUndo(id+"vol"),onInput:v=>{ state.vol[id]=+v.toFixed(3); const tv=$("tv-"+id); if(tv){ tv.value=Math.round(v*100); $("tvo-"+id).textContent=Math.round(v*100); } }});
+    fz.append(fader,meter);
+    const ms=document.createElement("div"); ms.className="mx-ms";
+    const mu=document.createElement("button"); mu.className="mx-m"; mu.textContent="M"; mu.title=`Mute ${trackLabel(id)}`;
+    const so=document.createElement("button"); so.className="mx-s"; so.textContent="S"; so.title=`Solo ${trackLabel(id)} (⌥-click: solo only this one)`;
+    mu.onclick=()=>{ pushUndo(); state.mutes[id]=!state.mutes[id]; renderGrid(); mixSync(); };
+    so.onclick=e=>{ pushUndo(); const on=!state.solo[id]; if(e.altKey) state.solo={}; state.solo[id]=on||e.altKey; mixApplyAll(); mixSync(); };
+    ms.append(mu,so);
+    s.append(nm,eq,dyn,pan,fz,db,ms); box.appendChild(s);
+    MIX.els[id]={strip:s,fader,meter,mu,so,db,nm};
+  }
+  // Master
+  const m=Object.assign(mixDefault().master,state.mix.master||{});
+  const s=document.createElement("div"); s.className="mx-strip mx-master"; s.style.setProperty("--c","var(--accent)");
+  const nm=document.createElement("div"); nm.className="mx-name"; nm.textContent="Master";
+  const ret=document.createElement("div"); ret.className="mx-row";
+  const retK=(key,label,short)=>{ const b=document.createElement("div"); b.className="mx-k"; const out=document.createElement("span");
+    const k=mxCtl("knob",{label,min:0,max:1,step:.01,value:state[key],def:key==="space"?.25:.12,fmt:fmtPct,out,onStart:()=>mixUndo("m"+key),
+      onInput:v=>{ state[key]=+v.toFixed(2); const inp=$(key); if(inp){ inp.value=Math.round(v*100); const o=$(key+"Out"); if(o) o.textContent=Math.round(v*100)+"%"; } if(chain) applyChain(chain,ctx); }});
+    const l=document.createElement("span"); l.className="mx-kl"; l.textContent=short; b.append(k,l); MIX.els["m."+key]=k; return b; };
+  ret.append(retK("space","Reverb return (room size and level)","Verb"),retK("echo","Echo return","Echo"));
+  const lim=document.createElement("button"); lim.className="mx-lim"; lim.textContent="Limiter"; lim.title="Keeps the mix from clipping (on is best for most beats)";
+  lim.onclick=()=>{ pushUndo(); const mm=state.mix.master||(state.mix.master=mixDefault().master); mm.limiter=!(mm.limiter??true); if(chain) mixApplyMaster(chain,ctx); mixSync(); };
+  const fz=document.createElement("div"); fz.className="mx-fz";
+  const meter=document.createElement("canvas"); meter.className="mx-meter st"; meter.width=14; meter.height=100; meter.setAttribute("aria-hidden","true");
+  const db=document.createElement("output"); db.className="mx-db";
+  const fader=mxCtl("fader",{label:"Master volume",min:-24,max:6,value:m.gain,def:0,out:db,snap:.1,fmt:x=>x<=-23.95?"−24 dB":fmtDb(x),
+    toP:x=>Math.pow((x+24)/30,1.6),fromP:p=>-24+30*Math.pow(p,1/1.6),
+    onStart:()=>mixUndo("master"),onInput:v=>{ const mm=state.mix.master||(state.mix.master=mixDefault().master); mm.gain=v; if(chain) mixApplyMaster(chain,ctx); }});
+  fz.append(fader,meter);
+  const reset=document.createElement("button"); reset.className="mx-reset"; reset.textContent="Reset mix"; reset.title="Flat EQ, no compression, center pans, default sends, faders at 0 dB, no solos";
+  reset.onclick=()=>{ pushUndo(); state.mix=mixDefault(); state.solo={}; MIX_ORDER.forEach(id=>state.vol[id]=1); mixApplyAll(); refreshAll(); toast("Mix reset"); };
+  s.append(nm,ret,lim,fz,db,reset); box.appendChild(s);
+  MIX.els.master={strip:s,fader,meter,lim,db};
+  mixSync();
+}
+/* Bring the mixer up to date after anything else changed (undo, opening a project, the Pattern grid sliders). */
+function mixSync(){
+  if(!MIX.els.master) return;
+  const solo=anySolo();
+  for(const id of MIX_ORDER){
+    const e=MIX.els[id]; if(!e) continue; const m=mixT(id);
+    ["lo","mid","hi","comp","rev","echo","pan"].forEach(k=>{ const el=MIX.els[id+"."+k]; if(el) el.setValue(m[k]); });
+    e.fader.setValue(state.vol[id]??1);
+    e.mu.setAttribute("aria-pressed",!!state.mutes[id]); e.so.setAttribute("aria-pressed",!!state.solo[id]);
+    e.strip.classList.toggle("off",!!state.mutes[id]||(solo&&!state.solo[id]));
+    const lbl=trackLabel(id)||id; if(e.nm.textContent!==lbl) e.nm.textContent=lbl;
+  }
+  const mm=Object.assign(mixDefault().master,state.mix.master||{});
+  MIX.els.master.fader.setValue(mm.gain); MIX.els.master.lim.setAttribute("aria-pressed",mm.limiter);
+  ["space","echo"].forEach(k=>{ const el=MIX.els["m."+k]; if(el) el.setValue(state[k]); });
+  $("mixSoloNote").hidden=!solo;
+}
+/* Meters: peak level with a slow fall, green to gold to red. */
+let mixBuf=null, mixBufM=null;
+function mixMeters(){
+  requestAnimationFrame(mixMeters);
+  const panel=$("mixPanel"); if(!panel||!MIX.els.master||panel.offsetParent===null) return;
+  if(!mixBuf) mixBuf=new Float32Array(512);
+  const draw=(cv,lv,hold)=>{ const g=cv.getContext("2d"), w=cv.width, h=cv.height; g.clearRect(0,0,w,h);
+    const db=lv>0?20*Math.log10(lv):-90, p=Math.max(0,Math.min(1,(db+48)/54)), y=h-p*h;
+    const gr=g.createLinearGradient(0,h,0,0); gr.addColorStop(0,"#3f8f62"); gr.addColorStop(.72,"#5fa877"); gr.addColorStop(.86,"#d8ab3e"); gr.addColorStop(1,"#d9573b");
+    g.fillStyle="#0a0907"; g.fillRect(0,0,w,h); g.fillStyle=gr; g.fillRect(0,y,w,h-y);
+    const hp=Math.max(0,Math.min(1,(20*Math.log10(Math.max(hold,1e-5))+48)/54)); g.fillStyle=hold>=.99?"#d9573b":"#efe3c8"; g.fillRect(0,Math.round(h-hp*h),w,2); };
+  const playingNow=!!(ctx&&ctx.state==="running");
+  for(const id of MIX_ORDER){
+    const e=MIX.els[id], s=ctx&&ctx.__strips&&ctx.__strips[id]; if(!e) continue;
+    let pk=0; if(playingNow&&s&&s.meter){ s.meter.getFloatTimeDomainData(mixBuf); for(let i=0;i<mixBuf.length;i++){ const a=Math.abs(mixBuf[i]); if(a>pk) pk=a; } }
+    const st=s||e; st.peak=Math.max(pk,(st.peak||0)*.86); st.hold=pk>=(st.hold||0)?pk:Math.max(0,(st.hold||0)-.006); draw(e.meter,st.peak,st.hold);
+  }
+  let pk=0; if(playingNow&&analyser){ if(!mixBufM||mixBufM.length!==analyser.fftSize) mixBufM=new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(mixBufM); for(let i=0;i<mixBufM.length;i++){ const a=Math.abs(mixBufM[i]); if(a>pk) pk=a; } }
+  const me=MIX.els.master; me.peak=Math.max(pk,(me.peak||0)*.86); me.hold=pk>=(me.hold||0)?pk:Math.max(0,(me.hold||0)-.006); draw(me.meter,me.peak,me.hold);
+}
+// Keep the mixer in step with everything else.
+{ const raw=refreshAll; refreshAll=function(){ raw.apply(this,arguments); if(!state.mix) state.mix=mixDefault(); if(!state.solo) state.solo={}; if(ctx) mixApplyAll(ctx); mixSync(); }; }
+{ const raw=renderGrid; renderGrid=function(){ raw.apply(this,arguments); mixSync(); }; }
+function mixSetup(){
+  if(chain&&!chain.lim) mixUpgradeChain(chain,ctx,analyser);
+  mixRender();
+  $("mixSoloOff").onclick=()=>{ pushUndo(); state.solo={}; mixApplyAll(); mixSync(); };
+  requestAnimationFrame(mixMeters);
+}
+mixSetup();
+</script>
+
+<script>
 /* ---------- Projects: save, open, autosave ----------
    A project file (.etherbeat) is plain JSON. Sounds from your NI drive and natural voices are saved as a link to the file
    (they stay where they are); sounds you dropped in or chopped are kept inside the project so it opens anywhere. */
@@ -3280,6 +3544,7 @@ async function projLoad(data,meta){
     const missing=[];
     // Beat settings and patterns: anything the project doesn't mention keeps its current value.
     for(const k of Object.keys(data.state)) state[k]=data.state[k];
+    if(!data.state.mix) state.mix=mixDefault(); if(!data.state.solo) state.solo={};
     for(const L of ["A","B","C","D"]) if(!state.patterns[L]) state.patterns[L]=blankPat();
     // Instruments from the NI drive: make sure they're known and their notes are loaded.
     const fallback={a:"epiano",b:"none",mel:"flute",bass:"sub"};
@@ -3368,7 +3633,7 @@ function projNew(){
   VOICE.busy++;
   for(const k of Object.keys(samples)) delete samples[k];
   sampler.buf=null; sampler.name=""; sampler.bounds=[]; peaks=null; chopParams.forEach((p,i)=>chopParams[i]=defParams());
-  Object.assign(state,{mutes:{},vol:{},pitch:{},trackLocks:{},fx:{},vintage:"off",sweep:0,songMode:false,song:["A","A","B","A"],cur:"A",
+  Object.assign(state,{mix:mixDefault(),solo:{},mutes:{},vol:{},pitch:{},trackLocks:{},fx:{},vintage:"off",sweep:0,songMode:false,song:["A","A","B","A"],cur:"A",
     locks:{genre:false,tempo:false,key:false,chords:false,sounds:false}});
   ["A","B","C","D"].forEach(L=>state.patterns[L]=blankPat());
   NI.kit=null; if($("niKit")) $("niKit").value="";
