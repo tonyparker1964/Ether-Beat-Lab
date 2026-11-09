@@ -248,13 +248,27 @@ body.studio .pad{aspect-ratio:auto;height:clamp(54px,calc((var(--edit-h,42vh) - 
 body.studio .pads-wrap{grid-template-columns:minmax(0,1fr) 230px}
 
 /* ---------- Visualizer ---------- */
-.viz-box{position:relative;height:clamp(220px,34vh,520px);border-radius:12px;overflow:hidden;background:radial-gradient(120% 90% at 50% 100%,#1a1f3a,#070912 70%);margin-top:12px}
-body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 130px);min-height:160px}
+.viz-modes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.viz-modes button{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--dim)}
+.viz-modes .glyph{color:var(--mode-color);font-size:15px;line-height:1}
+.viz-modes .num{font-family:var(--f-mono);font-size:10px;opacity:.6}
+.viz-modes button[aria-pressed="true"]{color:var(--text);border-color:var(--mode-color);box-shadow:inset 0 0 0 1px var(--mode-color)}
+.viz-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;margin-top:12px}
+@media (max-width:760px){ .viz-layout{grid-template-columns:1fr} }
+.viz-box{position:relative;height:clamp(260px,46vh,620px);border-radius:12px;overflow:hidden;background:#070810}
+body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height:180px}
 .viz-box canvas{width:100%;height:100%;display:block}
 .viz-box:fullscreen{height:100vh;border-radius:0}
-.viz-box .viz-cap{position:absolute;left:14px;bottom:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:rgba(235,232,244,.55);pointer-events:none}
+.viz-cap{position:absolute;left:14px;bottom:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:rgba(235,232,244,.55);pointer-events:none}
+.viz-side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.viz-name{margin:0;font-family:var(--f-display);font-weight:600;font-size:16px}
+.viz-desc{margin:0;color:var(--dim);font-size:13px}
+.viz-sliders{display:flex;flex-direction:column;gap:8px}
+.viz-slider{display:flex;flex-direction:column;gap:4px}
+.viz-slider .head{display:flex;justify-content:space-between;align-items:baseline}
+.viz-slider output{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.viz-red{font-size:14px;font-weight:500}
 .viz-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.viz-ctl select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
 @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
 </style>
 </head>
@@ -470,16 +484,20 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 130px);min-height
     <div class="sounds-head">
       <h2>Visualizer</h2>
       <div class="viz-ctl">
-        <select id="vizMode" aria-label="Visualizer style">
-          <option value="bloom">Bloom</option>
-          <option value="orbit">Orbit</option>
-          <option value="skyline">Skyline</option>
-          <option value="tide">Tide</option>
-        </select>
-        <button class="mini" id="vizFull" title="Fill the screen (Esc to leave)">⛶ Full screen</button>
+        <button class="mini" id="vizReset" title="Back to the default look">Reset</button>
+        <button class="mini" id="vizFull" title="Fill the screen. In full screen, 1–5 change the scene and F or Esc leaves">⛶ Full screen</button>
       </div>
     </div>
-    <div class="viz-box" id="vizBox"><canvas id="viz" aria-label="Music visualizer"></canvas><span class="viz-cap" id="vizCap">PRESS PLAY</span></div>
+    <div class="viz-modes" id="vizModes" role="group" aria-label="Visualizer scene"></div>
+    <div class="viz-layout">
+      <div class="viz-box" id="vizBox"><canvas id="viz" aria-label="Music visualizer"></canvas><span class="viz-cap" id="vizCap">PRESS PLAY</span></div>
+      <div class="viz-side">
+        <p class="viz-name" id="vizName"></p>
+        <p class="viz-desc" id="vizDesc"></p>
+        <div id="vizSliders" class="viz-sliders"></div>
+        <label class="toggle viz-red"><input type="checkbox" id="vizReduced"> Reduce motion</label>
+      </div>
+    </div>
   </section>
 
   <section class="export panel" aria-label="Export">
@@ -1808,11 +1826,11 @@ async function niUseKit(kit,quiet){
     jobs.push(niAssignDrum(track,pick(pool)));
   }
   const res=await Promise.allSettled(jobs);
-  NI.kit=kit; $("niKit").value=kit; renderGrid(); renderPads(); niStatus();
+  NI.kit=kit; $("niKit").value=kit; renderGrid(); renderPads(); niStatus(); syncSounds();
   const failed=res.filter(r=>r.status==="rejected").length;
   if(!quiet) toast(failed?`NI kit ${kit} (${failed} sounds couldn't be read)`:"NI kit: "+kit);
 }
-function niSynthKit(){ Object.keys(NI_TRACKS).forEach(t=>{ if(samples[t]&&samples[t].ni) delete samples[t]; }); NI.kit=null; $("niKit").value=""; renderGrid(); renderPads(); niStatus(); }
+function niSynthKit(){ Object.keys(NI_TRACKS).forEach(t=>{ if(samples[t]&&samples[t].ni) delete samples[t]; }); NI.kit=null; $("niKit").value=""; renderGrid(); renderPads(); niStatus(); syncSounds(); }
 function niGenreKit(extraWords){
   if(!NI.kits.length) return null;
   const want=(GENRE_WORDS[state.genre]||[]).concat(extraWords||[]);
@@ -1826,7 +1844,7 @@ function niGenreKit(extraWords){
 function niRegister(inst){
   const key="ni:"+inst.id;
   if(!INST[key]){
-    INST[key]={n:inst.name+" · "+inst.kit,fam:"Native Instruments",ni:inst,play(c,out,t,f,v,dur){ niPlay(inst,c,out,t,f,v,dur); }};
+    INST[key]={n:inst.name+" · "+inst.kit,fam:"NI · "+(NI_CATS[inst.category]||"Instruments"),ni:inst,play(c,out,t,f,v,dur){ niPlay(inst,c,out,t,f,v,dur); }};
     if(inst.category==="bass") BASSES[key]=INST[key].n;
   }
   return key;
@@ -1868,17 +1886,69 @@ async function niRollAll(announce){
 }
 // Roll sounds and Randomize also pick NI sounds when that's switched on.
 const _rollSounds=rollSounds;
-rollSounds=function(fromButton){ _rollSounds(fromButton); if(NI.lib&&$("niRoll").checked) niRollAll(fromButton); };
+rollSounds=function(fromButton){ _rollSounds(fromButton); if(NI.lib&&$("niRoll").checked) niRollAll(fromButton); else niPreloadCurrent(); };
+/* Any NI instrument the sound menus point at gets its notes loaded, so it plays from the first hit. */
+function niPreloadCurrent(){ ["a","b","mel","bass"].forEach(k=>{ const d=INST[state.inst[k]]; if(d&&d.ni) niLoadInst(d.ni); }); }
+
+/* ---------- NI sounds in the Sounds menus ---------- */
+// Drum kit menus: every NI drum sound of that type, grouped by kit. Instrument menus: every NI instrument.
+const NI_KIT_SELECTS={kick:"kitKick",snare:"kitSnare",hat:"kitHat",ohat:"kitOhat",perc:"percSel",tom:"kitTom",crash:"kitCrash"};
+function niFillKitSelects(){
+  if(!NI.lib) return;
+  NI.drumByPath=new Map(NI.lib.drums.map(f=>[f.path,f]));
+  for(const [track,selId] of Object.entries(NI_KIT_SELECTS)){
+    const sel=$(selId); [...sel.querySelectorAll("optgroup.ni")].forEach(g=>g.remove());
+    const roles=NI_TRACKS[track], byKit=new Map();
+    NI.lib.drums.forEach(f=>{ if(!roles.includes(f.role)) return; if(!byKit.has(f.kit)) byKit.set(f.kit,[]); byKit.get(f.kit).push(f); });
+    [...byKit.keys()].sort((a,b)=>a.localeCompare(b)).forEach(kit=>{
+      const og=document.createElement("optgroup"); og.className="ni"; og.label="NI · "+kit;
+      byKit.get(kit).forEach(f=>og.appendChild(new Option(f.name+(f.role==="clap"&&track==="snare"?" (clap)":""),"nid:"+f.path)));
+      sel.appendChild(og);
+    });
+  }
+  niSyncKitSelects();
+}
+function niSyncKitSelects(){
+  for(const [track,selId] of Object.entries(NI_KIT_SELECTS)){
+    const smp=samples[track], sel=$(selId); if(!sel) continue;
+    if(smp&&smp.ni) sel.value="nid:"+smp.ni.path;
+  }
+}
+function niHookKitSelects(){
+  for(const [track,selId] of Object.entries(NI_KIT_SELECTS)){
+    const sel=$(selId), builtIn=sel.onchange;
+    sel.onchange=async e=>{
+      const v=e.target.value;
+      if(v.startsWith("nid:")){
+        const f=NI.drumByPath&&NI.drumByPath.get(v.slice(4)); if(!f) return;
+        pushUndo();
+        try{ await niAssignDrum(track,f); }catch(err){ toast(err.message); return; }
+        renderGrid(); renderPads(); niSyncKitSelects(); audition(track);
+      } else {
+        // A Beat Lab sound replaces the NI one on this track.
+        if(samples[track]&&samples[track].ni) delete samples[track];
+        builtIn&&builtIn.call(sel,e);
+      }
+    };
+  }
+  // Instrument menus: load an NI instrument's notes before playing the preview.
+  [["instA","keys"],["instB","keys"],["instMel","mel"],["instBass","bass"]].forEach(([id,kind])=>{
+    $(id).addEventListener("change",e=>{ const d=INST[e.target.value]; if(d&&d.ni) niLoadInst(d.ni).then(()=>preview(kind)); });
+  });
+}
+{ const raw=syncSounds; syncSounds=function(){ raw(); niSyncKitSelects(); }; }
 
 /* ---------- Library panel ---------- */
 function niApplyLibrary(lib){
   NI.lib=lib; NI.instById=new Map(lib.instruments.map(i=>[i.id,i]));
+  lib.instruments.forEach(niRegister);
   const kits=new Map(); lib.drums.forEach(f=>{ const k=kits.get(f.kit)||new Set(); k.add(f.role); kits.set(f.kit,k); });
   NI.kits=[...kits.entries()].filter(([,r])=>r.has("kick")&&(r.has("snare")||r.has("clap"))).map(([k])=>k).sort((a,b)=>a.localeCompare(b));
   const ks=$("niKit"); ks.innerHTML=""; ks.add(new Option("Beat Lab synth drums","")); NI.kits.forEach(k=>ks.add(new Option(k,k))); ks.value=NI.kit||"";
   const allKits=[...new Set(lib.drums.map(f=>f.kit).concat(lib.instruments.map(i=>i.kit)))].sort((a,b)=>a.localeCompare(b));
   const kf=$("niKitFilter"); kf.innerHTML=""; kf.add(new Option("All kits","")); allKits.forEach(k=>kf.add(new Option(k,k)));
   niStatus(); niRender();
+  niFillKitSelects(); syncSounds();
 }
 function niStatus(){
   const el=$("niStatus"), lib=NI.lib;
@@ -1917,7 +1987,7 @@ function niRender(){
       play.onclick=()=>niAuditionDrum(it.f);
       ["kick","snare","hat","ohat","perc","tom","crash","chop"].forEach(t=>sel.add(new Option(trackLabel(t)+" track",t)));
       sel.onchange=async()=>{ const t=sel.value; sel.value=""; if(!t) return; pushUndo();
-        try{ await niAssignDrum(t,it.f); renderGrid(); renderPads(); toast(`${it.f.name} on ${trackLabel(t)}`); }catch(e){ toast(e.message); } };
+        try{ await niAssignDrum(t,it.f); renderGrid(); renderPads(); niSyncKitSelects(); toast(`${it.f.name} on ${trackLabel(t)}`); }catch(e){ toast(e.message); } };
     } else {
       const n=it.i.zones.length;
       nm.textContent=it.i.name; meta.textContent=`${NI_CATS[it.i.category]||"Instrument"} · ${it.i.kit} · ${n} note${n===1?"":"s"}`;
@@ -1958,6 +2028,7 @@ function niSetup(){
   $("niKit").onchange=e=>{ pushUndo(); const k=e.target.value; if(k) niUseKit(k); else niSynthKit(); };
   $("niGenreKit").onclick=()=>{ const k=niGenreKit(); if(k){ pushUndo(); niUseKit(k); } else toast("Add your NI folders first"); };
   $("niSynthKit").onclick=()=>{ pushUndo(); niSynthKit(); toast("Back to Beat Lab's synth drums"); };
+  niHookKitSelects();
   niCall("library");
 }
 
@@ -2105,116 +2176,541 @@ niSetup();
 </script>
 <script>
 "use strict";
-/* ---------- Visualizer ---------- */
-// Hits are recorded as they're scheduled, so shapes flash exactly when each sound plays.
-const VIZ={hits:[],mode:"bloom",bins:null,wave:null,glow:{},t0:performance.now()};
-const VIZ_COL={kick:"--h-kick",snare:"--h-snare",hat:"--h-hat",ohat:"--h-ohat",perc:"--h-perc",tom:"--h-tom",crash:"--h-crash",
-  chop:"--h-chop",chops:"--h-chops",mel:"--h-mel",bass:"--h-bass",keys:"--h-keys",fx:"--h-fx"};
-const _trigger=trigger;
-trigger=function(c,bus,id,t,v,o){ if(c===ctx&&VIZ_COL[id]){ VIZ.hits.push({id,t,v:v||1}); if(VIZ.hits.length>400) VIZ.hits.splice(0,200); } return _trigger.apply(this,arguments); };
-function vizColors(){ const css=getComputedStyle(document.documentElement), out={}; for(const [k,v] of Object.entries(VIZ_COL)) out[k]=css.getPropertyValue(v).trim()||"#fff"; return out; }
-let VIZ_C=null;
-function vizFrame(){
-  requestAnimationFrame(vizFrame);
-  const box=$("vizBox"), cv=$("viz"); if(!box||!cv||!box.offsetParent&&document.fullscreenElement!==box) return;
-  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight; if(!w||!h) return;
-  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); }
-  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
-  if(!VIZ_C) VIZ_C=vizColors();
-  const live=analyser&&ctx&&ctx.state==="running"&&playing;
-  if(live){ if(!VIZ.bins) { VIZ.bins=new Uint8Array(analyser.frequencyBinCount); VIZ.wave=new Float32Array(analyser.fftSize); }
-    analyser.getByteFrequencyData(VIZ.bins); analyser.getFloatTimeDomainData(VIZ.wave); }
-  // Fade each sound's glow, and light it again when its hit comes due.
-  const now=ctx?ctx.currentTime:0;
-  for(const k of Object.keys(VIZ.glow)) VIZ.glow[k]*=.9;
-  while(VIZ.hits.length&&VIZ.hits[0].t<=now){ const hh=VIZ.hits.shift(); VIZ.glow[hh.id]=Math.max(VIZ.glow[hh.id]||0,Math.min(1,hh.v)); }
-  if(!playing) VIZ.hits.length=0;
-  const bins=VIZ.bins, n=bins?bins.length:0, t=(performance.now()-VIZ.t0)/1000, kick=VIZ.glow.kick||0;
-  const band=(a,b)=>{ if(!live) return 0; let s=0; for(let i=a;i<b;i++) s+=bins[i]; return s/((b-a)*255); };
-  const low=band(1,8), mid=band(8,60), high=band(60,200);
-  $("vizCap").textContent=live?`${G().n.toUpperCase()} · ${state.bpm} BPM · ${NAMES[state.root]} ${MODES[state.mode].n.split(" ")[0].toUpperCase()}`:"PRESS PLAY";
-  const mode=VIZ.mode;
-  // Trails: draw over the last frame with a dark veil instead of clearing.
-  g.fillStyle=mode==="skyline"?"rgba(7,9,18,.55)":mode==="tide"?"rgba(7,9,18,.45)":"rgba(7,9,18,.3)"; g.fillRect(0,0,w,h);
-  g.globalCompositeOperation=mode==="bloom"||mode==="orbit"?"lighter":"source-over";
-  if(mode==="bloom") vizBloom(g,w,h,t,low,mid,high,kick,live);
-  else if(mode==="orbit") vizOrbit(g,w,h,t,low,kick,live);
-  else if(mode==="skyline") vizSkyline(g,w,h,live);
-  else vizTide(g,w,h,t,low,mid,high,live);
-  g.globalCompositeOperation="source-over";
+/* Ether Beat Lab Visualizer: five scenes around the Zero Point (from Ether's visualizer package, audio.js + visuals.js). */
+const EtherViz=(()=>{
+const SPECTRUM_SIZE = 72;
+const MIN_DB = -86;
+const MAX_DB = -16;
+const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
+
+function emptyFrame() {
+  return {
+    bass: 0, mid: 0, high: 0, rms: 0, beat: false, pulse: 0,
+    spectrum: new Float32Array(SPECTRUM_SIZE), waveform: new Float32Array(256),
+  };
 }
-// Bloom: every sound is a petal around a pulsing center; a petal opens when its sound plays.
-function vizBloom(g,w,h,t,low,mid,high,kick,live){
-  const cx=w/2, cy=h/2, base=Math.min(w,h), ids=["kick","bass","snare","keys","mel","hat","perc","chop","ohat","tom","crash","fx"];
-  const n=ids.length, spin=t*.06;
-  ids.forEach((id,k)=>{
-    const glow=VIZ.glow[id]||0, a=spin+k/n*Math.PI*2, energy=live?(k%3===0?low:k%3===1?mid:high):.05;
-    const len=base*(.2+.22*energy+.22*glow), wid=base*(.035+.05*glow);
-    const tipX=cx+Math.cos(a)*len, tipY=cy+Math.sin(a)*len, nx=-Math.sin(a)*wid, ny=Math.cos(a)*wid;
-    const midX=cx+Math.cos(a)*len*.5, midY=cy+Math.sin(a)*len*.5;
-    g.fillStyle=VIZ_C[id]; g.globalAlpha=.16+.5*glow+.25*energy;
-    g.beginPath(); g.moveTo(cx,cy); g.quadraticCurveTo(midX+nx,midY+ny,tipX,tipY); g.quadraticCurveTo(midX-nx,midY-ny,cx,cy); g.fill();
-    g.globalAlpha=.5+.5*glow; g.beginPath(); g.arc(tipX,tipY,1.5+4*glow,0,Math.PI*2); g.fill();
-  });
-  g.globalAlpha=.35+.5*kick; g.fillStyle=VIZ_C.kick;
-  g.beginPath(); g.arc(cx,cy,base*(.035+.045*kick+.03*low),0,Math.PI*2); g.fill();
-  g.globalAlpha=1;
-}
-// Orbit: the frequency spectrum wrapped into a ring, with each sound as a moon.
-function vizOrbit(g,w,h,t,low,kick,live){
-  const cx=w/2, cy=h/2, R0=Math.min(w,h)*(.2+.05*kick), bins=VIZ.bins, n=bins?Math.floor(bins.length*.7):0, steps=180;
-  for(let i=0;i<steps;i++){
-    const v=n?bins[Math.floor(i/steps*n)]/255:.04, a=i/steps*Math.PI*2-Math.PI/2+t*.05, r2=R0+v*Math.min(w,h)*.28;
-    const id=["kick","bass","keys","mel","snare","hat"][Math.floor(i/steps*6)];
-    g.strokeStyle=VIZ_C[id]; g.globalAlpha=.35+.65*v; g.lineWidth=2;
-    g.beginPath(); g.moveTo(cx+Math.cos(a)*R0,cy+Math.sin(a)*R0); g.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2); g.stroke();
+
+class BeatDetector {
+  reset() {
+    this.floor = 0;
+    this.previous = 0;
+    this.lastBeat = -Infinity;
+    this.armed = true;
+    this.pulse = 0;
   }
-  g.globalAlpha=1;
-  Object.keys(VIZ_COL).forEach((id,k)=>{
-    const glow=VIZ.glow[id]||0, a=t*(.2+k*.03)+k*1.3, rr=R0*(1.9+k*.12);
-    const x=cx+Math.cos(a)*rr, y=cy+Math.sin(a)*rr*.62, r=3+14*glow;
-    g.fillStyle=VIZ_C[id]; g.globalAlpha=.25+.75*glow; g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
-  });
-  g.globalAlpha=1;
-  g.fillStyle=`rgba(255,179,107,${.12+.5*kick})`; g.beginPath(); g.arc(cx,cy,R0*.55*(1+.25*low),0,Math.PI*2); g.fill();
-}
-// Skyline: spectrum bars on a log scale, colored low to high by the track colors.
-function vizSkyline(g,w,h,live){
-  const bins=VIZ.bins, cols=64, order=["kick","bass","tom","snare","keys","mel","perc","chop","ohat","hat"];
-  const bw=w/cols;
-  for(let i=0;i<cols;i++){
-    let v=.03;
-    if(bins){ const a=Math.floor(Math.pow(i/cols,2)*bins.length*.75)+1, b=Math.max(a+1,Math.floor(Math.pow((i+1)/cols,2)*bins.length*.75)+1);
-      let s=0; for(let k=a;k<b;k++) s+=bins[k]; v=s/((b-a)*255); }
-    const id=order[Math.floor(i/cols*order.length)], bh=v*h*.88, glow=VIZ.glow[id]||0;
-    g.fillStyle=VIZ_C[id]; g.globalAlpha=.35+.5*Math.max(v,glow*.6);
-    g.fillRect(i*bw+1,h-bh,bw-2,bh);
-    g.globalAlpha=.18*v; g.fillRect(i*bw+1,h-bh-6,bw-2,3);
+
+  constructor() {
+    this.reset();
   }
-  g.globalAlpha=1;
-}
-// Tide: the waveform as layered glowing lines, rising with the energy of the beat.
-function vizTide(g,w,h,t,low,mid,high,live){
-  const wave=VIZ.wave, layers=[["bass",low,1.6],["keys",mid,1.1],["hat",high,.7]];
-  layers.forEach(([id,e,amp],k)=>{
-    g.strokeStyle=VIZ_C[id]; g.globalAlpha=Math.min(.9,.35+.4*((VIZ.glow[id]||0)*.5+e)); g.lineWidth=1.5+2*e;
-    g.beginPath();
-    for(let x=0;x<=w;x+=3){
-      const i=wave?Math.floor((x/w)*wave.length*.5+k*60)%wave.length:0;
-      const v=live&&wave?wave[i]:Math.sin(x/40+t*(1+k))*.03;
-      const y=h*(.35+k*.15)+v*h*amp*.45+Math.sin(x/90+t*.8+k)*8;
-      x?g.lineTo(x,y):g.moveTo(x,y);
+
+  update(energy, now, dt, sensitivity = 1) {
+    const threshold = Math.max(.012, this.floor * (1 + .85 / sensitivity));
+    if (energy < threshold * .8 || energy < this.previous * .82) this.armed = true;
+    const beat = this.armed && energy > threshold && energy > this.previous * 1.08
+      && now - this.lastBeat >= .22;
+    this.floor += (energy - this.floor) * (1 - Math.exp(-dt / .42));
+    this.previous = energy;
+    this.pulse *= Math.exp(-dt * 5.2);
+    if (beat) {
+      this.armed = false;
+      this.lastBeat = now;
+      this.pulse = 1;
     }
-    g.stroke();
-  });
-  g.globalAlpha=1;
+    return beat;
+  }
+}
+
+// Can tap an existing beat maker bus. The analyser's output stays unconnected.
+class SignalAnalyser {
+  constructor(context) {
+    this.node = context.createAnalyser();
+    this.node.fftSize = 4096;
+    this.node.smoothingTimeConstant = .36;
+    this.node.minDecibels = MIN_DB;
+    this.node.maxDecibels = MAX_DB;
+    this.hzPerBin = context.sampleRate / this.node.fftSize;
+    this.frequency = new Uint8Array(this.node.frequencyBinCount);
+    this.samples = new Float32Array(this.node.fftSize);
+    this.frame = emptyFrame();
+    this.detector = new BeatDetector();
+    const maxHz = Math.min(16000, context.sampleRate / 2);
+    this.ranges = Array.from({ length: SPECTRUM_SIZE }, (_, i) => [
+      36 * (maxHz / 36) ** (i / SPECTRUM_SIZE),
+      36 * (maxHz / 36) ** ((i + 1) / SPECTRUM_SIZE),
+    ]);
+  }
+
+  reset() {
+    this.detector.reset();
+    this.frame = emptyFrame();
+  }
+
+  peak(low, high) {
+    const first = Math.max(1, Math.floor(low / this.hzPerBin));
+    const end = Math.min(this.frequency.length, Math.max(first + 1, Math.ceil(high / this.hzPerBin)));
+    let peak = 0;
+    for (let i = first; i < end; i++) peak = Math.max(peak, this.frequency[i]);
+    return peak / 255;
+  }
+
+  read(now, dt, sensitivity = 1) {
+    this.node.getByteFrequencyData(this.frequency);
+    this.node.getFloatTimeDomainData(this.samples);
+    const frame = this.frame;
+    const bass = this.peak(36, 150);
+    const mid = this.peak(180, 2300);
+    const high = this.peak(2400, 12000);
+    const blend = 1 - Math.exp(-dt * 14);
+    frame.bass += (clamp(bass * sensitivity) - frame.bass) * blend;
+    frame.mid += (clamp(mid * sensitivity) - frame.mid) * blend;
+    frame.high += (clamp(high * sensitivity) - frame.high) * blend;
+    const db = MIN_DB + bass * (MAX_DB - MIN_DB);
+    frame.beat = this.detector.update(10 ** (db / 20), now, dt, sensitivity);
+    frame.pulse = this.detector.pulse;
+    for (let i = 0; i < this.ranges.length; i++) {
+      const [low, high] = this.ranges[i];
+      frame.spectrum[i] += (clamp(this.peak(low, high) * sensitivity) - frame.spectrum[i]) * blend;
+    }
+    let power = 0;
+    for (let i = 0; i < this.samples.length; i++) power += this.samples[i] ** 2;
+    frame.rms = clamp(Math.sqrt(power / this.samples.length) * sensitivity);
+    for (let i = 0; i < frame.waveform.length; i++) {
+      frame.waveform[i] = clamp(this.samples[this.samples.length - frame.waveform.length * 4 + i * 4] * sensitivity, -1, 1);
+    }
+    return frame;
+  }
+}
+
+
+const TAU = Math.PI * 2;
+const { sin, cos, PI, min } = Math;
+
+const MODES = [
+  { name: 'Frequency Portal', glyph: '◎', hue: 31, color: '#ffb673', description: 'Golden shockwaves radiate from a luminous core.', draw: portal },
+  { name: 'Cymatic Geometry', glyph: '◇', hue: 163, color: '#78ebc9', description: 'Frequency bands bend a rotating lattice into living mandalas.', draw: cymatic },
+  { name: 'Quantum Spectrum', glyph: '▥', hue: 266, color: '#bea2ff', description: 'Luminous columns trace the spectrum from sub-bass to treble.', draw: quantum },
+  { name: 'Cosmic Vortex', glyph: '✧', hue: 229, color: '#8daaff', description: 'Bass bends a spiral galaxy and kicks send starlight outward.', draw: cosmic },
+  { name: 'Liquid Frequency', glyph: '≈', hue: 298, color: '#f3a7f3', description: 'A metallic surface reshapes itself around the live waveform.', draw: liquid },
+];
+
+function color(hue, light = 64, alpha = 1) {
+  return `hsla(${hue}, 91%, ${light}%, ${alpha})`;
+}
+
+function seededPoints(count) {
+  let seed = 9273;
+  const next = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  return Array.from({ length: count }, () => [next(), next(), next(), next()]);
+}
+const points = seededPoints(1800);
+
+function line(ctx, x, y, endX, endY) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+}
+
+function circle(ctx, radius, start = 0, end = TAU) {
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, start, end);
+  ctx.stroke();
+}
+
+function glow(ctx, x, y, radius, hue, strength) {
+  const fill = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  fill.addColorStop(0, color(hue, 92, strength));
+  fill.addColorStop(.19, color(hue, 65, strength * .51));
+  fill.addColorStop(.55, color(hue, 48, strength * .15));
+  fill.addColorStop(1, color(hue, 35, 0));
+  ctx.fillStyle = fill;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+function backdrop(ctx, width, height, hue, settings) {
+  ctx.fillStyle = '#070810';
+  ctx.fillRect(0, 0, width, height);
+  const haze = ctx.createRadialGradient(width * .5, height * .46, 0, width * .5, height * .46, Math.max(width, height) * .58);
+  haze.addColorStop(0, color(hue, 19, .54 * settings.glow));
+  haze.addColorStop(1, color(hue, 12, 0));
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = '#adb9ff0c';
+  ctx.lineWidth = 1;
+  const step = 34;
+  for (let x = (width / 2) % step; x < width; x += step) line(ctx, x, 0, x, height);
+  for (let y = (height * .46) % step; y < height; y += step) line(ctx, 0, y, width, y);
+  for (let i = 0; i < 110 * settings.density; i++) {
+    const [x, y, size, light] = points[i];
+    ctx.fillStyle = color(hue + 25, 78, .15 + light * .36);
+    ctx.fillRect(x * width, y * height, size * 1.5 + .35, size * 1.5 + .35);
+  }
+}
+
+function calibration(ctx, hue) {
+  ctx.lineWidth = .6;
+  ctx.strokeStyle = color(hue, 79, .19);
+  circle(ctx, 202);
+  circle(ctx, 212);
+  for (let i = 0; i < 96; i++) {
+    const a = i * TAU / 96;
+    const end = i % 8 === 0 ? 225 : 217;
+    line(ctx, cos(a) * 213, sin(a) * 213, cos(a) * end, sin(a) * end);
+  }
+  ctx.fillStyle = color(hue, 83, .58);
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('0°', 0, -232);
+  ctx.fillText('180°', 0, 242);
+  ctx.textAlign = 'left';
+  ctx.fillText('Z / 00', 210, 14);
+}
+
+function zeroPoint(ctx, hue, pulse, settings) {
+  glow(ctx, 0, 0, 55 + pulse * 34, hue, (.58 + pulse * .34) * settings.glow);
+  ctx.lineWidth = .8;
+  ctx.strokeStyle = color(hue, 91, .62);
+  circle(ctx, 8 + pulse * 4);
+  ctx.fillStyle = '#fff7e8';
+  ctx.beginPath();
+  ctx.moveTo(0, -5);
+  ctx.lineTo(3.5, 0);
+  ctx.lineTo(0, 5);
+  ctx.lineTo(-3.5, 0);
+  ctx.fill();
+  line(ctx, -16, 0, -10, 0);
+  line(ctx, 10, 0, 16, 0);
+}
+
+function portal(ctx, frame, t, settings, hue) {
+  const { bass, high, mid, pulse } = frame;
+  glow(ctx, 0, 0, 190, hue, (.27 + bass * .25) * settings.glow);
+  for (let i = 0; i < 16; i++) {
+    const radius = 24 + i * 10.5 + bass * (4 + i * .56) + sin(t * 1.5 - i * .67) * 3;
+    ctx.lineWidth = i % 4 === 0 ? 1.45 + mid : .65;
+    ctx.strokeStyle = color(hue + i * 1.1, 58 + (i % 4 === 0 ? 17 : 0), .36 + high * .28);
+    ctx.beginPath();
+    for (let step = 0; step <= 200; step++) {
+      const a = step * TAU / 200;
+      const r = radius + sin(a * 9 + i * .51 - t * 1.3) * (1.6 + high * 5)
+        + sin(a * 3 - t * .8 + i * .21) * (i * .39);
+      ctx.lineTo(r * cos(a), r * sin(a));
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+  for (let i = 0; i < 13; i++) {
+    const radius = 53 + i * 10.6;
+    const angle = t * (i % 2 ? -.28 : .38) + i * 2.2;
+    ctx.lineWidth = 1.6 + mid * 1.9;
+    ctx.strokeStyle = color(hue + 8, 80, .68);
+    circle(ctx, radius + bass * 8, angle, angle + .25 + high * .28);
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 900 * settings.density; i++) {
+    const [angle, distance, size, phase] = points[i];
+    const a = angle * TAU + t * (.1 + phase * .21);
+    const r = 19 + distance ** .66 * 178 + bass * distance * 13;
+    ctx.fillStyle = color(hue + phase * 22, 54 + phase * 35, (.14 + size * .45) * (.65 + .35 * sin(t * 2 + phase * TAU)));
+    const dot = .45 + size * (1.55 + high);
+    ctx.fillRect(cos(a) * r, sin(a) * r, dot, dot);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  if (pulse > .025) {
+    ctx.strokeStyle = color(hue + 11, 84, pulse * .86);
+    ctx.lineWidth = 2.5 * pulse + .7;
+    circle(ctx, 30 + (1 - pulse) * 190);
+  }
+}
+
+function cymatic(ctx, frame, t, settings, hue) {
+  const { bass, mid, high, pulse } = frame;
+  glow(ctx, 0, 0, 185, hue, (.24 + mid * .23) * settings.glow);
+  ctx.rotate(t * .105);
+  for (let ring = 0; ring < 12; ring++) {
+    const r = 33 + ring * 12.6 + bass * 7;
+    const twist = ring * .071 + t * .15;
+    const vertices = ring % 3 === 0 ? 6 : 12;
+    ctx.strokeStyle = color(hue + ring * 5, 67 + high * 16, .39);
+    ctx.lineWidth = ring % 3 === 0 ? 1.2 : .65;
+    ctx.beginPath();
+    for (let j = 0; j <= vertices; j++) {
+      const a = j * TAU / vertices + twist;
+      const warped = r * (1 + mid * .09 * cos(a * 6));
+      ctx.lineTo(cos(a) * warped, sin(a) * warped);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (let layer = 0; layer < 6; layer++) {
+    const petalCount = layer < 3 ? 6 : 12;
+    ctx.lineWidth = .75 + (layer % 3) * .45;
+    ctx.strokeStyle = color(hue + layer * 9, 60 + layer * 4, .42 + high * .2);
+    ctx.beginPath();
+    for (let j = 0; j <= 360; j++) {
+      const a = j * TAU / 360;
+      const r = 68 + layer * 14 + (24 + mid * 14) * cos(a * petalCount + t * .7 + layer * .8)
+        + (8 + high * 8) * cos(a * 18 + t + layer);
+      ctx.lineTo(cos(a) * r, sin(a) * r);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+  for (let i = 0; i < 120 * settings.density; i++) {
+    const a = i * TAU / 120 + t * .15;
+    const r = 161 + 19 * cos(a * 12) + pulse * 12;
+    ctx.fillStyle = color(hue + 37, 85, .6);
+    ctx.fillRect(cos(a) * r, sin(a) * r, 1.6, 1.6);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function quantum(ctx, frame, t, settings, hue) {
+  const { spectrum, bass, pulse, rms } = frame;
+  glow(ctx, 0, 40, 185, hue, (.24 + rms * .8) * settings.glow);
+  ctx.lineWidth = .75;
+  for (let j = 0; j < 9; j++) {
+    const y = 65 + j * j * 1.5;
+    ctx.strokeStyle = color(hue - 20, 72, .19 - j * .012);
+    line(ctx, -203, y, 203, y);
+  }
+  for (let j = -8; j <= 8; j++) {
+    ctx.strokeStyle = color(hue, 75, .2);
+    line(ctx, j * 17, 65, j * 27, 165);
+  }
+  for (let row = 2; row >= 0; row--) {
+    for (let i = 0; i < spectrum.length; i++) {
+      const x = (i - (spectrum.length - 1) / 2) * 5.25 + row * 6;
+      const y = 73 - row * 14 - (x / 190) * 18;
+      const idle = (8 + 17 * (1 + sin(i * .25 - t * 1.8))) * (1 - i / 114);
+      const amplitude = spectrum[i] ** 1.6;
+      const height = (idle + amplitude * 139 + pulse * 22 * (1 - i / spectrum.length)) * (1 - row * .2);
+      const tint = hue + 43 - i * 1.55;
+      const gradient = ctx.createLinearGradient(x, y, x, y - height);
+      gradient.addColorStop(0, color(tint, 30, .16));
+      gradient.addColorStop(.7, color(tint, 54, .52 - row * .13));
+      gradient.addColorStop(1, color(tint, 76, .94 - row * .21));
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, y - height, 3.4, height);
+      ctx.fillStyle = color(tint, 88, .92 - row * .23);
+      ctx.fillRect(x, y - height, 3.4, 1.3);
+      if (!row) {
+        ctx.fillStyle = color(tint, 62, .2);
+        ctx.fillRect(x, y + 3, 3, height * .27);
+      }
+    }
+  }
+  ctx.strokeStyle = color(hue - 32, 87, .36 + bass * .4);
+  ctx.beginPath();
+  for (let i = 0; i < frame.waveform.length; i++) {
+    const x = -188 + i / (frame.waveform.length - 1) * 376;
+    ctx.lineTo(x, -92 + frame.waveform[i] * 50 + sin(i * .09 - t * 2) * 3);
+  }
+  ctx.stroke();
+  for (let i = 0; i < 48 * settings.density; i++) {
+    const [x, y, size, phase] = points[i];
+    ctx.fillStyle = color(hue - phase * 65, 83, .18 + pulse * .42);
+    ctx.fillRect((x - .5) * 390, -145 + ((y + t * .08) % 1) * 190, size * 2 + .5, 1.3);
+  }
+}
+
+function cosmic(ctx, frame, t, settings, hue) {
+  const { bass, mid, high, pulse } = frame;
+  glow(ctx, 0, 0, 175, hue + 38, (.30 + bass * .23) * settings.glow);
+  ctx.save();
+  ctx.rotate(-.28);
+  ctx.scale(1.06, .77);
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < points.length * settings.density; i++) {
+    const [distance, spread, size, phase] = points[i];
+    const arm = i % 4 * TAU / 4;
+    const drift = (spread - .5) * (65 + mid * 36);
+    const r = 12 + distance ** .73 * 169 + pulse * 23 * distance;
+    const a = arm + distance * 6.4 + t * (.26 - distance * .15) + drift / (r + 16);
+    const dot = .5 + size ** 3 * (2.1 + high * 2.6);
+    const tint = phase > .86 ? 41 : hue + (i % 4) * 15 - distance * 20;
+    ctx.fillStyle = color(tint, 56 + size * 35, .18 + phase * .58);
+    ctx.fillRect(cos(a) * (r + drift * .28), sin(a) * (r + drift * .28), dot, dot);
+  }
+  if (pulse > .035) {
+    ctx.lineWidth = .85 + pulse;
+    ctx.strokeStyle = color(51, 85, pulse * .59);
+    circle(ctx, 26 + (1 - pulse) * 174);
+  }
+  ctx.restore();
+}
+
+function liquid(ctx, frame, t, settings, hue) {
+  const { bass, mid, high, pulse, waveform } = frame;
+  glow(ctx, 0, 0, 194, hue - 70, (.27 + bass * .26) * settings.glow);
+  const bands = 42;
+  function contour(index, reverse = false) {
+    const ratio = index / bands;
+    for (let j = 0; j <= 160; j++) {
+      const a = (reverse ? 160 - j : j) * TAU / 160;
+      const wave = waveform[Math.floor((a % TAU) / TAU * waveform.length)];
+      const radius = 24 + ratio * 141 + (14 + mid * 16) * sin(a * 3 + t + ratio * 4)
+        + (8 + high * 12) * cos(a * 5 - t * 1.3 - ratio * 4) + pulse * ratio * 17
+        + wave * ratio * 14;
+      const x = cos(a) * radius * 1.08;
+      const y = sin(a) * radius * .87;
+      if (j === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+  for (let i = bands; i > 0; i--) {
+    const light = 23 + 25 * (1 + sin(i * .63 - t * 1.1));
+    const gradient = ctx.createLinearGradient(-152, -125, 157, 125);
+    gradient.addColorStop(0, color(hue - 85, min(98, light + 26), .91));
+    gradient.addColorStop(.27, color(hue - 43, light * .55, .93));
+    gradient.addColorStop(.48, color(hue + 20, min(97, light + 20), .91));
+    gradient.addColorStop(.65, color(hue + 71, light, .94));
+    gradient.addColorStop(.84, color(hue - 110, min(97, light + 14), .9));
+    gradient.addColorStop(1, color(hue - 38, light * .56, .9));
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    contour(i);
+    contour(i - 1, true);
+    ctx.fill('evenodd');
+    if (i % 4 === 0) {
+      ctx.strokeStyle = color(hue - 68, 94, (.13 + high * .17) * settings.glow);
+      ctx.lineWidth = .65;
+      ctx.beginPath();
+      contour(i);
+      ctx.stroke();
+    }
+  }
+  ctx.fillStyle = color(hue - 61, 92, .41 + pulse * .3);
+  for (let i = 0; i < 95 * settings.density; i++) {
+    const [angle, radius, size, phase] = points[i];
+    const a = angle * TAU - t * .11;
+    const r = 178 + radius * 22 + phase * bass * 8;
+    ctx.fillRect(cos(a) * r, sin(a) * r * .91, .5 + size * 1.4, .5 + size * 1.4);
+  }
+}
+
+class EtherRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d', { alpha: false });
+    if (!this.ctx) throw new Error('Canvas 2D is unavailable.');
+    this.time = 0;
+    this.quietSpectrum = new Float32Array(72);
+    this.quietWave = new Float32Array(256);
+  }
+
+  draw(mode, frame, settings, dt) {
+    const { canvas, ctx } = this;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (width < 1 || height < 1) return;
+    const dpr = min(2, window.devicePixelRatio || 1);
+    const pixelWidth = Math.round(width * dpr);
+    const pixelHeight = Math.round(height * dpr);
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+    }
+    if (!settings.reduced) this.time += dt * settings.motion;
+    ctx.setTransform(pixelWidth / width, 0, 0, pixelHeight / height, 0, 0);
+    const hue = (mode.hue + settings.colorShift) % 360;
+    backdrop(ctx, width, height, hue, settings);
+    ctx.save();
+    ctx.translate(width / 2, height * .46);
+    const scale = min(width / 505, height / 530);
+    ctx.scale(scale, scale);
+    const response = settings.reduced ? .37 : 1;
+    let signal = frame;
+    if (settings.reduced) {
+      const blend = 1 - Math.exp(-dt * 4);
+      for (let i = 0; i < frame.spectrum.length; i++) {
+        this.quietSpectrum[i] += (frame.spectrum[i] * response - this.quietSpectrum[i]) * blend;
+      }
+      for (let i = 0; i < frame.waveform.length; i++) {
+        this.quietWave[i] = frame.waveform[i] * response;
+      }
+      signal = {
+        ...frame, pulse: 0, rms: frame.rms * response, bass: frame.bass * response,
+        mid: frame.mid * response, high: frame.high * response,
+        spectrum: this.quietSpectrum, waveform: this.quietWave,
+      };
+    }
+    calibration(ctx, hue);
+    ctx.save();
+    mode.draw(ctx, signal, this.time, settings, hue);
+    ctx.restore();
+    zeroPoint(ctx, hue, signal.pulse, settings);
+    ctx.restore();
+  }
+}
+
+return {SignalAnalyser,EtherRenderer,MODES,emptyFrame};
+})();
+
+/* ---------- Visualizer ---------- */
+// Beat Lab's master output feeds the visualizer's analyser in parallel. Kicks come straight from the
+// sequencer, so the Zero Point pulses exactly on the beat instead of guessing it from the audio.
+const VIZ={mode:0,renderer:null,analyser:null,idle:EtherViz.emptyFrame(),kicks:[],pulse:0,prev:null,
+  settings:{sensitivity:1,motion:1,density:.8,glow:.86,colorShift:0,reduced:matchMedia("(prefers-reduced-motion: reduce)").matches}};
+const VIZ_CONTROLS=[{key:"sensitivity",label:"Sensitivity",min:25,max:200,value:100},{key:"motion",label:"Motion",min:0,max:180,value:100},
+  {key:"density",label:"Particles",min:0,max:100,value:80},{key:"glow",label:"Glow",min:0,max:100,value:86},{key:"colorShift",label:"Hue shift",min:0,max:360,value:0,unit:"°"}];
+const _trigger=trigger;
+trigger=function(c,bus,id,t,v,o){ if(c===ctx&&id==="kick"){ VIZ.kicks.push(t); if(VIZ.kicks.length>64) VIZ.kicks.splice(0,32); } return _trigger.apply(this,arguments); };
+function vizSelect(i){
+  VIZ.mode=i; const m=EtherViz.MODES[i];
+  document.querySelectorAll("#vizModes button").forEach((b,k)=>b.setAttribute("aria-pressed",String(k===i)));
+  $("vizName").textContent=m.name; $("vizDesc").textContent=m.description; $("viz").setAttribute("aria-label",m.name+" animation");
+  try{ localStorage.setItem("beatlab.vizMode",String(i)); }catch(e){}
+}
+function vizFrame(ms){
+  requestAnimationFrame(vizFrame);
+  const box=$("vizBox"); if(!box||(!box.offsetParent&&document.fullscreenElement!==box)){ VIZ.prev=null; return; }
+  if(!VIZ.renderer){ try{ VIZ.renderer=new EtherViz.EtherRenderer($("viz")); }catch(e){ $("vizDesc").textContent=e.message; return; } }
+  const now=ms/1000, dt=Math.min(.05,now-(VIZ.prev??now)); VIZ.prev=now;
+  if(ctx&&analyser&&!VIZ.analyser){ VIZ.analyser=new EtherViz.SignalAnalyser(ctx); analyser.connect(VIZ.analyser.node); }
+  const live=!!(VIZ.analyser&&ctx.state==="running"&&playing);
+  let frame=VIZ.idle;
+  if(live){
+    frame=VIZ.analyser.read(now,dt,VIZ.settings.sensitivity);
+    VIZ.pulse*=Math.exp(-dt*5.2);
+    while(VIZ.kicks.length&&VIZ.kicks[0]<=ctx.currentTime){ VIZ.kicks.shift(); VIZ.pulse=1; }
+    frame.pulse=Math.max(frame.pulse,VIZ.pulse);
+  } else { VIZ.kicks.length=0; VIZ.pulse=0; }
+  VIZ.renderer.draw(EtherViz.MODES[VIZ.mode],frame,VIZ.settings,dt);
+  $("vizCap").textContent=live?`${G().n.toUpperCase()} · ${state.bpm} BPM · ${NAMES[state.root]} ${MODES[state.mode].n.split(" ")[0].toUpperCase()}`:"PRESS PLAY";
 }
 function vizSetup(){
-  try{ const m=localStorage.getItem("beatlab.viz"); if(m&&["bloom","orbit","skyline","tide"].includes(m)) VIZ.mode=m; }catch(e){}
-  $("vizMode").value=VIZ.mode;
-  $("vizMode").onchange=e=>{ VIZ.mode=e.target.value; try{ localStorage.setItem("beatlab.viz",VIZ.mode); }catch(err){} };
+  const modes=$("vizModes");
+  EtherViz.MODES.forEach((m,i)=>{ const b=document.createElement("button"); b.type="button"; b.style.setProperty("--mode-color",m.color);
+    b.innerHTML=`<span aria-hidden="true" class="glyph">${m.glyph}</span><span>${m.name}</span><span aria-hidden="true" class="num">0${i+1}</span>`;
+    b.onclick=()=>vizSelect(i); modes.appendChild(b); });
+  const inputs=VIZ_CONTROLS.map(({key,label,min,max,value,unit="%"})=>{
+    const row=document.createElement("label"); row.className="viz-slider";
+    row.innerHTML=`<span class="head"><span class="lbl">${label}</span><output></output></span><input type="range" min="${min}" max="${max}" value="${value}">`;
+    $("vizSliders").appendChild(row);
+    const input=row.querySelector("input"), out=row.querySelector("output");
+    const update=()=>{ VIZ.settings[key]=Number(input.value)/(unit==="%"?100:1); out.textContent=input.value+unit; };
+    input.addEventListener("input",update); update();
+    return {input,value,update};
+  });
+  const red=$("vizReduced"); red.checked=VIZ.settings.reduced; red.onchange=()=>{ VIZ.settings.reduced=red.checked; };
+  $("vizReset").onclick=()=>{ inputs.forEach(({input,value,update})=>{ input.value=value; update(); }); red.checked=VIZ.settings.reduced=matchMedia("(prefers-reduced-motion: reduce)").matches; };
   $("vizFull").onclick=()=>{ const b=$("vizBox"); if(document.fullscreenElement) document.exitFullscreen(); else if(b.requestFullscreen) b.requestFullscreen().catch(()=>toast("Full screen isn't available here")); };
   $("vizBox").ondblclick=()=>$("vizFull").click();
+  // In full screen: 1–5 pick a scene, F leaves (Esc works too).
+  document.addEventListener("keydown",e=>{
+    const box=$("vizBox"); if(document.fullscreenElement!==box) return;
+    if(e.metaKey||e.ctrlKey||e.altKey) return;
+    if(e.key>="1"&&e.key<="5"){ e.preventDefault(); e.stopPropagation(); vizSelect(+e.key-1); }
+    else if(e.key.toLowerCase()==="f"){ e.preventDefault(); e.stopPropagation(); $("vizFull").click(); }
+  },true);
+  let saved=0; try{ saved=+localStorage.getItem("beatlab.vizMode")||0; }catch(e){}
+  vizSelect(saved>=0&&saved<EtherViz.MODES.length?saved:0);
   requestAnimationFrame(vizFrame);
 }
 
