@@ -643,6 +643,7 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
         <button class="mini" id="scriptCopy" title="Write the current beat out as a script">Copy this beat as a script</button>
         <button class="mini" id="scriptSave">Save as .txt</button>
         <button class="mini" id="scriptExample">Example</button>
+        <button class="mini" id="scriptClear" title="Empty the script box (your beat stays as it is)">Clear</button>
       </div>
       <div class="script-report" id="scriptReport" role="status"></div>
       <input type="file" id="scriptFile" accept=".txt,.ebs,text/plain" hidden>
@@ -5437,6 +5438,7 @@ function setupScript(){
   ta.addEventListener("dragover",e=>{ if(e.dataTransfer.types.includes("Files")){ e.preventDefault(); ta.classList.add("drag"); } });
   ta.addEventListener("dragleave",()=>ta.classList.remove("drag"));
   ta.addEventListener("drop",e=>{ if(!e.dataTransfer.files.length) return; e.preventDefault(); ta.classList.remove("drag"); readFile(e.dataTransfer.files[0]); });
+  $("scriptClear").onclick=()=>{ ta.value=""; $("scriptReport").textContent=""; ta.focus(); };
   $("scriptExample").onclick=()=>{ ta.value=SCR_EXAMPLE; $("scriptReport").textContent="Example loaded in the box. Press Load script to hear it."; };
   $("scriptCopy").onclick=async()=>{ ta.value=beatToScript(); try{ await navigator.clipboard.writeText(ta.value); toast("Beat copied as a script"); }catch(e){ ta.select(); toast("Script is in the box. Copy it from there"); } };
   $("scriptSave").onclick=()=>{ const txt=ta.value.trim()?ta.value:beatToScript(); const m=txt.match(/^\s*title\s+(.+)$/mi);
