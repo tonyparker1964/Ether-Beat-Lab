@@ -51,6 +51,24 @@ h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
 #rec .ic{color:var(--rec)} #rec[aria-pressed="true"] .ic{color:#1a0705}
 #play[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .spacer{flex:1}
+/* Project button and menu */
+.proj{position:relative;display:flex}
+.proj-btn{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;padding:5px 11px 5px 9px;max-width:240px;min-width:0}
+.proj-btn:hover{border-color:var(--dim)}
+.proj-ic{color:var(--accent);font-size:16px}
+.proj-txt{display:flex;flex-direction:column;align-items:flex-start;min-width:0;line-height:1.15}
+.proj-k{font-family:var(--f-mono);font-size:8.5px;letter-spacing:.18em;color:var(--dim)}
+.proj-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+.proj-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.proj-dot[hidden]{display:none}
+.proj-car{color:var(--dim);font-size:11px}
+.proj-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:50;min-width:240px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
+  padding:6px;box-shadow:0 14px 40px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.proj-menu button{display:flex;justify-content:space-between;align-items:center;gap:18px;border:0;background:none;text-align:left;padding:9px 11px;border-radius:8px;font-size:14px}
+.proj-menu button:hover,.proj-menu button:focus-visible{background:var(--panel);color:var(--accent);outline:0}
+.proj-menu kbd{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.proj-menu hr{border:0;border-top:1px solid var(--line);margin:5px 4px}
+.proj-note{margin:6px 10px 4px;font-size:12px;color:var(--dim);max-width:260px;overflow-wrap:anywhere}
 
 /* Control deck */
 .deck{display:flex;flex-direction:column;gap:16px}
@@ -280,6 +298,11 @@ body.studio .st-side .fields{grid-template-columns:1fr 1fr}
 @media (max-width:1560px){ body.studio .st-lcd>div:nth-child(5){display:none} }
 @media (max-width:1380px){ body.studio .st-lcd>div:nth-child(4){display:none} body.studio #scope{display:none} }
 @media (max-width:1180px){ body.studio #gen{display:none} }
+@media (max-width:1800px){ body.studio #scope{display:none} }
+@media (max-width:1020px){ body.studio .proj-txt{display:none} }
+@media (max-width:1380px){ body.studio #gen{display:none} body.studio .proj-name{max-width:120px} }
+@media (max-width:1240px){ body.studio .st-lcd>div:nth-child(3){display:none} body.studio .st-lcd>div:nth-child(2){border-right:0} body.studio .proj-k{display:none} }
+@media (max-width:1100px){ body.studio #mutate{display:none} body.studio .proj-name{max-width:90px} }
 body.studio .pads{grid-template-columns:repeat(8,minmax(0,1fr))}
 body.studio .pad{aspect-ratio:auto;height:clamp(54px,calc((var(--edit-h,42vh) - 210px)/2),110px)}
 body.studio .pads-wrap{grid-template-columns:minmax(0,1fr) 230px}
@@ -316,6 +339,22 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
     <div class="brand"><span class="mark">ETHER</span><h1>Beat Lab</h1></div>
     <canvas id="scope" aria-hidden="true"></canvas>
     <div class="transport">
+      <div class="proj" id="proj">
+        <button class="proj-btn" id="projBtn" aria-haspopup="menu" aria-expanded="false" title="Your project: new, open, save (⌘S saves)">
+          <span class="proj-ic" aria-hidden="true">▤</span><span class="proj-txt"><span class="proj-k">PROJECT</span><span class="proj-name" id="projName">Untitled beat</span></span>
+          <span class="proj-dot" id="projDot" title="Unsaved changes" hidden></span><span class="proj-car" aria-hidden="true">▾</span>
+        </button>
+        <div class="proj-menu" id="projMenu" role="menu" hidden>
+          <button role="menuitem" data-act="new"><span>New beat</span><kbd>⌘N</kbd></button>
+          <button role="menuitem" data-act="open"><span>Open…</span><kbd>⌘O</kbd></button>
+          <hr>
+          <button role="menuitem" data-act="save"><span>Save</span><kbd>⌘S</kbd></button>
+          <button role="menuitem" data-act="saveas"><span>Save as…</span><kbd>⇧⌘S</kbd></button>
+          <hr>
+          <button role="menuitem" data-act="export"><span>Export audio…</span><kbd>⌘E</kbd></button>
+          <p class="proj-note" id="projNote">Your work is kept automatically while you go.</p>
+        </div>
+      </div>
       <button class="btn" id="play" aria-pressed="false"><span class="ic">▶</span><span>Play</span></button>
       <button class="btn" id="rec" aria-pressed="false" title="Record pad hits into the grid while playing"><span class="ic">●</span><span>Rec</span></button>
       <span class="spacer"></span>
@@ -1821,7 +1860,7 @@ async function native(action,data){
   const r=await window.webkit.messageHandlers.ether.postMessage(Object.assign({action},data||{}));
   return typeof r==="string"?JSON.parse(r):r;
 }
-const NI={lib:null,ready:new Map(),loading:new Map(),kit:null,kits:[],instById:new Map()};
+const NI={gen:0,lib:null,ready:new Map(),loading:new Map(),kit:null,kits:[],instById:new Map()};
 // Which NI drum sounds a kit fills each track with (first type found wins).
 const NI_TRACKS={kick:["kick"],snare:["snare","clap"],hat:["closedHat","shaker"],ohat:["openHat","ride"],perc:["perc","shaker","rim"],tom:["tom"],crash:["crash","cymbal","ride"]};
 // Which NI drum sounds each Drum kit menu offers.
@@ -1877,8 +1916,10 @@ function niLoad(path){
 }
 
 /* Drum sounds go onto Beat Lab's own sample slots, so the sequencer, pads and export use them. */
+// NI.gen goes up when a project is opened, so sounds still loading for the old beat don't land in the new one.
 async function niAssignDrum(track,file){
-  const b=await niLoad(file.path), d=b.buf.duration;
+  const gen=NI.gen, b=await niLoad(file.path), d=b.buf.duration;
+  if(gen!==NI.gen) return;
   samples[track]={buf:b.buf,name:file.name,start:b.start/d,end:1,ni:file,
     p:Object.assign(defParams(),{level:Math.min(3,(NI_TRIM[track]||.6)*b.norm),mode:"oneshot"})};
 }
@@ -1892,7 +1933,8 @@ async function niUseKit(kit,quiet){
     if(!pool.length){ if(samples[track]&&samples[track].ni) delete samples[track]; continue; }
     jobs.push(niAssignDrum(track,pick(pool)));
   }
-  const res=await Promise.allSettled(jobs);
+  const gen=NI.gen, res=await Promise.allSettled(jobs);
+  if(gen!==NI.gen) return;
   NI.kit=kit; $("niKit").value=kit; renderGrid(); renderPads(); niStatus(); syncSounds();
   const failed=res.filter(r=>r.status==="rejected").length;
   if(!quiet) toast(failed?`NI kit ${kit} (${failed} sounds couldn't be read)`:"NI kit: "+kit);
@@ -1927,7 +1969,8 @@ function niPlay(inst,c,out,t,f,v,dur){
   src.connect(g).connect(out); src.start(t,best.r.start); src.stop(t+len+rel+.03);
 }
 async function niAssignInst(slot,inst,quiet){
-  const key=niRegister(inst); await niLoadInst(inst);
+  const key=niRegister(inst), gen=NI.gen; await niLoadInst(inst);
+  if(gen!==NI.gen) return;
   state.inst[slot]=key; if(slot==="b"&&state.inst.blend<.25) state.inst.blend=.4;
   syncSounds(); renderGrid(); renderPadEdit();
   if(!quiet) toast(`${NI_SLOTS[slot]}: ${inst.name}`);
@@ -2343,6 +2386,7 @@ async function voiceMake(word,quiet){
   if(r.error){ toast(r.error); return; }
   const f={path:r.path,name:`${entry[0]==="custom"?text:entry[1]} — ${VOICE.singer}`,role:"vocal",kit:"Natural voice"};
   await niAssignDrum("chop",f);
+  if(job!==VOICE.busy||!samples.chop) return;
   samples.chop.voice={word,singer:VOICE.singer};
   renderGrid(); renderPads(); voiceSyncMenu();
   if(!quiet) audition("chop");
@@ -3184,6 +3228,230 @@ function studioSetup(){
 }
 vizSetup();
 studioSetup();
+</script>
+
+<script>
+/* ---------- Projects: save, open, autosave ----------
+   A project file (.etherbeat) is plain JSON. Sounds from your NI drive and natural voices are saved as a link to the file
+   (they stay where they are); sounds you dropped in or chopped are kept inside the project so it opens anywhere. */
+const PROJ={name:"Untitled beat",path:"",savedSig:"",autoSig:"",busy:false,b64:new WeakMap(),restoring:false,lastTitle:""};
+function projWav(buf){ // 16-bit WAV, level untouched
+  const ch=buf.numberOfChannels, n=buf.length, sr=buf.sampleRate, bytes=n*ch*2, ab=new ArrayBuffer(44+bytes), dv=new DataView(ab);
+  const ws=(o,t)=>{ for(let i=0;i<t.length;i++) dv.setUint8(o+i,t.charCodeAt(i)); };
+  ws(0,"RIFF"); dv.setUint32(4,36+bytes,true); ws(8,"WAVE"); ws(12,"fmt "); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,ch,true);
+  dv.setUint32(24,sr,true); dv.setUint32(28,sr*ch*2,true); dv.setUint16(32,ch*2,true); dv.setUint16(34,16,true); ws(36,"data"); dv.setUint32(40,bytes,true);
+  const d=[]; for(let c=0;c<ch;c++) d.push(buf.getChannelData(c)); let o=44;
+  for(let i=0;i<n;i++) for(let c=0;c<ch;c++){ const v=Math.max(-1,Math.min(1,d[c][i])); dv.setInt16(o,v<0?v*32768:v*32767,true); o+=2; }
+  return new Uint8Array(ab);
+}
+function projB64(buf){
+  if(PROJ.b64.has(buf)) return PROJ.b64.get(buf);
+  const u=projWav(buf); let bin=""; for(let i=0;i<u.length;i+=0x8000) bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
+  const out=btoa(bin); PROJ.b64.set(buf,out); return out;
+}
+function projUnB64(b64){ const bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; }
+/* A quick fingerprint of everything that makes up the beat, used to spot unsaved changes. */
+function projSig(){
+  const sm=Object.entries(samples).map(([k,v])=>[k,v.name,v.start,v.end,v.ni&&v.ni.path,JSON.stringify(v.p)].join("|")).sort().join(";");
+  return JSON.stringify(state)+sm+"#"+sampler.name+sampler.bounds.join(",")+JSON.stringify(chopParams)+(NI.kit||"");
+}
+function projBuild(){
+  const bufs=[], idx=new Map(), ref=buf=>{ if(!idx.has(buf)){ idx.set(buf,bufs.length); bufs.push(projB64(buf)); } return idx.get(buf); };
+  const smp={};
+  for(const [track,v] of Object.entries(samples)){
+    if(!v||!v.buf) continue;
+    const e={name:v.name,start:v.start,end:v.end,p:v.p};
+    if(v.ni&&v.ni.path){ e.file=v.ni; if(v.voice){ e.voice=v.voice; e.buf=ref(v.buf); } } // voices are small: keep a copy too
+    else e.buf=ref(v.buf);
+    smp[track]=e;
+  }
+  const smpl=Object.assign({},sampler); smpl.buf=sampler.buf?ref(sampler.buf):null;
+  return {app:"Ether Beat Lab",version:3,saved:new Date().toISOString(),name:PROJ.name,state:JSON.parse(JSON.stringify(state)),
+    samples:smp,sampler:smpl,chopParams:JSON.parse(JSON.stringify(chopParams)),niKit:NI.kit||"",buffers:bufs};
+}
+async function projWaitLibrary(ms){ const t0=Date.now(); while(NATIVE&&!NI.lib&&Date.now()-t0<ms) await new Promise(r=>setTimeout(r,150)); }
+async function projLoad(data,meta){
+  if(!data||data.app!=="Ether Beat Lab"||!data.state) throw new Error("That isn't an Ether Beat Lab project.");
+  if(playing) stop();
+  PROJ.restoring=true; NI.gen++; VOICE.busy++; // drop any sound or voice that was still being made for the old beat
+  try{
+    ensureCtx();
+    await projWaitLibrary(6000);
+    const missing=[];
+    // Beat settings and patterns: anything the project doesn't mention keeps its current value.
+    for(const k of Object.keys(data.state)) state[k]=data.state[k];
+    for(const L of ["A","B","C","D"]) if(!state.patterns[L]) state.patterns[L]=blankPat();
+    // Instruments from the NI drive: make sure they're known and their notes are loaded.
+    const fallback={a:"epiano",b:"none",mel:"flute",bass:"sub"};
+    for(const slot of Object.keys(fallback)){
+      const key=state.inst[slot]; if(!key||key==="none"||INST[key]||BASSES[key]) continue;
+      const inst=key.startsWith("ni:")&&NI.instById.get(key.slice(3));
+      if(inst) niRegister(inst); else { missing.push(key.replace(/^ni:/,"")); state.inst[slot]=fallback[slot]; }
+    }
+    Object.keys(fallback).forEach(slot=>{ const d=INST[state.inst[slot]]; if(d&&d.ni) niLoadInst(d.ni); });
+    // Sounds
+    const decoded=await Promise.all((data.buffers||[]).map(b=>ctx.decodeAudioData(projUnB64(b)).catch(()=>null)));
+    for(const k of Object.keys(samples)) delete samples[k];
+    for(const [track,e] of Object.entries(data.samples||{})){
+      let buf=null, ni=null;
+      if(e.file&&e.file.path){
+        try{ buf=(await niLoad(e.file.path)).buf; ni=e.file; }
+        catch(err){ if(e.buf!=null) buf=decoded[e.buf]; if(!buf) missing.push(e.name); }
+      } else if(e.buf!=null) buf=decoded[e.buf];
+      if(!buf) continue;
+      samples[track]={buf,name:e.name,start:e.start,end:e.end,p:Object.assign(defParams(),e.p||{})};
+      if(ni) samples[track].ni=ni;
+      if(e.voice) samples[track].voice=e.voice;
+    }
+    // Sampler and its chops
+    const sm=data.sampler||{};
+    for(const k of Object.keys(sm)) if(k!=="buf") sampler[k]=sm[k];
+    sampler.buf=sm.buf!=null?decoded[sm.buf]||null:null; if(!sampler.buf){ sampler.name=""; sampler.bounds=[]; }
+    peaks=null; sampler.cursor=0;
+    (data.chopParams||[]).forEach((p,i)=>{ if(i<chopParams.length) chopParams[i]=Object.assign(defParams(),p); });
+    NI.kit=data.niKit||null;
+    const ks=$("niKit"); if(ks) ks.value=NI.kit&&[...ks.options].some(o=>o.value===NI.kit)?NI.kit:"";
+    undoStack.length=0; $("undo").disabled=true;
+    setLen(state.len||16);
+    refreshAll(); smpUI(); renderPads();
+    if(NATIVE){ niStatus(); voiceSyncMenu(); }
+    PROJ.name=(meta&&meta.name)||data.name||"Untitled beat"; PROJ.path=(meta&&meta.path)||"";
+    return missing;
+  } finally { PROJ.restoring=false; }
+}
+async function projSave(saveAs){
+  if(PROJ.busy) return; PROJ.busy=true; projMenu(false);
+  try{
+    if(NATIVE){
+      const sig=projSig(), json=JSON.stringify(projBuild());
+      const r=await native("saveProject",{json,name:PROJ.name,path:saveAs?"":PROJ.path});
+      if(r.cancelled) return; if(r.error){ toast(r.error); return; }
+      PROJ.path=r.path; PROJ.name=r.name; PROJ.savedSig=sig;
+    } else {
+      let nm=PROJ.name; if(saveAs||!PROJ.path){ const a=prompt("Name your beat",PROJ.name); if(a===null) return; nm=a.trim()||PROJ.name; }
+      PROJ.name=nm; PROJ.path="download:"+nm;
+      const sig=projSig(), json=JSON.stringify(projBuild());
+      const blob=new Blob([json],{type:"application/json"}), url=URL.createObjectURL(blob), a=document.createElement("a");
+      a.href=url; a.download=nm.replace(/[\\/:*?"<>|]+/g,"-")+".etherbeat"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+      PROJ.savedSig=sig;
+    }
+    projTitle(); projAutosave(true);
+    toast("Saved “"+PROJ.name+"”");
+  } catch(e){ toast("Couldn't save: "+e.message); }
+  finally { PROJ.busy=false; }
+}
+function projDirty(){ return projSig()!==PROJ.savedSig; }
+function projAsk(what){ return !projDirty()||confirm(`“${PROJ.name}” has changes that aren't saved. ${what} anyway?`); }
+async function projOpen(){
+  projMenu(false);
+  if(!projAsk("Open another beat")) return;
+  try{
+    let data, meta;
+    if(NATIVE){
+      const r=await native("openProject"); if(r.cancelled) return; if(r.error){ toast(r.error); return; }
+      data=JSON.parse(r.json); meta={name:r.name,path:r.path};
+    } else {
+      const f=await new Promise(res=>{ const i=document.createElement("input"); i.type="file"; i.accept=".etherbeat,.json"; i.id="projFile"; i.hidden=true;
+        document.body.appendChild(i); i.onchange=()=>{ res(i.files[0]); i.remove(); }; i.click(); });
+      if(!f) return; data=JSON.parse(await f.text()); meta={name:f.name.replace(/\.[^.]+$/,""),path:"download:"+f.name};
+    }
+    toast("Opening “"+meta.name+"”…");
+    const missing=await projLoad(data,meta);
+    PROJ.savedSig=projSig(); projTitle(); projAutosave(true);
+    toast(missing.length?`Opened. Not found: ${missing.slice(0,3).join(", ")}${missing.length>3?"…":""} (is the NI drive connected?)`:"Opened “"+PROJ.name+"”");
+  } catch(e){ toast("Couldn't open: "+e.message); }
+}
+function projNew(){
+  projMenu(false);
+  if(!projAsk("Start a new beat")) return;
+  if(playing) stop();
+  VOICE.busy++;
+  for(const k of Object.keys(samples)) delete samples[k];
+  sampler.buf=null; sampler.name=""; sampler.bounds=[]; peaks=null; chopParams.forEach((p,i)=>chopParams[i]=defParams());
+  Object.assign(state,{mutes:{},vol:{},pitch:{},trackLocks:{},fx:{},vintage:"off",sweep:0,songMode:false,song:["A","A","B","A"],cur:"A",
+    locks:{genre:false,tempo:false,key:false,chords:false,sounds:false}});
+  ["A","B","C","D"].forEach(L=>state.patterns[L]=blankPat());
+  NI.kit=null; if($("niKit")) $("niKit").value="";
+  randomizeAll(); undoStack.length=0; $("undo").disabled=true;
+  refreshAll(); smpUI();
+  PROJ.name="Untitled beat"; PROJ.path=""; PROJ.savedSig=projSig(); projTitle(); projAutosave(true);
+  if(NATIVE&&VOICE.singer&&state.inst.chop==="auto") voiceMake("ahh",true).then(()=>{ PROJ.savedSig=projSig(); projTitle(); });
+  toast("New beat");
+}
+// Shows the Export panel (stems, MIDI and the mix live there) rather than starting an export straight away.
+function projExportShortcut(){
+  projMenu(false);
+  if(STUDIO.on){ document.body.classList.remove("st-noedit"); STUDIO.pickEdit("export"); stSyncToggles(); stSave(); }
+  else stPanels().exp.scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(()=>$("export").focus(),60);
+}
+function projTitle(){
+  const dirty=projDirty(), key=PROJ.name+"|"+dirty+"|"+PROJ.path;
+  if(key===PROJ.lastTitle) return; PROJ.lastTitle=key;
+  $("projName").textContent=PROJ.name; $("projDot").hidden=!dirty;
+  $("projBtn").title=`${PROJ.name}${dirty?" — not saved yet":PROJ.path?" — saved":""}. New, open, save (⌘S)`;
+  document.title=(dirty?"• ":"")+PROJ.name+" — Ether Beat Lab";
+  if(NATIVE) native("title",{title:PROJ.name+" — Ether Beat Lab",edited:dirty}).catch(()=>{});
+}
+/* Autosave: whenever the beat changes, a copy is kept so closing the app or a crash never loses it. */
+function projAutosave(force){
+  if(PROJ.restoring) return;
+  const sig=projSig(); if(!force&&sig===PROJ.autoSig) return; PROJ.autoSig=sig;
+  let json; try{ const d=projBuild(); d._edited=sig!==PROJ.savedSig; d._path=PROJ.path; json=JSON.stringify(d); }catch(e){ return; }
+  if(NATIVE) native("autosave",{json,name:PROJ.name,path:PROJ.path}).catch(()=>{});
+  else { try{ localStorage.setItem("beatlab.autosave",json); }
+    catch(e){ try{ const d=JSON.parse(json); d.buffers=[]; d.samples={}; d.sampler.buf=null; localStorage.setItem("beatlab.autosave",JSON.stringify(d)); }catch(e2){} } }
+}
+async function projRestore(){
+  let data=null, meta=null;
+  try{
+    if(NATIVE){ const r=await native("loadAutosave"); if(r&&r.json){ data=JSON.parse(r.json); meta={name:r.name||data.name,path:r.path||data._path||""}; } }
+    else { const j=localStorage.getItem("beatlab.autosave"); if(j){ data=JSON.parse(j); meta={name:data.name,path:data._path||""}; } }
+  }catch(e){ data=null; }
+  if(!data){ projBaseline(); return; }
+  try{
+    await projLoad(data,meta);
+    // Opens where you left off. If it had unsaved changes, it still shows them as unsaved.
+    if(data._edited){ PROJ.savedSig=""; PROJ.autoSig=projSig(); projTitle(); } else projBaseline();
+    toast(`Picked up where you left off: “${PROJ.name}”`);
+  }catch(e){ projBaseline(); }
+}
+/* The app fills in a few things by itself as it starts (like the natural "Ahh" voice). Until you touch something,
+   those don't count as unsaved changes. */
+function projBaseline(){
+  const mark=()=>{ if(PROJ.touched) return; PROJ.savedSig=projSig(); PROJ.autoSig=PROJ.savedSig; projTitle(); };
+  mark(); setTimeout(mark,2500); setTimeout(mark,6000);
+}
+function projMenu(open){
+  const m=$("projMenu"), b=$("projBtn"); if(open===undefined) open=m.hidden;
+  m.hidden=!open; b.setAttribute("aria-expanded",String(open));
+  if(open){
+    $("projNote").textContent=PROJ.path&&!PROJ.path.startsWith("download:")?"Saved in "+PROJ.path.replace(/^\/Users\/[^/]+/,"~"):
+      NATIVE?"Not saved to a file yet. Your work is still kept automatically while you go.":"Save downloads a .etherbeat file. Your work is also kept in this browser.";
+    m.querySelector("button").focus();
+  }
+}
+function projSetup(){
+  $("projBtn").onclick=e=>{ e.stopPropagation(); projMenu(); };
+  $("projMenu").addEventListener("click",e=>{ const b=e.target.closest("button[data-act]"); if(!b) return;
+    ({new:projNew,open:projOpen,save:()=>projSave(false),saveas:()=>projSave(true),export:projExportShortcut})[b.dataset.act](); });
+  $("projMenu").addEventListener("keydown",e=>{ e.stopPropagation();
+    const items=[...$("projMenu").querySelectorAll("button")], i=items.indexOf(document.activeElement);
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){ e.preventDefault(); items[(i+(e.key==="ArrowDown"?1:-1)+items.length)%items.length].focus(); }
+    if(e.key==="Escape"){ projMenu(false); $("projBtn").focus(); } });
+  document.addEventListener("click",e=>{ if(!$("proj").contains(e.target)) projMenu(false); });
+  // In the Mac app the File menu handles these keys; in a browser the page does.
+  if(!NATIVE) document.addEventListener("keydown",e=>{
+    if(!(e.metaKey||e.ctrlKey)) return; const k=e.key.toLowerCase();
+    if(k==="s"){ e.preventDefault(); e.stopPropagation(); projSave(e.shiftKey); } else if(k==="o"){ e.preventDefault(); e.stopPropagation(); projOpen(); }
+  },true);
+  ["pointerdown","keydown"].forEach(ev=>document.addEventListener(ev,()=>{ PROJ.touched=true; },true));
+  window.addEventListener("beforeunload",()=>projAutosave(true));
+  setInterval(()=>{ if(!PROJ.restoring) projTitle(); },1200);
+  setInterval(()=>projAutosave(false),5000);
+  projRestore();
+}
+projSetup();
 </script>
 
 </body>

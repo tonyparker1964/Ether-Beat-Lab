@@ -1,5 +1,6 @@
 import AppKit
 import WebKit
+import UniformTypeIdentifiers
 
 /// Where Beat Lab keeps its own files (the scanned library), on this Mac only.
 enum AppFiles {
@@ -10,6 +11,15 @@ enum AppFiles {
         return d
     }
     static var libraryURL: URL { dir.appendingPathComponent("library.json") }
+    static var autosaveURL: URL { dir.appendingPathComponent("Autosave.etherbeat") }
+    /// Where projects are saved unless you pick somewhere else.
+    static var projectsDir: URL {
+        let music = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask)[0]
+        let d = music.appendingPathComponent("Ether Beat Lab Projects", isDirectory: true)
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
+    }
+    static var projectType: UTType { UTType(filenameExtension: "etherbeat") ?? .json }
 
     /// The Beat Lab page: inside the app when installed, or the repository's index.html when run with `swift run`.
     static var webPage: URL? {
@@ -153,6 +163,65 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
             rescan(replyHandler)
         case "rescan":
             rescan(replyHandler)
+        case "saveProject":
+            // Saves straight to the project's file, or asks where (Save As, or a project that's never been saved).
+            let json = body["json"] as? String ?? ""
+            let name = (body["name"] as? String ?? "Untitled beat").trimmingCharacters(in: .whitespacesAndNewlines)
+            var target: URL?
+            if let path = body["path"] as? String, !path.isEmpty { target = URL(fileURLWithPath: path) }
+            if target == nil {
+                let panel = NSSavePanel()
+                panel.allowedContentTypes = [AppFiles.projectType]
+                panel.directoryURL = AppFiles.projectsDir
+                panel.nameFieldStringValue = (name.isEmpty ? "Untitled beat" : name) + ".etherbeat"
+                panel.message = "Save your Ether Beat Lab project"
+                guard panel.runModal() == .OK, let url = panel.url else { return replyHandler(Self.encode(["cancelled": "1"]), nil) }
+                target = url
+            }
+            do {
+                try Data(json.utf8).write(to: target!, options: .atomic)
+                window?.representedURL = target
+                replyHandler(Self.encode(["path": target!.path, "name": target!.deletingPathExtension().lastPathComponent]), nil)
+            } catch {
+                replyHandler(Self.encode(["error": "Couldn't save: \(error.localizedDescription)"]), nil)
+            }
+        case "openProject":
+            let panel = NSOpenPanel()
+            panel.allowedContentTypes = [AppFiles.projectType, .json]
+            panel.directoryURL = AppFiles.projectsDir
+            panel.message = "Open an Ether Beat Lab project"
+            guard panel.runModal() == .OK, let url = panel.url else { return replyHandler(Self.encode(["cancelled": "1"]), nil) }
+            guard let data = try? Data(contentsOf: url), let json = String(data: data, encoding: .utf8) else {
+                return replyHandler(Self.encode(["error": "That file couldn't be read."]), nil)
+            }
+            window?.representedURL = url
+            NSDocumentController.shared.noteNewRecentDocumentURL(url)
+            replyHandler(Self.encode(["path": url.path, "name": url.deletingPathExtension().lastPathComponent, "json": json]), nil)
+        case "autosave":
+            // Kept quietly in the background so a crash or a closed window never loses the beat.
+            let json = body["json"] as? String ?? ""
+            let meta = ["path": body["path"] as? String ?? "", "name": body["name"] as? String ?? ""]
+            DispatchQueue.global(qos: .utility).async {
+                try? Data(json.utf8).write(to: AppFiles.autosaveURL, options: .atomic)
+                UserDefaults.standard.set(meta, forKey: "autosaveMeta")
+            }
+            replyHandler("{}", nil)
+        case "loadAutosave":
+            guard let data = try? Data(contentsOf: AppFiles.autosaveURL), let json = String(data: data, encoding: .utf8) else {
+                return replyHandler("{}", nil)
+            }
+            let meta = UserDefaults.standard.dictionary(forKey: "autosaveMeta") as? [String: String] ?? [:]
+            replyHandler(Self.encode(["json": json, "path": meta["path"] ?? "", "name": meta["name"] ?? ""]), nil)
+        case "clearAutosave":
+            try? FileManager.default.removeItem(at: AppFiles.autosaveURL)
+            UserDefaults.standard.removeObject(forKey: "autosaveMeta")
+            window?.representedURL = nil
+            replyHandler("{}", nil)
+        case "title":
+            let title = body["title"] as? String ?? "Ether Beat Lab"
+            window?.title = title
+            window?.isDocumentEdited = (body["edited"] as? Bool) ?? false
+            replyHandler("{}", nil)
         case "getFavs":
             let favs = UserDefaults.standard.stringArray(forKey: "favorites") ?? []
             let text = (try? JSONSerialization.data(withJSONObject: favs)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
@@ -434,6 +503,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         panel.beginSheetModal(for: window) { completionHandler($0 == .OK ? panel.urls : nil) }
     }
 
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (Bool) -> Void) {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Cancel")
+        completionHandler(alert.runModal() == .alertFirstButtonReturn)
+    }
+
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo,
                  completionHandler: @escaping () -> Void) {
         let alert = NSAlert()
@@ -452,6 +530,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         appMenu.addItem(withTitle: "Hide Ether Beat Lab", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: "Quit Ether Beat Lab", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
+
+        let fileItem = NSMenuItem()
+        main.addItem(fileItem)
+        let file = NSMenu(title: "File")
+        file.addItem(withTitle: "New Beat", action: #selector(fileNew), keyEquivalent: "n")
+        file.addItem(withTitle: "Open…", action: #selector(fileOpen), keyEquivalent: "o")
+        file.addItem(.separator())
+        file.addItem(withTitle: "Save", action: #selector(fileSave), keyEquivalent: "s")
+        file.addItem(withTitle: "Save As…", action: #selector(fileSaveAs), keyEquivalent: "S")
+        file.addItem(.separator())
+        file.addItem(withTitle: "Export…", action: #selector(fileExport), keyEquivalent: "e")
+        fileItem.submenu = file
 
         let editItem = NSMenuItem()
         main.addItem(editItem)
@@ -482,6 +572,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     @objc func reload() { webView.reload() }
+    @objc func fileNew() { webView.evaluateJavaScript("projNew()") }
+    @objc func fileOpen() { webView.evaluateJavaScript("projOpen()") }
+    @objc func fileSave() { webView.evaluateJavaScript("projSave(false)") }
+    @objc func fileSaveAs() { webView.evaluateJavaScript("projSave(true)") }
+    @objc func fileExport() { webView.evaluateJavaScript("projExportShortcut()") }
 }
 
 let app = NSApplication.shared

@@ -35,6 +35,16 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 - Patterns A–D chained into a song, including random arrangements.
 - Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut.
 
+## Projects: save, open and pick up where you left off
+
+The **Project** button at the left of the top bar shows your beat's name (a gold dot means changes aren't saved yet) and opens the project menu: **New beat**, **Open…**, **Save**, **Save as…** and **Export audio…**. The same commands are in the Mac app's **File** menu with ⌘N, ⌘O, ⌘S, ⇧⌘S and ⌘E.
+
+- A project (`.etherbeat`) keeps everything: patterns A–D, the song, every setting and lock, track volumes and mutes, your sounds, the Sampler with its chops and chop settings, and the NI kit.
+- Sounds from your Native Instruments drive are saved as a link to the file, so projects stay small. Sounds you dropped in, chopped or recorded, and natural voice chops, are saved inside the project, so it opens anywhere.
+- In the Mac app projects go to **Music → Ether Beat Lab Projects** unless you choose somewhere else. On the web page, Save downloads the file and Open loads one.
+- **Autosave:** your beat is kept automatically every few seconds. Close the app (or lose power) and next time it opens right where you left off; unsaved changes still show as unsaved. New beat and Open ask before replacing unsaved work.
+- If a project uses NI sounds and the drive isn't connected, it still opens and tells you which sounds it couldn't find.
+
 ## Studio view and visualizer
 
 On a wide window (and always in the Mac app) Beat Lab opens in **Studio view**, a full-window workspace: a control bar with transport and a display (bar and beat, tempo, key, genre, what's playing), a **library** on the left (AI Producer, Native Instruments, beat settings), the **tracks** in the middle, and **editors** along the bottom (Pads, Sounds, Sampler, Visualizer, Export). The ◧ and ⬓ buttons show or hide the library and editors, the line above the editors drags to resize them, and **Classic view** goes back to the single page. Your layout is remembered.
@@ -56,7 +66,7 @@ Sound files are read straight from your drive and played inside the app; the app
 
 Open the live page in a modern browser, press Play, and explore the controls. Audio starts after a user gesture. The app runs in your browser; loaded samples are processed locally.
 
-Patterns and samples are session-only in this version. Export your audio before closing or reloading the page; project save/load is not implemented.
+Save your beat with the Project menu (or ⌘S / Ctrl+S). The page also keeps your latest beat in this browser and reopens it next time.
 
 ## Hosting
 
