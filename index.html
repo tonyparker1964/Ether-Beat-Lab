@@ -51,6 +51,22 @@ h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
 #rec .ic{color:var(--rec)} #rec[aria-pressed="true"] .ic{color:#1a0705}
 #play[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .spacer{flex:1}
+/* Audio & MIDI */
+.st-side .st-tabs button{padding:8px 8px;white-space:nowrap;letter-spacing:.1em}
+.audp{display:flex;flex-direction:column;gap:12px}
+.aud-sec{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.aud-sec h3{margin:0}
+.aud-sec .hint{margin:0}
+.aud-sec select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.aud-info,.midi-last{margin:0;font-family:var(--f-mono);font-size:11.5px;color:var(--accent)}
+.midi-map{display:flex;flex-direction:column;gap:4px}
+.midi-row{display:flex;align-items:center;gap:8px;font-size:13px}
+.midi-row .cc{font-family:var(--f-mono);font-size:11px;color:var(--dim);min-width:58px}
+.midi-row span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#midiLearn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+body.midi-learning .mx-knob,body.midi-learning .mx-fader,body.midi-learning input[type=range]{outline:1px dashed var(--accent);outline-offset:2px}
+.au-open{margin-top:6px}
+
 /* Arrangement */
 .arrp{display:flex;flex-direction:column;gap:8px}
 .arr-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -530,6 +546,32 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       </div>
       <label class="field"><span class="head"><span class="lbl">Wildness</span><output id="chaosOut"></output></span><input type="range" id="chaos" min="0" max="100" step="1">
         <span class="hint">Higher borrows rhythms from other genres and pushes tempo further.</span></label>
+    </div>
+  </section>
+
+  <section class="panel audp" aria-label="Audio and MIDI" id="audPanel">
+    <h2>Audio &amp; MIDI</h2>
+    <div class="aud-sec"><h3 class="lbl">Audio</h3>
+      <p class="aud-info" id="audInfo"></p>
+      <label class="field"><span class="lbl">Latency</span><select id="audLatency"><option value="interactive">Lowest (best for playing live)</option><option value="balanced">Balanced</option><option value="playback">Safest (no crackles on a busy Mac)</option></select></label>
+      <button class="mini" id="audRestart" hidden>Restart audio to apply</button>
+      <p class="hint" id="audOutNote"></p><select id="audOut" aria-label="Audio output"></select>
+    </div>
+    <div class="aud-sec"><h3 class="lbl">MIDI keyboard &amp; controller</h3>
+      <p class="hint" id="midiDevs">No MIDI keyboard or controller connected.</p>
+      <button class="mini" id="midiConnect">Connect MIDI</button>
+      <label class="field"><span class="lbl">Keyboard plays</span><select id="midiTarget"><option value="mel">Melody</option><option value="keys">Chords</option><option value="bass">Bass</option><option value="pads">Pads (C1 = pad 1)</option></select></label>
+      <p class="hint">Turn on ● Rec while the beat plays and what you play on the keyboard is written into the Piano roll.</p>
+      <p class="midi-last" id="midiLast">Play a note to test.</p>
+      <button class="mini" id="midiLearn" aria-pressed="false">MIDI learn</button>
+      <p class="hint" id="midiLearnNote" hidden>Click a knob, fader or slider in Beat Lab, then move a knob or slider on your controller. Press MIDI learn again when you're done.</p>
+      <div class="midi-map" id="midiMap"></div>
+    </div>
+    <div class="aud-sec" id="auBox"><h3 class="lbl">Plug-ins</h3>
+      <p class="hint" id="auCount"></p>
+      <div id="auSlots"></div>
+      <label class="field"><span class="lbl">Plug-in volume</span><input type="range" id="auVol" min="0" max="150" value="100"></label>
+      <button class="mini" id="auRescan">Rescan plug-ins</button>
     </div>
   </section>
 
@@ -1432,7 +1474,8 @@ function scheduleStep(ctx,out,pat,i,t0,marks){
 let ctx=null, chain=null, analyser=null, playing=false, recording=false, timer=null, nextTime=0, gStep=0, queue=[], hist=[];
 function ensureCtx(){
   if(ctx) return;
-  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  let hint="interactive"; try{ hint=localStorage.getItem("beatlab.latency")||"interactive"; }catch(e){}
+  ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:hint});
   analyser=ctx.createAnalyser(); analyser.fftSize=1024; analyser.connect(ctx.destination);
   chain=buildChain(ctx,analyser);
 }
@@ -2018,6 +2061,7 @@ async function doExport(){
       scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,marks);
       if(useSong&&typeof arrStep==="function") arrStep(off,ch,g,g*sd);
     }
+    if(typeof auExportPass==="function") await auExportPass(off,ch);
     const buf=await off.startRendering();
     const gg=G(), r3=x=>Math.round(x*1000)/1000;
     const beats=[], barT=[]; for(let b=0;b<bars*4;b++) beats.push(r3(b*4*sd)); for(let b=0;b<bars;b++) barT.push(r3(b*16*sd));
@@ -3336,7 +3380,7 @@ const STUDIO={on:false,duo:null,sideTab:"producer",editTab:"pads"};
 const stQ=sel=>document.querySelector(sel);
 function stEl(tag,cls,html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
 function stPanels(){
-  return {bar:stQ("header.top"),deck:stQ('[aria-label="Beat settings"]'),prod:stQ('[aria-label="AI Producer"]'),ni:stQ("#niPanel"),
+  return {bar:stQ("header.top"),deck:stQ('[aria-label="Beat settings"]'),prod:stQ('[aria-label="AI Producer"]'),aud:stQ("#audPanel"),ni:stQ("#niPanel"),
     sounds:stQ('[aria-label="Sounds"]'),seq:stQ('[aria-label="Pattern"]'),pads:stQ('[aria-label="Pads"]'),song:stQ('[aria-label="Song"]'),
     sampler:stQ('[aria-label="Sampler"]'),mix:stQ("#mixPanel"),roll:stQ("#prPanel"),arr:stQ("#arrPanel"),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo"),fav:stQ("#favPanel")};
 }
@@ -3361,7 +3405,7 @@ function studioOn(){
   STUDIO.duo=P.duo;
   const side=stEl("aside","st-side"), main=stEl("main","st-main"), edit=stEl("section","st-edit");
   edit.setAttribute("aria-label","Editors"); side.setAttribute("aria-label","Library");
-  const sideTabs=[["producer","Producer",P.prod],["library","NI Library",NATIVE?P.ni:null],["setup","Beat Setup",P.deck]];
+  const sideTabs=[["producer","Producer",P.prod],["library","NI Library",NATIVE?P.ni:null],["setup","Setup",P.deck],["audio","Audio/MIDI",P.aud]];
   STUDIO.pickSide=stTabs(side,sideTabs,STUDIO.sideTab,k=>{ STUDIO.sideTab=k; stSave(); });
   const views=stEl("div","seg st-views"); views.setAttribute("role","group"); views.setAttribute("aria-label","Main view");
   [["pattern","Pattern"],["arr","Arrangement"]].forEach(([k,l])=>{ const b=stEl("button",null,l); b.dataset.v=k; b.id="stv-"+k;
@@ -3385,7 +3429,7 @@ function studioOff(){
   duo.append(P.pads,P.song);
   [...app.children].forEach(c=>c.remove());
   // Back to the classic page order.
-  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.fav,P.seq,duo,P.arr,P.roll,P.mix,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
+  [P.bar,P.deck,P.prod,P.aud,P.ni,P.sounds,P.fav,P.seq,duo,P.arr,P.roll,P.mix,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
   document.body.classList.remove("studio","st-noside","st-noedit","st-nofav","st-arr"); STUDIO.on=false; stSyncToggles(); stSave();
 }
 function stGrip(grip){
@@ -3529,6 +3573,7 @@ function mxCtl(kind,o){
   let wt=0; el.addEventListener("wheel",e=>{ e.preventDefault(); if(Date.now()-wt>600) o.onStart&&o.onStart(); wt=Date.now();
     const d=e.deltaY<0?1:-1; set(o.toP?fromP(toP(v)+d*.02):v+d*step,true); },{passive:false});
   el.setValue=x=>{ v=x; paint(); if(o.out) o.out.textContent=o.fmt(v); };
+  el.setNorm=p=>{ o.onStart&&o.onStart(); set(fromP(Math.max(0,Math.min(1,p))),true); }; // from a MIDI controller
   el.setValue(v); return el;
 }
 const fmtDb=x=>(x>0?"+":"")+(Math.abs(x)<.05?"0.0":x.toFixed(1))+" dB";
@@ -4586,6 +4631,7 @@ function arrSetup(){
     try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null);
         if(useSong) arrStep(off,ch,g,g*sd,{only:id.startsWith("aud:")?id:"none"}); } }
     finally{ state.mutes=mutes; state.solo=solo; }
+    if(typeof auExportPass==="function") await auExportPass(off,ch);
     return off.startRendering(); }; }
 { const raw=exportStems; exportStems=async function(files,o,status){
     const n=await raw.apply(this,arguments); if(!o.useSong) return n;
@@ -4602,6 +4648,237 @@ function arrSetup(){
     if(data&&data.audio){ ensureCtx(); for(const [id,e] of Object.entries(data.audio)){ try{ AUD.bufs.set(id,{name:e.name,buf:await ctx.decodeAudioData(projUnB64(e.wav))}); }catch(err){} } }
     return raw.apply(this,arguments); }; }
 arrSetup();
+</script>
+
+<script>
+/* ---------- Plug-ins, MIDI and audio settings ----------
+   In the Mac app, Audio Unit instruments (Kontakt, Massive and any other instrument plug-in on this Mac) can play
+   Chords A, Chords B, Melody or Bass. The sequencer sends them notes a moment ahead, and the export renders them
+   offline through the track's mixer strip. MIDI keyboards and controllers play Beat Lab and can be mapped to any knob,
+   fader or slider (MIDI learn). Audio settings pick the latency and, for plug-ins, the output. */
+const AUX={list:[],ready:null,loaded:{},states:{},capture:new Map(),held:new Map(),learn:false,learnEl:null,recUndo:false,last:"",devices:[]};
+const AU_SLOTS={a:"Chords A",b:"Chords B",mel:"Melody",bass:"Bass"};
+const AU_SEL={instA:"a",instB:"b",instMel:"mel",instBass:"bass"};
+const AU_VEL={a:3.4,b:3.4,mel:2.4,bass:1.33};
+const AU_TRACK={a:"keys",b:"keys",mel:"mel",bass:"bass"};
+const auKey=(slot,comp)=>`au:${slot}:${comp}`;
+const auParse=k=>{ if(!k||!k.startsWith("au:")) return null; const [,slot,comp]=k.split(":"); return {slot,comp}; };
+function auName(comp){ const p=AUX.list.find(x=>x.id===comp); return p?p.name:"Plug-in"; }
+function auRegister(slot,comp){
+  const key=auKey(slot,comp);
+  if(!INST[key]){ INST[key]={n:auName(comp)+" (plug-in)",fam:"Plug-ins",au:{slot,comp},play(c,out,t,f,v,dur){ auPlay(slot,c,t,f,v,dur); }};
+    if(slot==="bass") BASSES[key]=INST[key].n; }
+  return key;
+}
+function auPlay(slot,c,t,f,v,dur){
+  const n=Math.round(69+12*Math.log2(f/440)), vel=Math.round(Math.max(1,Math.min(127,v*AU_VEL[slot]*127)));
+  if(c===ctx){ native("auNote",{slot,n,v:vel,delay:Math.max(0,t-ctx.currentTime),len:Math.max(.05,dur||.3)}).catch(()=>{}); return; }
+  // export: remember the note; the plug-in renders them all before the mix is rendered
+  if(!AUX.capture.has(c)) AUX.capture.set(c,[]);
+  AUX.capture.get(c).push({slot,t,n,v:vel,len:Math.max(.05,dur||.3)});
+}
+/* Load or unload plug-ins so they match the sound menus. */
+async function auSync(){
+  if(!NATIVE) return;
+  for(const slot of Object.keys(AU_SLOTS)){
+    const p=auParse(state.inst[slot]);
+    if(p){ if(AUX.loaded[slot]!==p.comp){ AUX.loaded[slot]=p.comp; auRegister(slot,p.comp);
+        const r=await native("auLoad",{slot,comp:p.comp,state:AUX.states[slot]||null});
+        if(r&&r.error){ toast(r.error); AUX.loaded[slot]=null; } } }
+    else if(AUX.loaded[slot]){ AUX.loaded[slot]=null; native("auUnload",{slot}).catch(()=>{}); }
+  }
+  auRenderPanel();
+}
+async function auRefreshStates(){
+  if(!NATIVE) return;
+  for(const [slot,comp] of Object.entries(AUX.loaded)) if(comp){ const r=await native("auState",{slot}).catch(()=>null); if(r&&r.state) AUX.states[slot]=r.state; }
+}
+/* Menus: a Plug-ins group in Chords A, Chords B, Melody and Bass. */
+function auMenus(){
+  for(const [id,slot] of Object.entries(AU_SEL)){
+    const sel=$(id); if(!sel) continue;
+    [...sel.querySelectorAll('option[value^="au:"]')].forEach(o=>{ const og=o.parentElement; o.remove(); if(og.tagName==="OPTGROUP"&&!og.children.length) og.remove(); });
+    if(!AUX.list.length) continue;
+    const og=document.createElement("optgroup"); og.label="Plug-ins (Audio Units)"; og.className="au-group";
+    AUX.list.forEach(p=>og.appendChild(new Option(`${p.name} — ${p.maker}`,auKey(slot,p.id)))); sel.appendChild(og);
+    if(state.inst[slot]&&state.inst[slot].startsWith("au:")) sel.value=state.inst[slot];
+  }
+}
+{ const raw=fillSoundSelects; fillSoundSelects=function(){ raw.apply(this,arguments); auMenus(); }; }
+{ const raw=syncSounds; syncSounds=function(){ raw.apply(this,arguments); auMenus(); for(const [id,slot] of Object.entries(AU_SEL)) if($(id)&&state.inst[slot]) $(id).value=state.inst[slot]; auButtons(); if(NATIVE) auSync(); }; }
+// Randomize and Roll sounds never pick a plug-in by themselves.
+{ const raw=rollSounds; rollSounds=function(){ const hidden={}; Object.keys(INST).filter(k=>k.startsWith("au:")).forEach(k=>{ hidden[k]=INST[k]; delete INST[k]; });
+    const hb={}; Object.keys(BASSES).filter(k=>k.startsWith("au:")).forEach(k=>{ hb[k]=BASSES[k]; delete BASSES[k]; });
+    try{ return raw.apply(this,arguments); } finally { Object.assign(INST,hidden); Object.assign(BASSES,hb); } }; }
+// The bass track plays plug-ins like NI instruments.
+{ const raw=trigger; trigger=function(c,bus,id,t,v,o){ if(id==="bass"){ const nb=state.inst.bass; if(nb&&nb.startsWith("au:")&&INST[nb]){ const vol=state.vol.bass??1;
+        INST[nb].play(c,null,t,o.f,v*vol*.75,o.len); return null; } } return raw.apply(this,arguments); }; }
+/* A "Plug-in window" button beside each menu that's playing a plug-in. */
+function auButtons(){
+  for(const [id,slot] of Object.entries(AU_SEL)){
+    const sel=$(id); if(!sel) continue; let b=sel.parentElement.querySelector(".au-open");
+    const p=auParse(state.inst[slot]);
+    if(!p){ if(b) b.hidden=true; continue; }
+    if(!b){ b=document.createElement("button"); b.className="mini au-open"; b.type="button"; sel.after(b); b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); auShow(b.dataset.slot); }; }
+    b.hidden=false; b.dataset.slot=slot; b.textContent="🎛 Plug-in window"; b.title=`Open ${auName(p.comp)} to choose its sound`;
+  }
+}
+function auShow(slot){ const p=auParse(state.inst[slot]); if(p) native("auShow",{slot,title:`${auName(p.comp)} — ${AU_SLOTS[slot]}`}).catch(()=>{}); }
+/* Export: render each plug-in's notes offline and play the result through its track's mixer strip. */
+async function auExportPass(off,ch){
+  const ev=AUX.capture.get(off); AUX.capture.delete(off); if(!ev||!ev.length||!NATIVE) return;
+  const bySlot={}; ev.forEach(e=>(bySlot[e.slot]=bySlot[e.slot]||[]).push([e.t,e.n,e.v,e.len]));
+  for(const [slot,events] of Object.entries(bySlot)){
+    const st=$("status"); if(st) st.textContent=`Rendering ${auName(AUX.loaded[slot]||"")} (${AU_SLOTS[slot]})…`;
+    const r=await native("auRender",{slot,events,seconds:off.length/off.sampleRate});
+    if(!r||r.error){ toast((r&&r.error)||"A plug-in couldn't be rendered"); continue; }
+    try{ const res=await fetch(niURL(r.path)); const buf=await off.decodeAudioData(await res.arrayBuffer());
+      const s=off.createBufferSource(); s.buffer=buf; s.connect(stripFor(off,ch,AU_TRACK[slot]).inp); s.start(0); }
+    catch(e){ toast("A plug-in render couldn't be read"); }
+  }
+}
+// Projects: plug-in choices are in the sound menus; their sounds are saved too.
+{ const raw=projSave; projSave=async function(){ await auRefreshStates(); return raw.apply(this,arguments); }; }
+{ const raw=projBuild; projBuild=function(){ const d=raw.apply(this,arguments); if(Object.keys(AUX.states).length) d.auStates=AUX.states; return d; }; }
+{ const raw=projLoad; projLoad=async function(data,meta){
+    if(data&&data.state&&data.state.inst){ await (AUX.ready||Promise.resolve());
+      AUX.states=data.auStates||{}; Object.keys(AU_SLOTS).forEach(s=>{ AUX.loaded[s]=null; });
+      for(const slot of Object.keys(AU_SLOTS)){ const p=auParse(data.state.inst[slot]); if(!p) continue;
+        if(AUX.list.some(x=>x.id===p.comp)) auRegister(slot,p.comp); else { toast(`Plug-in not found on this Mac (${AU_SLOTS[slot]}). Using a Beat Lab sound.`); delete data.state.inst[slot]; } } }
+    return raw.apply(this,arguments); }; }
+setInterval(()=>{ if(Object.values(AUX.loaded).some(Boolean)) auRefreshStates(); },30000);
+
+/* ---------- MIDI ---------- */
+function midiCfg(){ try{ return Object.assign({target:"mel",map:{}},JSON.parse(localStorage.getItem("beatlab.midi")||"{}")); }catch(e){ return {target:"mel",map:{}}; } }
+function midiSave(c){ try{ localStorage.setItem("beatlab.midi",JSON.stringify(c)); }catch(e){} }
+function midiDevices(names){ AUX.devices=names||[]; const el=$("midiDevs"); if(el) el.textContent=AUX.devices.length?AUX.devices.join(", "):"No MIDI keyboard or controller connected."; }
+const NOTE_NAMES=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+function midiPos(){
+  // where the song is now, in pattern steps, allowing for the delay between scheduling and hearing
+  const now=ctx.currentTime-((ctx.outputLatency||0)+(ctx.baseLatency||0)); let e=null;
+  for(const h of hist) if(h.t<=now) e=h; if(!e) return null;
+  return {slot:e.slot,pos:e.i+(now-e.t)/stepDur()};
+}
+function liveNoteOn(track,m,v){
+  ensureCtx(); ctx.resume(); const t=ctx.currentTime+.005, f=mtof(m);
+  const key=track==="mel"?state.inst.mel:track==="bass"?state.inst.bass:state.inst.a, au=auParse(key);
+  if(au){ native("auNoteNow",{slot:au.slot,n:m,v:Math.round(v*127)}).catch(()=>{}); return {au:au.slot,m}; }
+  const g=ctx.createGain(); g.connect(stripFor(ctx,chain,track).inp); const vol=state.vol[track]??1;
+  if(track==="mel") INST[key].play(ctx,g,t,f,v*.42*vol,6);
+  else if(track==="keys") INST[key].play(ctx,g,t,f,v*.3*vol,6);
+  else { if(INST[key]) INST[key].play(ctx,g,t,f,v*.75*vol,6); else V.bass(ctx,g,t,v*vol,f,6,key,0); }
+  return {g};
+}
+function liveNoteOff(h){
+  if(!h) return; if(h.au){ native("auNoteNow",{slot:h.au,n:h.m,v:0}).catch(()=>{}); return; }
+  const t=ctx.currentTime; h.g.gain.setTargetAtTime(0,t,.05); setTimeout(()=>{ try{ h.g.disconnect(); }catch(e){} },800);
+}
+function midiNote(m,vel,on){
+  const cfg=midiCfg(), tgt=cfg.target;
+  if(tgt==="pads"){ if(on&&m>=36&&m<52) hitPad(m-36); return; }
+  const key=m+"";
+  if(on){
+    const h=liveNoteOn(tgt,m,vel/127);
+    let rec=null;
+    if(recording&&playing){ const p=midiPos(); if(p) rec=Object.assign(p,{v:vel/127}); }
+    AUX.held.set(key,{h,rec});
+  } else {
+    const o=AUX.held.get(key); if(!o) return; AUX.held.delete(key); liveNoteOff(o.h);
+    if(o.rec&&PR_TRACKS[tgt]){ const p=midiPos(); if(!p) return;
+      const pat=state.patterns[o.rec.slot]; let len=p.pos-o.rec.pos; if(p.slot!==o.rec.slot||len<0) len=Math.max(PR.snap,64-o.rec.pos);
+      if(!AUX.recUndo){ pushUndo(); AUX.recUndo=true; }
+      if(!pat.roll) pat.roll={}; if(!pat.roll[tgt]) pat.roll[tgt]=prFromSteps(pat,tgt);
+      const q=PR.snap, t=Math.min(64-q,Math.max(0,Math.round(o.rec.pos/q)*q)), d=Math.max(q,Math.round(len/q)*q);
+      pat.roll[tgt].push({t,d:Math.min(d,64-t),m,v:Math.max(.1,o.rec.v)}); pat.roll[tgt].sort((a,b)=>a.t-b.t||a.m-b.m);
+      renderGrid(); }
+  }
+}
+{ const raw=setRec; setRec=function(on){ raw.apply(this,arguments); if(!on) AUX.recUndo=false; }; }
+function midiCC(cc,val){
+  const cfg=midiCfg();
+  if(AUX.learn&&AUX.learnEl){ const sel=midiSelector(AUX.learnEl); if(sel){ cfg.map[cc]={sel,label:midiLabel(AUX.learnEl)}; midiSave(cfg); toast(`CC ${cc} → ${cfg.map[cc].label}`); midiRenderMap(); } AUX.learnEl=null; return; }
+  if(cc===123||cc===120){ AUX.held.forEach(o=>liveNoteOff(o.h)); AUX.held.clear(); return; }
+  const m=cfg.map[cc]; if(!m) return; const el=document.querySelector(m.sel); if(!el) return;
+  const p=val/127;
+  if(el.setNorm) el.setNorm(p);
+  else if(el.type==="range"){ const lo=+el.min||0, hi=+(el.max||100); el.value=lo+(hi-lo)*p; el.dispatchEvent(new Event("input",{bubbles:true})); }
+}
+function midiSelector(el){ if(el.id) return "#"+CSS.escape(el.id); const l=el.getAttribute("aria-label"); return l?`[aria-label="${l.replace(/"/g,'\\"')}"]`:null; }
+function midiLabel(el){ if(el.getAttribute("aria-label")) return el.getAttribute("aria-label"); const f=el.closest("label,.field"); return f?(f.querySelector(".lbl")||f).textContent.trim().slice(0,40):el.id; }
+function midiIn(st,d1,d2){
+  const kind=st&0xF0;
+  if(kind===0x90&&d2>0) midiNote(d1,d2,true); else if(kind===0x80||(kind===0x90&&d2===0)) midiNote(d1,0,false);
+  else if(kind===0xB0) midiCC(d1,d2);
+  AUX.last=kind===0x90||kind===0x80?`${kind===0x90&&d2?"Note on":"Note off"} ${NOTE_NAMES[d1%12]}${Math.floor(d1/12)-2} · velocity ${d2}`:kind===0xB0?`CC ${d1} = ${d2}`:"";
+  const el=$("midiLast"); if(el&&AUX.last) el.textContent=AUX.last;
+}
+function midiRenderMap(){
+  const box=$("midiMap"); if(!box) return; const cfg=midiCfg(); box.innerHTML="";
+  const e=Object.entries(cfg.map); if(!e.length){ box.textContent="Nothing mapped yet."; return; }
+  e.sort((a,b)=>a[0]-b[0]).forEach(([cc,m])=>{ const r=document.createElement("div"); r.className="midi-row"; r.innerHTML=`<span class="cc">CC ${cc}</span><span></span>`; r.children[1].textContent=m.label;
+    const x=document.createElement("button"); x.className="ico"; x.textContent="✕"; x.title="Remove this mapping"; x.onclick=()=>{ const c=midiCfg(); delete c.map[cc]; midiSave(c); midiRenderMap(); };
+    r.appendChild(x); box.appendChild(r); });
+}
+async function midiConnectWeb(){
+  if(!navigator.requestMIDIAccess){ toast("This browser can't use MIDI. Chrome and Edge can, and so can the Mac app."); return; }
+  try{ const acc=await navigator.requestMIDIAccess();
+    const hook=()=>{ const names=[]; acc.inputs.forEach(i=>{ names.push(i.name); i.onmidimessage=e=>{ const d=e.data; midiIn(d[0],d[1]||0,d[2]||0); }; }); midiDevices(names); };
+    acc.onstatechange=hook; hook(); }
+  catch(e){ toast("MIDI access wasn't allowed."); }
+}
+
+/* ---------- Audio & MIDI panel ---------- */
+function auRenderPanel(){
+  const box=$("auSlots"); if(!box) return; box.innerHTML="";
+  if(!NATIVE){ box.textContent="Plug-ins play in the Mac app."; return; }
+  const any=Object.entries(AU_SLOTS).filter(([s])=>auParse(state.inst[s]));
+  $("auCount").textContent=AUX.list.length?`${AUX.list.length} instrument plug-in${AUX.list.length===1?"":"s"} found on this Mac.`:"No instrument plug-ins found. Install Kontakt, Massive or another Audio Unit instrument, then press Rescan.";
+  if(!any.length){ box.textContent="Pick a plug-in in the Chords, Melody or Bass menu (Sounds & Kits) to play it."; return; }
+  any.forEach(([slot,label])=>{ const p=auParse(state.inst[slot]); const r=document.createElement("div"); r.className="midi-row";
+    r.innerHTML=`<span class="cc">${label}</span><span></span>`; r.children[1].textContent=auName(p.comp);
+    const b=document.createElement("button"); b.className="mini"; b.textContent="Open window"; b.onclick=()=>auShow(slot); r.appendChild(b); box.appendChild(r); });
+}
+async function audioPanelSetup(){
+  const lat=$("audLatency"); try{ lat.value=localStorage.getItem("beatlab.latency")||"interactive"; }catch(e){}
+  lat.onchange=()=>{ try{ localStorage.setItem("beatlab.latency",lat.value); }catch(e){} $("audRestart").hidden=false; };
+  $("audRestart").onclick=()=>{ projAutosave(true); setTimeout(()=>location.reload(),300); };
+  const info=()=>{ if(!ctx){ $("audInfo").textContent="Audio starts when you press Play."; return; }
+    $("audInfo").textContent=`${(ctx.sampleRate/1000).toFixed(1)} kHz · about ${Math.round(((ctx.baseLatency||0)+(ctx.outputLatency||0))*1000)} ms from Play to your speakers`; };
+  info(); setInterval(info,3000);
+  // output
+  const out=$("audOut");
+  if(NATIVE){
+    $("audOutNote").textContent="Beat Lab's own sounds play through your Mac's sound output (System Settings → Sound). Plug-ins play through:";
+    const list=await native("audioDevices").catch(()=>[]); out.innerHTML=""; (list||[]).forEach(d=>{ const o=new Option(d.name,d.id); o.selected=d.current; out.add(o); });
+    out.onchange=async()=>{ const r=await native("audioOutput",{id:+out.value}); toast(r&&r.error?r.error:"Plug-ins now play through "+out.selectedOptions[0].text); };
+    $("auVol").oninput=e=>native("auVolume",{v:e.target.value/100}).catch(()=>{});
+    $("auRescan").onclick=async()=>{ AUX.list=await native("auList").catch(()=>[])||[]; auMenus(); auRenderPanel(); toast(`${AUX.list.length} plug-ins found`); };
+    $("midiConnect").hidden=true;
+    native("midiDevices").then(midiDevices).catch(()=>{});
+  } else {
+    $("auBox").hidden=true;
+    if(typeof AudioContext!=="undefined"&&AudioContext.prototype.setSinkId&&navigator.mediaDevices){
+      $("audOutNote").textContent="Play through:";
+      const fill=async()=>{ const ds=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==="audiooutput"); out.innerHTML="";
+        ds.forEach((d,k)=>out.add(new Option(d.label||(d.deviceId==="default"?"System default":"Output "+(k+1)),d.deviceId))); };
+      fill(); out.onchange=async()=>{ ensureCtx(); try{ await ctx.setSinkId(out.value==="default"?"":out.value); toast("Output changed"); }catch(e){ toast("Couldn't switch output"); } };
+    } else { out.hidden=true; $("audOutNote").textContent="Beat Lab plays through your computer's sound output."; }
+    $("midiConnect").onclick=midiConnectWeb;
+  }
+  const cfg=midiCfg(); $("midiTarget").value=cfg.target;
+  $("midiTarget").onchange=e=>{ const c=midiCfg(); c.target=e.target.value; midiSave(c); };
+  $("midiLearn").onclick=()=>{ AUX.learn=!AUX.learn; AUX.learnEl=null; $("midiLearn").setAttribute("aria-pressed",AUX.learn); document.body.classList.toggle("midi-learning",AUX.learn);
+    $("midiLearnNote").hidden=!AUX.learn; };
+  // in learn mode, the last knob, fader or slider you touch is what the next controller knob moves
+  document.addEventListener("pointerdown",e=>{ if(!AUX.learn) return; const el=e.target.closest(".mx-knob,.mx-fader,input[type=range]"); if(el){ AUX.learnEl=el; $("midiLearnNote").textContent=`Now move a knob on your controller for: ${midiLabel(el)}`; } },true);
+  midiRenderMap(); midiDevices(AUX.devices);
+}
+function engineSetup(){
+  if(NATIVE){ AUX.ready=native("auList").then(l=>{ AUX.list=Array.isArray(l)?l:[]; auMenus(); auRenderPanel(); }).catch(()=>{}); }
+  audioPanelSetup(); auRenderPanel();
+  ["instA","instB","instMel","instBass"].forEach(id=>$(id).addEventListener("change",()=>{ auButtons(); if(NATIVE) auSync(); }));
+}
+engineSetup();
 </script>
 
 </body>

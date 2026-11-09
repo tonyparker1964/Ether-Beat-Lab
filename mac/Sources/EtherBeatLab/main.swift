@@ -62,6 +62,7 @@ final class LibraryStore {
     func isAllowed(_ path: String) -> Bool {
         lock.lock(); defer { lock.unlock() }
         return allowed.contains(path) || path.hasPrefix(Voices.dir.path + "/")
+            || path.hasPrefix(Engine.recordingsDir.path + "/") || path.hasPrefix(Engine.rendersDir.path + "/")
     }
 
     var folders: [String] {
@@ -259,6 +260,8 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
                 await MainActor.run { replyHandler(Self.encode(result), nil) }
             }
         default:
+            // plug-ins, MIDI, audio devices and recording
+            if Engine.shared.handle(action, body, reply: replyHandler) { return }
             replyHandler(nil, "Unknown request: \(action)")
         }
     }
@@ -434,6 +437,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         if !window.setFrameUsingName("EtherBeatLabWindow") { window.center() }
         window.makeKeyAndOrderFront(nil)
         bridge.window = window
+        Engine.shared.webView = webView
 
         if AppFiles.webPage == nil {
             webView.loadHTMLString("<body style='background:#0a0907;color:#efe3c8;font:16px system-ui;padding:40px'>The Beat Lab page (index.html) wasn't found. Reinstall with install-mac-app.sh.</body>", baseURL: nil)
@@ -444,6 +448,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { Engine.shared.startMIDI() }
+
+    // Recording from the microphone or an audio interface (macOS still asks you once).
+    func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo,
+                 type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        decisionHandler(type == .microphone ? .grant : .deny)
+    }
 
     // Links to other sites open in the browser.
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,

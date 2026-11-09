@@ -45,6 +45,14 @@ The **Project** button at the left of the top bar shows your beat's name (a gold
 - **Autosave:** your beat is kept automatically every few seconds. Close the app (or lose power) and next time it opens right where you left off; unsaved changes still show as unsaved. New beat and Open ask before replacing unsaved work.
 - If a project uses NI sounds and the drive isn't connected, it still opens and tells you which sounds it couldn't find.
 
+## Plug-ins, MIDI and audio settings (Audio/MIDI)
+
+**Plug-ins (Mac app).** Every Audio Unit instrument on your Mac (Kontakt, Massive, and anything else that shows up in Logic) is listed under **Plug-ins (Audio Units)** at the bottom of the Chords, Chords layer 2, Melody and Bass menus in Sounds & Kits. Pick one and it loads for that part; **🎛 Plug-in window** beside the menu opens the plug-in so you can choose its sound (in Kontakt, load an instrument there). The sequencer, the piano roll and your MIDI keyboard play it, Randomize never swaps it out on its own, and the plug-in's sound is saved with your project. In the export the plug-in's notes are rendered offline (faster than real time) and go through that track's mixer strip, stems included. While playing live, plug-ins come straight out of the Mac (not through Beat Lab's mixer); set their level with **Plug-in volume**.
+
+**MIDI keyboards and controllers.** The Mac app sees every connected MIDI device by itself (in Chrome or Edge, press **Connect MIDI**). **Keyboard plays** chooses Melody, Chords, Bass or the Pads (C1 is pad 1). Turn on **● Rec** while the beat plays and what you play is written into the Piano roll, quantized to its Snap (one Undo removes the whole take). **MIDI learn:** press it, click any knob, fader or slider in Beat Lab (mixer knobs and faders, tempo, swing, reverb…), then move a knob or slider on your controller. Mappings are listed with ✕ to remove them.
+
+**Audio.** Shows the sample rate and how long sound takes to reach your speakers. **Latency**: Lowest for playing live, Balanced, or Safest if you hear crackles (press **Restart audio to apply**; your beat is kept). In the Mac app Beat Lab's own sounds use your Mac's sound output (System Settings → Sound) and you can choose a separate output for plug-ins (an audio interface, say). **Recording** uses the Mac's input; the first time, macOS asks for microphone permission.
+
 ## Arrangement
 
 Switch the main area from **Pattern** to **Arrangement** (top left of the tracks in Studio view; on the classic page it's its own section) to lay out the whole song on a timeline.
@@ -78,7 +86,7 @@ The **Mixer** tab (in the editors along the bottom of Studio view, or its own se
 
 ## Studio view and visualizer
 
-On a wide window (and always in the Mac app) Beat Lab opens in **Studio view**, a full-window workspace: a control bar with transport and a display (bar and beat, tempo, key, genre, what's playing), a **library** on the left (AI Producer, Native Instruments, beat settings), the **tracks** in the middle, and **editors** along the bottom (Pads, Sounds, Sampler, Visualizer, Export). The ◧ and ⬓ buttons show or hide the library and editors, the line above the editors drags to resize them, and **Classic view** goes back to the single page. Your layout is remembered.
+On a wide window (and always in the Mac app) Beat Lab opens in **Studio view**, a full-window workspace: a control bar with transport and a display (bar and beat, tempo, key, genre, what's playing), a **library** on the left (AI Producer, NI Library, Setup for the beat settings, and Audio/MIDI), the **tracks** in the middle with a **Pattern / Arrangement** switch, a **♥ Favorites** list on the right, and **editors** along the bottom (Pads, Piano roll, Mixer, Sounds & Kits, Sampler, Visualizer, Export). The ◧ and ⬓ buttons show or hide the library and editors, the line above the editors drags to resize them, and **Classic view** goes back to the single page. Your layout is remembered.
 
 The **Visualizer** has five scenes around the Zero Point, a luminous diamond that pulses on every kick (taken straight from the sequencer, so it lands exactly on the beat): **Frequency Portal**, **Cymatic Geometry**, **Quantum Spectrum**, **Cosmic Vortex** and **Liquid Frequency**. Sensitivity, Motion, Particles, Glow, Hue shift and Reduce motion tune the look; Reset restores it. ⛶ fills the screen, where 1–5 change the scene and F or Esc leaves.
 
