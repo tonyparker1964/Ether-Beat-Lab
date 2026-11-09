@@ -48,10 +48,10 @@ final class LibraryStore {
         return index
     }
 
-    /// Only files the scan found can be served to the page. Nothing else on the Mac is reachable.
+    /// Only files the scan found (and voice chops the app made) can be served to the page.
     func isAllowed(_ path: String) -> Bool {
         lock.lock(); defer { lock.unlock() }
-        return allowed.contains(path)
+        return allowed.contains(path) || path.hasPrefix(Voices.dir.path + "/")
     }
 
     var folders: [String] {
@@ -153,6 +153,22 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
             rescan(replyHandler)
         case "rescan":
             rescan(replyHandler)
+        case "voices":
+            DispatchQueue.global(qos: .userInitiated).async {
+                let list = Voices.list()
+                let text = (try? JSONEncoder().encode(list)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+                DispatchQueue.main.async { replyHandler(text, nil) }
+            }
+        case "speak":
+            let text = body["text"] as? String ?? ""
+            let voice = body["voice"] as? String ?? ""
+            let rate = (body["rate"] as? NSNumber)?.intValue ?? 140
+            DispatchQueue.global(qos: .userInitiated).async {
+                let path = Voices.speak(text, voice: voice, rate: rate)
+                DispatchQueue.main.async {
+                    replyHandler(Self.encode(path.map { ["path": $0] } ?? ["error": "That voice couldn't speak. Pick another voice."]), nil)
+                }
+            }
         case "settings":
             replyHandler(Self.encode(["model": UserDefaults.standard.string(forKey: "producerModel") ?? "",
                                       "lmStudioURL": Producer.baseURL]), nil)
@@ -195,6 +211,58 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
     static func encode(_ dict: [String: String]) -> String {
         guard let d = try? JSONSerialization.data(withJSONObject: dict) else { return "{}" }
         return String(data: d, encoding: .utf8) ?? "{}"
+    }
+}
+
+/// Natural vocal chops from the voices built into macOS (System Settings → Accessibility → Spoken Content).
+/// Made on this Mac with the `say` tool; nothing goes online.
+enum Voices {
+    static var dir: URL {
+        let d = AppFiles.dir.appendingPathComponent("Voices", isDirectory: true)
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
+    }
+
+    struct Voice: Codable { var name: String; var locale: String }
+
+    /// Installed voices, from `say -v ?`. Lines look like "Samantha            en_US    # Hello…".
+    static func list() -> [Voice] {
+        guard let out = run(["-v", "?"]) else { return [] }
+        let re = try? NSRegularExpression(pattern: "^(.+?)\\s{2,}([a-z]{2,3}_[A-Za-z0-9]+)\\s+#")
+        var voices: [Voice] = []
+        for line in out.split(separator: "\n").map(String.init) {
+            let ns = line as NSString
+            guard let m = re?.firstMatch(in: line, range: NSRange(location: 0, length: ns.length)) else { continue }
+            voices.append(Voice(name: ns.substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespaces),
+                                locale: ns.substring(with: m.range(at: 2))))
+        }
+        return voices
+    }
+
+    /// Speaks a short word into a WAV file and returns its path. Same voice and word reuse the file.
+    static func speak(_ text: String, voice: String, rate: Int) -> String? {
+        let clean = String(text.filter { $0.isLetter || $0 == " " || $0 == "'" }.prefix(40)).trimmingCharacters(in: .whitespaces)
+        guard !clean.isEmpty, list().contains(where: { $0.name == voice }) else { return nil }
+        let id = LibraryScanner.stableID(voice + "|" + clean + "|" + String(rate))
+        let url = dir.appendingPathComponent("\(id).wav")
+        if FileManager.default.fileExists(atPath: url.path) { return url.path }
+        _ = run(["-v", voice, "-r", String(max(60, min(260, rate))), "--file-format=WAVE", "--data-format=LEI16@44100",
+                 "-o", url.path, "--", clean])
+        return FileManager.default.fileExists(atPath: url.path) ? url.path : nil
+    }
+
+    @discardableResult
+    static func run(_ args: [String]) -> String? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/say")
+        p.arguments = args
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return String(data: data, encoding: .utf8)
     }
 }
 

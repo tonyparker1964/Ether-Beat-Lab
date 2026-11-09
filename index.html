@@ -393,6 +393,8 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       <label class="field"><span class="lbl">Cymbals</span><select id="kitCrash"></select></label>
       <label class="field"><span class="lbl">Transitions (risers &amp; hits)</span><select id="fxSel"></select></label>
       <label class="field"><span class="lbl">Vocal chop</span><select id="kitChop"></select></label>
+      <label class="field st-voice" id="voiceField" hidden><span class="lbl">Chop singer (natural voice)</span><select id="voiceSel"></select></label>
+      <label class="field" id="voiceWordField" hidden><span class="lbl">Your own word</span><input type="text" id="voiceWord" class="ni-input" maxlength="40" placeholder="e.g. yeah, oh baby, ether" aria-label="Word for the vocal chop"></label>
     </div>
   </section>
 
@@ -1852,7 +1854,7 @@ async function niUseKit(kit,quiet){
   const failed=res.filter(r=>r.status==="rejected").length;
   if(!quiet) toast(failed?`NI kit ${kit} (${failed} sounds couldn't be read)`:"NI kit: "+kit);
 }
-function niSynthKit(){ Object.keys(NI_TRACKS).concat(["chop"]).forEach(t=>{ if(samples[t]&&samples[t].ni) delete samples[t]; }); NI.kit=null; $("niKit").value=""; renderGrid(); renderPads(); niStatus(); syncSounds(); }
+function niSynthKit(){ Object.keys(NI_TRACKS).concat(["chop"]).forEach(t=>{ if(samples[t]&&samples[t].ni&&!samples[t].voice) delete samples[t]; }); NI.kit=null; $("niKit").value=""; renderGrid(); renderPads(); niStatus(); syncSounds(); }
 function niGenreKit(extraWords){
   if(!NI.kits.length) return null;
   const want=(GENRE_WORDS[state.genre]||[]).concat(extraWords||[]);
@@ -1944,7 +1946,7 @@ function niGroupBuiltInKitOptions(){
     const sel=$(selId); if(!sel||sel.querySelector("optgroup.own")) continue;
     const own=[...sel.options].filter(o=>o.value!=="auto"&&o.parentElement===sel);
     if(!own.length) continue;
-    const og=document.createElement("optgroup"); og.className="own"; og.label=selId==="percSel"?"Beat Lab percussion":"Beat Lab sounds";
+    const og=document.createElement("optgroup"); og.className="own"; og.label=selId==="percSel"?"Beat Lab percussion":selId==="kitChop"?"Synth voices (Beat Lab)":"Beat Lab sounds";
     if(selId==="percSel"){ const world=document.createElement("optgroup"); world.className="own"; world.label="World percussion (Beat Lab)";
       own.forEach(o=>(/\(/.test(o.text)?world:og).appendChild(o)); sel.appendChild(og); sel.appendChild(world); }
     else { own.forEach(o=>og.appendChild(o)); sel.appendChild(og); }
@@ -1971,7 +1973,8 @@ function niFillKitSelects(){
 function niSyncKitSelects(){
   for(const [track,selId] of Object.entries(NI_KIT_SELECTS)){
     const smp=samples[track], sel=$(selId); if(!sel) continue;
-    if(smp&&smp.ni) sel.value="nid:"+smp.ni.path;
+    if(smp&&smp.voice) sel.value="voice:"+smp.voice.word;
+    else if(smp&&smp.ni) sel.value="nid:"+smp.ni.path;
   }
 }
 function niHookKitSelects(){
@@ -2251,6 +2254,84 @@ document.addEventListener("keydown",e=>{
 prodSetup();
 niGroupBuiltInKitOptions();
 niSetup();
+/* ---------- Natural voice vocal chops (Mac app) ---------- */
+// Words are spoken by a voice built into macOS, then tuned so the chop sings the chord notes in key.
+const VOICE_WORDS=[["ahh","Ahh","Aaah"],["ooh","Ooh","Oooh"],["oh","Oh","Ohh"],["hey","Hey","Hey!"],["yeah","Yeah","Yeah"],["uh","Uh","Uh"],
+  ["la","La","Laa"],["hmm","Hmm","Hmmm"],["whoa","Whoa","Whoa"],["custom","Your own word…",""]];
+const VOICE={list:[],singer:"",word:"ahh",busy:0};
+/* Rough pitch of a voice sample (autocorrelation over a steady part), as a MIDI note. */
+function detectMidi(buf,start){
+  const sr=buf.sampleRate, d=buf.getChannelData(0), from=Math.floor((start+.06)*sr), n=Math.min(Math.floor(.12*sr),d.length-from);
+  if(n<sr*.03) return null;
+  let best=0, bestLag=0; const minLag=Math.floor(sr/500), maxLag=Math.floor(sr/70);
+  for(let lag=minLag;lag<=maxLag;lag++){ let c=0, e=0; for(let i=0;i<n-lag;i++){ c+=d[from+i]*d[from+i+lag]; e+=d[from+i+lag]*d[from+i+lag]; }
+    const v=e>0?c/Math.sqrt(e):0; if(v>best){ best=v; bestLag=lag; } }
+  if(!bestLag) return null;
+  return 69+12*Math.log2(sr/bestLag/440);
+}
+const _assignDrumForChop=niAssignDrum;
+niAssignDrum=async function(track,file){
+  await _assignDrumForChop(track,file);
+  // A vocal on the chop track is tuned so its own pitch sits on middle C; the chord notes do the rest.
+  if(track==="chop"&&samples.chop){ const m=detectMidi(samples.chop.buf,samples.chop.start*samples.chop.buf.duration);
+    if(m!=null) samples.chop.p.tune=Math.max(-12,Math.min(12,Math.round(60-m))); }
+};
+function voiceLabel(v){ return v.name.replace(/\s*\((Enhanced|Premium)\)/,m=>" ★"); }
+function voiceFillChopMenu(){
+  const sel=$("kitChop"); [...sel.querySelectorAll("optgroup.voice")].forEach(g=>g.remove());
+  if(!VOICE.singer) return;
+  const og=document.createElement("optgroup"); og.className="voice"; og.label="Natural voice — "+VOICE.singer;
+  VOICE_WORDS.forEach(([k,label])=>og.appendChild(new Option(label,"voice:"+k)));
+  // Natural voices come first after the genre default.
+  const after=sel.querySelector("option[value=auto]"); after&&after.nextSibling?sel.insertBefore(og,after.nextSibling):sel.appendChild(og);
+  voiceSyncMenu();
+}
+function voiceSyncMenu(){ const s=samples.chop; if(s&&s.voice){ $("kitChop").value="voice:"+s.voice.word; } $("voiceWordField").hidden=!(s&&s.voice&&s.voice.word==="custom"); }
+async function voiceMake(word,quiet){
+  if(!VOICE.singer) return;
+  const entry=VOICE_WORDS.find(w=>w[0]===word)||VOICE_WORDS[0];
+  const text=word==="custom"?($("voiceWord").value.trim()||"yeah"):entry[2];
+  const job=++VOICE.busy;
+  if(!quiet) toast(`Making “${text}” with ${VOICE.singer}…`);
+  const r=await native("speak",{text,voice:VOICE.singer,rate:word==="custom"?150:115});
+  if(job!==VOICE.busy) return; // a newer choice won
+  if(r.error){ toast(r.error); return; }
+  const f={path:r.path,name:`${entry[0]==="custom"?text:entry[1]} — ${VOICE.singer}`,role:"vocal",kit:"Natural voice"};
+  await niAssignDrum("chop",f);
+  samples.chop.voice={word,singer:VOICE.singer};
+  renderGrid(); renderPads(); voiceSyncMenu();
+  if(!quiet) audition("chop");
+}
+function voiceSetup(){
+  if(!NATIVE) return;
+  // The chop menu: natural voice words go through the voice maker; everything else behaves as before.
+  const sel=$("kitChop"), prev=sel.onchange;
+  sel.onchange=e=>{ const v=e.target.value;
+    if(v.startsWith("voice:")){ pushUndo(); VOICE.word=v.slice(6); $("voiceWordField").hidden=VOICE.word!=="custom"; voiceMake(VOICE.word); if(VOICE.word==="custom") setTimeout(()=>$("voiceWord").focus(),50); }
+    else { if(samples.chop&&samples.chop.voice) delete samples.chop; $("voiceWordField").hidden=true; prev&&prev.call(sel,e); } };
+  $("voiceSel").onchange=e=>{ VOICE.singer=e.target.value; try{ localStorage.setItem("beatlab.singer",VOICE.singer); }catch(err){} voiceFillChopMenu(); voiceMake(VOICE.word); };
+  $("voiceWord").addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter"){ e.preventDefault(); voiceMake("custom"); } });
+  $("voiceWord").addEventListener("change",()=>voiceMake("custom"));
+  native("voices").then(list=>{
+    VOICE.list=(list||[]).filter(v=>v.name);
+    if(!VOICE.list.length) return;
+    // English voices first, best quality first; then every other language.
+    const q=v=>/Premium/.test(v.name)?0:/Enhanced/.test(v.name)?1:2;
+    VOICE.list.sort((a,b)=>(a.locale.startsWith("en")?0:1)-(b.locale.startsWith("en")?0:1)||q(a)-q(b)||a.name.localeCompare(b.name));
+    const vs=$("voiceSel"); vs.innerHTML="";
+    const groups=new Map(); VOICE.list.forEach(v=>{ const lang=v.locale.startsWith("en")?"English":v.locale; if(!groups.has(lang)) groups.set(lang,[]); groups.get(lang).push(v); });
+    groups.forEach((vs2,lang)=>{ const og=document.createElement("optgroup"); og.label=lang==="English"?"English voices":lang; vs2.forEach(v=>og.appendChild(new Option(voiceLabel(v)+(lang==="English"?` (${v.locale.replace("en_","")})`:""),v.name))); vs.appendChild(og); });
+    let saved=""; try{ saved=localStorage.getItem("beatlab.singer")||""; }catch(e){}
+    const pickDefault=VOICE.list.find(v=>v.name===saved)||VOICE.list.find(v=>v.locale.startsWith("en")&&/Samantha|Ava|Zoe|Allison|Susan/.test(v.name))||VOICE.list[0];
+    VOICE.singer=pickDefault.name; vs.value=VOICE.singer;
+    $("voiceField").hidden=false;
+    voiceFillChopMenu();
+    // In the Mac app the vocal chop starts as a natural "Ahh" instead of the synthesized voice.
+    if(!samples.chop&&state.inst.chop==="auto") voiceMake("ahh",true);
+  }).catch(()=>{});
+}
+voiceSetup();
+
 </script>
 <script>
 "use strict";
