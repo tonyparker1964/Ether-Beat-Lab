@@ -365,6 +365,7 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       <h2>Sounds</h2>
       <button class="btn" id="rollSounds" title="Pick a new combination of instruments">⚄ Roll sounds</button>
     </div>
+    <p class="ni-status">Tip: click a menu, then press ↑ or ↓ to step through the sounds and hear each one.</p>
     <h3 class="subhead">Instruments · chords, melody, bass</h3>
     <div class="sounds-grid">
       <label class="field"><span class="lbl">Chords</span><select id="instA"></select></label>
@@ -2230,6 +2231,23 @@ function prodSetup(){
   if(!NATIVE){ $("prodAI").checked=false; $("prodAI").disabled=true; $("prodModel").disabled=true; }
   else native("settings").then(s=>{ if(s&&s.model) $("prodModel").value=s.model; }).catch(()=>{});
 }
+/* ↑ ↓ on a focused Sounds menu steps to the previous or next sound and plays it, without opening the list.
+   (⌥↓ or Space still opens the full list.) */
+function stepSelect(sel,dir){
+  const opts=[...sel.options].filter(o=>!o.disabled), cur=sel.selectedOptions[0];
+  let i=opts.indexOf(cur); i=i<0?0:Math.max(0,Math.min(opts.length-1,i+dir));
+  const next=opts[i]; if(!next||next===cur) return;
+  sel.value=next.value; sel.dispatchEvent(new Event("change",{bubbles:true}));
+  const label=(next.parentElement.tagName==="OPTGROUP"?next.parentElement.label+" · ":"")+next.text;
+  toast(label.length>70?next.text:label);
+}
+document.addEventListener("keydown",e=>{
+  const t=e.target;
+  if(t.tagName!=="SELECT"||!t.closest('[aria-label="Sounds"],#niPanel')) return;
+  if((e.key!=="ArrowDown"&&e.key!=="ArrowUp")||e.altKey||e.metaKey||e.ctrlKey) return;
+  e.preventDefault(); e.stopPropagation();
+  stepSelect(t,e.key==="ArrowDown"?1:-1);
+},true);
 prodSetup();
 niGroupBuiltInKitOptions();
 niSetup();
