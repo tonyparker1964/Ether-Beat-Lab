@@ -45,6 +45,17 @@ The **Project** button at the left of the top bar shows your beat's name (a gold
 - **Autosave:** your beat is kept automatically every few seconds. Close the app (or lose power) and next time it opens right where you left off; unsaved changes still show as unsaved. New beat and Open ask before replacing unsaved work.
 - If a project uses NI sounds and the drive isn't connected, it still opens and tells you which sounds it couldn't find.
 
+## Arrangement
+
+Switch the main area from **Pattern** to **Arrangement** (top left of the tracks in Studio view; on the classic page it's its own section) to lay out the whole song on a timeline.
+
+- **▶ Play arrangement** makes Play run the whole song with everything on the timeline (it's the same switch as "Play as song").
+- **Patterns** lane: the song's patterns in order, 4 bars each, with their chords. Click a block to change it to the next pattern, right-click (or select it and press Delete) to remove it, **+ Pattern** to add one.
+- **Audio tracks:** **Import audio…** (or drag WAV, AIFF, MP3 or M4A files onto the timeline) or **● Record audio** from your microphone or audio interface. Recording starts the song from bar 1 and stops when you press Stop; it goes onto the track marked ● or a new one, lined up with bar 1 (the sound card's delay is taken into account). Each track has a name, ● (record onto it), **M** (mute), a volume slider and ✕.
+- **Clips:** drag to move (snapping to the bar, beat or 1/16), drag an edge to trim, ⌥-drag to copy, Delete removes. Click one to see its settings: **Gain**, **Duplicate**, **Delete**, and **Tempo**: *Original speed*, *Follow the tempo (keep pitch)*, which time-stretches the clip to the song's tempo without changing its pitch, or *Follow the tempo (varispeed)*, which speeds it up or slows it down like tape. **Clip BPM** is the tempo the clip was played at (recordings remember the tempo they were made at, so they follow if you change it later).
+- **+ Automation** adds a lane that moves a setting over the song: the filter sweep, reverb, echo, master volume, or the volume of any track or audio track. Click to add a point, drag points, double-click or right-click to delete one.
+- Audio tracks go through the mixer like the other tracks, are saved inside the project, and are in the whole-song export and its stems.
+
 ## Piano roll
 
 Melody, Bass and Chords can be edited note by note in the **Piano roll** (an editor tab in Studio view, a section on the classic page, or the ♪ button on those rows of the Pattern grid). It covers the pattern's full 4 bars with the chord names along the top, and rows in the key are lighter (the key's root is marked in gold).
