@@ -2229,7 +2229,10 @@ function niLoad(path){
     for(const d of chans) for(let i=0;i<d.length;i++){ const a=Math.abs(d[i]); if(a>peak) peak=a; }
     let start=0; const th=peak*.02;
     outer: for(let i=0;i<buf.length;i++){ for(const d of chans){ if(Math.abs(d[i])>=th){ start=i; break outer; } } }
-    const info={buf,start:Math.max(0,start-Math.round(buf.sampleRate*.001))/buf.sampleRate,norm:peak>.0001?1/peak:1};
+    // loudness over the first half second: notes are matched by how loud they sound, not by their loudest peak
+    let sq=0, cnt=0; const end=Math.min(buf.length,start+Math.round(buf.sampleRate*.5));
+    for(const d of chans){ for(let i=start;i<end;i++) sq+=d[i]*d[i]; cnt+=end-start; }
+    const info={buf,start:Math.max(0,start-Math.round(buf.sampleRate*.001))/buf.sampleRate,norm:peak>.0001?1/peak:1,rms:cnt?Math.sqrt(sq/cnt):0};
     NI.ready.set(path,info); NI.loading.delete(path); return info;
   })();
   job.catch(()=>NI.loading.delete(path));
@@ -2280,12 +2283,16 @@ function niRegister(inst){
   return key;
 }
 function niLoadInst(inst){ return Promise.allSettled(inst.zones.map(z=>niLoad(z.path))); }
+/* How loud an NI note plays: set by how loud the sample sounds (its first half second), so a held bass and a fading piano
+   sit where Beat Lab's own bass and piano sit in the mix. Never more than twice its peak level, so it can't clip. */
+const NI_LOUD={bass:.19,other:.23};
+function niGain(r,inst){ const peak=1.4*r.norm; if(!r.rms) return peak; return Math.min((inst.category==="bass"?NI_LOUD.bass:NI_LOUD.other)/r.rms,2*r.norm); }
 function niPlay(inst,c,out,t,f,v,dur){
   const m=69+12*Math.log2(f/440); let best=null, bd=1e9;
   for(const z of inst.zones){ const r=NI.ready.get(z.path); if(!r) continue; const d=Math.abs(z.root-m); if(d<bd){ bd=d; best={z,r}; } }
   if(!best){ niLoadInst(inst); return; }
   const src=c.createBufferSource(); src.buffer=best.r.buf; src.playbackRate.value=Math.pow(2,(m-best.z.root)/12);
-  const len=Math.max(.08,dur||.4), rel=Math.min(.45,.08+len*.25), lvl=Math.max(.0001,v*1.4*best.r.norm), g=c.createGain();
+  const len=Math.max(.08,dur||.4), rel=Math.min(.45,.08+len*.25), lvl=Math.max(.0001,v*niGain(best.r,inst)), g=c.createGain();
   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(lvl,t+.005); g.gain.setValueAtTime(lvl,t+len); g.gain.linearRampToValueAtTime(0,t+len+rel);
   src.connect(g).connect(out); src.start(t,best.r.start); src.stop(t+len+rel+.03);
 }
@@ -5253,15 +5260,22 @@ function scrNameNote(name){ // pitch class (0-11) and octave (or null) from a fi
   const acc=last[2]?(/^(#|♯|sharp)$/i.test(last[2])?1:-1):0, pc=(SCR_PC[last[1].toLowerCase()]+acc+12)%12;
   return {pc,midi:last[3]!=null?pc+12*(+last[3]+2):null};
 }
-function scrPitch(info){ // the note a sample plays (YIN-style), or null when it isn't clearly pitched
-  const buf=info.buf, sr=buf.sampleRate, d=buf.getChannelData(0), from=Math.floor((info.start||0)*sr+.03*sr), n=Math.min(Math.floor(.12*sr),d.length-from-Math.floor(sr/30));
+function scrPitch(info,at){ const r=scrPitchAt(info,at||.03); return r?r.m:null; }
+/* The exact note a sample plays (fractions of a semitone included), measured at two moments; null unless both agree. */
+function scrPitchSure(info){ const a=scrPitchAt(info,.04), b=scrPitchAt(info,.16);
+  if(!a||!b) return a&&!b&&info.buf.duration<.3?a:null; if(Math.abs(a.m-b.m)>.3) return null; return {m:(a.m+b.m)/2,clarity:Math.max(a.clarity,b.clarity)}; }
+function scrPitchAt(info,at){ // YIN pitch detection, or null when the sound isn't clearly pitched
+  const buf=info.buf, sr=buf.sampleRate, d=buf.getChannelData(0), from=Math.floor((info.start||0)*sr+at*sr), n=Math.min(Math.floor(.1*sr),d.length-from-Math.floor(sr/30));
   if(n<Math.floor(.04*sr)) return null;
   const minLag=Math.floor(sr/1200), maxLag=Math.floor(sr/30), df=new Float32Array(maxLag+1);
   for(let lag=minLag;lag<=maxLag;lag++){ let sum=0; for(let i=0;i<n;i++){ const x=d[from+i]-d[from+i+lag]; sum+=x*x; } df[lag]=sum; }
-  let run=0, best=-1, bestV=1;
-  for(let lag=minLag;lag<=maxLag;lag++){ run+=df[lag]; const v=run>0?df[lag]*(lag-minLag+1)/run:1; if(v<bestV){ bestV=v; best=lag; } if(v<.12){ while(lag+1<=maxLag&&df[lag+1]<df[lag]) lag++; best=lag; bestV=v; break; } }
+  const dn=new Float32Array(maxLag+1); let run=0;
+  for(let lag=minLag;lag<=maxLag;lag++){ run+=df[lag]; dn[lag]=run>0?df[lag]*(lag-minLag+1)/run:1; }
+  let best=-1, bestV=1;
+  for(let lag=minLag;lag<=maxLag;lag++){ if(dn[lag]<bestV){ bestV=dn[lag]; best=lag; } if(dn[lag]<.12){ while(lag+1<=maxLag&&dn[lag+1]<dn[lag]) lag++; best=lag; bestV=dn[lag]; break; } }
   if(best<0||bestV>.25) return null;
-  const f=sr/best; return 69+12*Math.log2(f/440);
+  let lag=best; if(best>minLag&&best<maxLag){ const y0=df[best-1], y1=df[best], y2=df[best+1], den=y0-2*y1+y2; if(den>0) lag=best+.5*(y0-y2)/den; } // between samples, for cents
+  return {m:69+12*Math.log2(sr/lag/440),clarity:bestV};
 }
 const SCR_SPAN={a:[0,19],b:[0,19],mel:[12,26],bass:[0,12]};
 function scrPartRange(slot){ const lo=slot==="bass"?36+state.root:keysBase(); const [a,b]=SCR_SPAN[slot]; return [lo+a,lo+b]; }
@@ -5270,19 +5284,24 @@ function scrRangeFit(inst,slot){ // 0 = recorded right where the part plays; hig
   for(let m=lo;m<=hi;m+=2){ let near=1e9; inst.zones.forEach(z=>{ near=Math.min(near,Math.abs(z.root-m)); }); worst=Math.max(worst,near); }
   return worst;
 }
-async function scrCheckRoots(inst){ // fix zones whose file name had no note (the library guessed C3 = 60)
+async function scrCheckRoots(inst){ // every recorded note checked by ear; file names can be wrong or a little out of tune
   let fixed=0;
   for(const z of inst.zones){
     if(z.checked) continue; z.checked=true;
-    const nn=scrNameNote(z.path.split("/").pop()); if(nn&&nn.midi!=null) continue;
     let info; try{ info=await niLoad(z.path); }catch(e){ continue; }
-    const p=scrPitch(info); if(p==null) continue;
-    const m=Math.round(p); if(nn&&nn.midi==null&&((m%12)+12)%12!==nn.pc) continue; // the name says another note: trust neither
-    if(Math.abs(m-z.root)>=1){ z.root=m; fixed++; }
+    const p=scrPitchSure(info); if(!p) continue; // not clearly pitched (bells, noise, slides): keep what the name says
+    const nn=scrNameNote(z.path.split("/").pop()), named=!!nn;
+    if(named&&p.clarity>.05) continue; // overruling a name needs a very clear pitch
+    let m=p.m; const ref=nn&&nn.midi!=null?nn.midi:z.root; while(m-ref>6) m-=12; while(ref-m>6) m+=12; // keep the octave the library expects
+    if(!named) m=p.m;
+    m=Math.round(m*100)/100;
+    if(Math.abs(m-z.root)>=.12){ z.root=m; fixed++; }
   }
   if(fixed) inst.zones.sort((a,b)=>a.root-b.root);
   return fixed;
 }
+// Any NI instrument that plays gets checked once, whichever way it was chosen (menus, Producer, scripts).
+{ const raw=niLoadInst; niLoadInst=function(inst){ return raw(inst).then(r=>scrCheckRoots(inst).then(()=>r,()=>r)); }; }
 async function scrTuneDrums(){ // pitched kicks (808s, tuned kicks) onto the song's root note
   const out=[];
   for(const t of ["kick","tom"]){
@@ -5441,7 +5460,7 @@ function runScript(text){
       if(sl==="b"&&(!best||best.zones.length<3||best.__fit>5)){ state.inst.b="none"; niPicked.push("chords 2 off (no close match)"); return; }
       if(!best) return;
       used.push(best.id); kits.push(best.kit);
-      jobs.push(async()=>{ const f=await scrCheckRoots(best); if(f) tuned.push(`${best.name} (${f} note${f>1?"s":""} found by ear)`); await niAssignInst(sl,best,true); });
+      jobs.push(async()=>{ const f=await scrCheckRoots(best); if(f) tuned.push(`${best.name} (${f} note${f>1?"s":""} retuned by ear)`); await niAssignInst(sl,best,true); });
       niPicked.push(`${label} ${best.name} (${best.zones.length} recorded note${best.zones.length>1?"s":""})`); });
   }
   if(typeof NI!=="undefined"&&NI.lib) jobs.push(async()=>{ const d=await scrTuneDrums(); if(d.length) tuned.push("tuned to "+NAMES[state.root]+": "+d.join(", ")); });
