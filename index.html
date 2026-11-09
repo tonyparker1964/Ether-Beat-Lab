@@ -365,17 +365,17 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       <h2>Sounds</h2>
       <button class="btn" id="rollSounds" title="Pick a new combination of instruments">⚄ Roll sounds</button>
     </div>
-    <h3 class="subhead">Instruments</h3>
+    <h3 class="subhead">Instruments · chords, melody, bass</h3>
     <div class="sounds-grid">
-      <label class="field"><span class="lbl">Chords · layer A</span><select id="instA"></select></label>
-      <label class="field"><span class="lbl">Chords · layer B</span><select id="instB"></select></label>
-      <label class="field"><span class="head"><span class="lbl">Layer blend</span><output id="blendOut"></output></span><input type="range" id="blend" min="0" max="100" step="1"></label>
-      <label class="field"><span class="lbl">Chord voicing</span><select id="voicing"></select></label>
+      <label class="field"><span class="lbl">Chords</span><select id="instA"></select></label>
+      <label class="field"><span class="lbl">Chords layer 2</span><select id="instB"></select></label>
+      <label class="field"><span class="head"><span class="lbl">Layer 2 mix</span><output id="blendOut"></output></span><input type="range" id="blend" min="0" max="100" step="1"></label>
+      <label class="field"><span class="lbl">Chord shape</span><select id="voicing"></select></label>
       <label class="field"><span class="lbl">Chord rhythm</span><select id="rhythm"></select></label>
       <label class="field"><span class="lbl">Melody</span><select id="instMel"></select></label>
       <label class="field"><span class="lbl">Bass</span><select id="instBass"></select></label>
-      <label class="field"><span class="head"><span class="lbl">Space (reverb)</span><output id="spaceOut"></output></span><input type="range" id="space" min="0" max="100" step="1"></label>
-      <label class="field"><span class="head"><span class="lbl">Echo</span><output id="echoOut"></output></span><input type="range" id="echo" min="0" max="100" step="1"></label>
+      <label class="field"><span class="head"><span class="lbl">Reverb</span><output id="spaceOut"></output></span><input type="range" id="space" min="0" max="100" step="1"></label>
+      <label class="field"><span class="head"><span class="lbl">Echo delay</span><output id="echoOut"></output></span><input type="range" id="echo" min="0" max="100" step="1"></label>
     </div>
     <div class="sounds-head" style="margin-top:18px">
       <h3 class="subhead" style="margin:0">Drum kit</h3>
@@ -384,13 +384,13 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
     <p class="ni-status" id="niKitNote" hidden></p>
     <div class="sounds-grid">
       <label class="field"><span class="lbl">Kick</span><select id="kitKick"></select></label>
-      <label class="field"><span class="lbl">Snare</span><select id="kitSnare"></select></label>
-      <label class="field"><span class="lbl">Hat</span><select id="kitHat"></select></label>
-      <label class="field"><span class="lbl">Open hat</span><select id="kitOhat"></select></label>
+      <label class="field"><span class="lbl">Snare &amp; clap</span><select id="kitSnare"></select></label>
+      <label class="field"><span class="lbl">Hi-hat</span><select id="kitHat"></select></label>
+      <label class="field"><span class="lbl">Open hat &amp; ride</span><select id="kitOhat"></select></label>
       <label class="field"><span class="lbl">Percussion</span><select id="percSel"></select></label>
-      <label class="field"><span class="lbl">Tom</span><select id="kitTom"></select></label>
-      <label class="field"><span class="lbl">Crash</span><select id="kitCrash"></select></label>
-      <label class="field"><span class="lbl">FX (rise &amp; hit)</span><select id="fxSel"></select></label>
+      <label class="field"><span class="lbl">Toms</span><select id="kitTom"></select></label>
+      <label class="field"><span class="lbl">Cymbals</span><select id="kitCrash"></select></label>
+      <label class="field"><span class="lbl">Transitions (risers &amp; hits)</span><select id="fxSel"></select></label>
       <label class="field"><span class="lbl">Vocal chop</span><select id="kitChop"></select></label>
     </div>
   </section>
@@ -1776,10 +1776,31 @@ async function native(action,data){
   return typeof r==="string"?JSON.parse(r):r;
 }
 const NI={lib:null,ready:new Map(),loading:new Map(),kit:null,kits:[],instById:new Map()};
-const NI_TRACKS={kick:["kick"],snare:["snare","clap"],hat:["closedHat"],ohat:["openHat"],perc:["perc"],tom:["tom"],crash:["cymbal"]};
-const NI_TRIM={kick:.95,snare:.8,hat:.42,ohat:.38,perc:.5,tom:.6,crash:.32};
-const NI_ROLE_LABEL={kick:"Kick",snare:"Snare",clap:"Clap",closedHat:"Closed hat",openHat:"Open hat",perc:"Percussion",tom:"Tom",cymbal:"Cymbal"};
-const NI_CATS={keys:"Keys",pad:"Pads",synth:"Synths",pluck:"Plucks",bell:"Bells & mallets",strings:"Strings",brass:"Brass & winds",guitar:"Guitars",bass:"Bass"};
+// Which NI drum sounds a kit fills each track with (first type found wins).
+const NI_TRACKS={kick:["kick"],snare:["snare","clap"],hat:["closedHat","shaker"],ohat:["openHat","ride"],perc:["perc","shaker","rim"],tom:["tom"],crash:["crash","cymbal","ride"]};
+// Which NI drum sounds each Drum kit menu offers.
+const NI_MENU_ROLES={kick:["kick"],snare:["snare","clap","rim","snap"],hat:["closedHat","shaker"],ohat:["openHat","ride"],perc:["perc","shaker","rim","snap"],
+  tom:["tom"],crash:["crash","ride","cymbal"],chop:["vocal"]};
+const NI_TRIM={kick:.95,snare:.8,hat:.42,ohat:.38,perc:.5,tom:.6,crash:.32,chop:.55};
+const NI_ROLE_LABEL={kick:"Kick",snare:"Snare",clap:"Clap",rim:"Rim",snap:"Snap",closedHat:"Closed hat",openHat:"Open hat",shaker:"Shaker",
+  ride:"Ride",crash:"Crash",cymbal:"Cymbal",perc:"Percussion",tom:"Tom",vocal:"Vocal one-shot"};
+// One set of instrument categories for Beat Lab's own sounds and NI sounds alike.
+const NI_CATS={keys:"Pianos & Keys",organ:"Organs",bell:"Bells & Mallets",guitar:"Guitars",strings:"Strings",brass:"Brass & Woodwinds",
+  lead:"Synth Leads",synth:"Synths",pluck:"Plucks",pad:"Pads & Atmospheres",voice:"Voices & Choirs",world:"World Instruments",bass:"Bass"};
+const INST_CAT={piano:"keys",epiano:"keys",softpiano:"keys",darkpiano:"keys",midnight:"keys",fusionkeys:"keys",tapeglow:"keys",
+  organ:"organ",musicbox:"bell",kalimba:"bell",vibes:"bell",marimba:"bell",bell:"bell",steel:"bell",bloom:"bell",glass:"bell",fluxmallet:"bell",toybox:"bell",
+  eguitar:"guitar",jazzguitar:"guitar",strings:"strings",violin:"strings",cello:"strings",sax:"brass",trumpet:"brass",flute:"brass",
+  sawlead:"lead",ascend:"lead",twinlead:"lead",brass:"synth",analogdream:"synth",pluck:"pluck",
+  warmpad:"pad",earthpad:"pad",fablepad:"pad",haze:"pad",dunedrone:"pad",darkmetal:"pad",
+  choir:"voice",ooh:"voice",etherchoir:"voice",silkvox:"voice",prismvox:"voice",
+  harp:"world",tinwhistle:"world",fiddle:"world",sitar:"world",bansuri:"world",oud:"world",kora:"world",balafon:"world",tres:"world",gamelan:"world"};
+// Sounds designed for Ether get a ✦ so they stand out in the menus.
+const ETHER_MADE=new Set(["etherchoir","silkvox","prismvox","ascend","midnight","bloom","twinlead","analogdream","fusionkeys","tapeglow","earthpad",
+  "dunedrone","fablepad","haze","glass","darkmetal","fluxmallet","toybox"]);
+// Menu order: chord menus lead with sustained sounds, the melody menu with lead and bell sounds.
+const CAT_ORDER={chords:["keys","organ","pad","strings","guitar","synth","pluck","bell","brass","voice","lead","world"],
+  mel:["lead","bell","pluck","synth","brass","keys","guitar","strings","world","voice","organ","pad"]};
+const kitShort=k=>String(k).replace(/\s+(Library|Expansion|Kit)$/i,"");
 const NI_SLOTS={a:"Chords A",b:"Chords B",mel:"Melody",bass:"Bass"};
 // Words that suggest a kit suits a genre, matched against kit and expansion names.
 const GENRE_WORDS={boombap:["boom","bap","hip","hop","90","golden","basement","dusty","vinyl","soul","funk","crate"],
@@ -1830,7 +1851,7 @@ async function niUseKit(kit,quiet){
   const failed=res.filter(r=>r.status==="rejected").length;
   if(!quiet) toast(failed?`NI kit ${kit} (${failed} sounds couldn't be read)`:"NI kit: "+kit);
 }
-function niSynthKit(){ Object.keys(NI_TRACKS).forEach(t=>{ if(samples[t]&&samples[t].ni) delete samples[t]; }); NI.kit=null; $("niKit").value=""; renderGrid(); renderPads(); niStatus(); syncSounds(); }
+function niSynthKit(){ Object.keys(NI_TRACKS).concat(["chop"]).forEach(t=>{ if(samples[t]&&samples[t].ni) delete samples[t]; }); NI.kit=null; $("niKit").value=""; renderGrid(); renderPads(); niStatus(); syncSounds(); }
 function niGenreKit(extraWords){
   if(!NI.kits.length) return null;
   const want=(GENRE_WORDS[state.genre]||[]).concat(extraWords||[]);
@@ -1844,7 +1865,7 @@ function niGenreKit(extraWords){
 function niRegister(inst){
   const key="ni:"+inst.id;
   if(!INST[key]){
-    INST[key]={n:inst.name+" · "+inst.kit,fam:"NI · "+(NI_CATS[inst.category]||"Instruments"),ni:inst,play(c,out,t,f,v,dur){ niPlay(inst,c,out,t,f,v,dur); }};
+    INST[key]={n:inst.name+" · "+kitShort(inst.kit),fam:"NI · "+(NI_CATS[inst.category]||"Instruments"),ni:inst,play(c,out,t,f,v,dur){ niPlay(inst,c,out,t,f,v,dur); }};
     if(inst.category==="bass") BASSES[key]=INST[key].n;
   }
   return key;
@@ -1877,7 +1898,7 @@ async function niRollAll(announce){
   if(!NI.lib||!NI.kits.length) return;
   pushUndo();
   const kit=niGenreKit(); const jobs=[niUseKit(kit,true)];
-  const chords=niPickInst(["keys","pad","strings","guitar"],kit), mel=niPickInst(["bell","pluck","synth","brass","guitar","keys"],kit,chords?[chords.id]:null), bass=niPickInst(["bass"],kit);
+  const chords=niPickInst(["keys","organ","pad","strings","guitar"],kit), mel=niPickInst(["lead","bell","pluck","synth","brass","guitar","keys"],kit,chords?[chords.id]:null), bass=niPickInst(["bass"],kit);
   if(chords) jobs.push(niAssignInst("a",chords,true));
   if(mel) jobs.push(niAssignInst("mel",mel,true));
   if(bass) jobs.push(niAssignInst("bass",bass,true));
@@ -1892,17 +1913,55 @@ function niPreloadCurrent(){ ["a","b","mel","bass"].forEach(k=>{ const d=INST[st
 
 /* ---------- NI sounds in the Sounds menus ---------- */
 // Drum kit menus: every NI drum sound of that type, grouped by kit. Instrument menus: every NI instrument.
-const NI_KIT_SELECTS={kick:"kitKick",snare:"kitSnare",hat:"kitHat",ohat:"kitOhat",perc:"percSel",tom:"kitTom",crash:"kitCrash"};
+const NI_KIT_SELECTS={kick:"kitKick",snare:"kitSnare",hat:"kitHat",ohat:"kitOhat",perc:"percSel",tom:"kitTom",crash:"kitCrash",chop:"kitChop"};
+/* Instrument menus: genre picks first, then each category with Beat Lab's sounds and, right after, your NI sounds. */
+const instLabel=k=>{ const d=INST[k]; if(!d) return k; return d.ni?`${d.ni.name} — ${kitShort(d.ni.kit)}`:(ETHER_MADE.has(k)?"✦ ":"")+d.n; };
+fillInstSelect=function(sel,withNone,picks){
+  const slot=sel.id==="instMel"?"mel":"chords", order=CAT_ORDER[slot]; picks=(picks||[]).filter(k=>k!=="none"&&INST[k]);
+  sel.innerHTML="";
+  if(withNone) sel.add(new Option("None (off)","none"));
+  const group=(label,keys)=>{ if(!keys.length) return; const og=document.createElement("optgroup"); og.label=label; keys.forEach(k=>og.appendChild(new Option(instLabel(k),k))); sel.appendChild(og); };
+  group("Best for "+G().n,picks);
+  const all=Object.keys(INST).filter(k=>k!=="none"&&!picks.includes(k));
+  const catOf=k=>INST[k].ni?INST[k].ni.category:INST_CAT[k]||"other";
+  const byName=(a,b)=>instLabel(a).replace("✦ ","").localeCompare(instLabel(b).replace("✦ ",""));
+  for(const cat of order.concat(["other"])){
+    const own=all.filter(k=>!INST[k].ni&&catOf(k)===cat), ni=all.filter(k=>INST[k].ni&&catOf(k)===cat).sort(byName);
+    group(NI_CATS[cat]||"More sounds",own); group((NI_CATS[cat]||"More sounds")+" — Native Instruments",ni);
+  }
+};
+fillBassSelect=function(){
+  const sel=$("instBass"), pal=GPAL[state.genre].bass; sel.innerHTML="";
+  const group=(label,keys,name)=>{ if(!keys.length) return; const og=document.createElement("optgroup"); og.label=label; keys.forEach(k=>og.appendChild(new Option(name(k),k))); sel.appendChild(og); };
+  group("Best for "+G().n,pal,k=>BASSES[k]);
+  group("Beat Lab basses",Object.keys(BASSES).filter(k=>!k.startsWith("ni:")&&!pal.includes(k)),k=>BASSES[k]);
+  group("Bass — Native Instruments",Object.keys(BASSES).filter(k=>k.startsWith("ni:")).sort((a,b)=>instLabel(a).localeCompare(instLabel(b))),instLabel);
+};
+/* Drum kit menus: the genre default, Beat Lab's own sounds, then each NI kit. */
+function niGroupBuiltInKitOptions(){
+  for(const selId of Object.values(NI_KIT_SELECTS)){
+    const sel=$(selId); if(!sel||sel.querySelector("optgroup.own")) continue;
+    const own=[...sel.options].filter(o=>o.value!=="auto"&&o.parentElement===sel);
+    if(!own.length) continue;
+    const og=document.createElement("optgroup"); og.className="own"; og.label=selId==="percSel"?"Beat Lab percussion":"Beat Lab sounds";
+    if(selId==="percSel"){ const world=document.createElement("optgroup"); world.className="own"; world.label="World percussion (Beat Lab)";
+      own.forEach(o=>(/\(/.test(o.text)?world:og).appendChild(o)); sel.appendChild(og); sel.appendChild(world); }
+    else { own.forEach(o=>og.appendChild(o)); sel.appendChild(og); }
+  }
+}
 function niFillKitSelects(){
   if(!NI.lib) return;
   NI.drumByPath=new Map(NI.lib.drums.map(f=>[f.path,f]));
   for(const [track,selId] of Object.entries(NI_KIT_SELECTS)){
-    const sel=$(selId); [...sel.querySelectorAll("optgroup.ni")].forEach(g=>g.remove());
-    const roles=NI_TRACKS[track], byKit=new Map();
+    const sel=$(selId); if(!sel) continue; [...sel.querySelectorAll("optgroup.ni")].forEach(g=>g.remove());
+    const roles=NI_MENU_ROLES[track]||[], byKit=new Map();
     NI.lib.drums.forEach(f=>{ if(!roles.includes(f.role)) return; if(!byKit.has(f.kit)) byKit.set(f.kit,[]); byKit.get(f.kit).push(f); });
     [...byKit.keys()].sort((a,b)=>a.localeCompare(b)).forEach(kit=>{
-      const og=document.createElement("optgroup"); og.className="ni"; og.label="NI · "+kit;
-      byKit.get(kit).forEach(f=>og.appendChild(new Option(f.name+(f.role==="clap"&&track==="snare"?" (clap)":""),"nid:"+f.path)));
+      const og=document.createElement("optgroup"); og.className="ni"; og.label=kitShort(kit)+" — Native Instruments";
+      // Main sound type first (snares before claps and rims), then by name.
+      byKit.get(kit).sort((a,b)=>roles.indexOf(a.role)-roles.indexOf(b.role)||a.name.localeCompare(b.name,undefined,{numeric:true}))
+        .forEach(f=>{ const tag=NI_ROLE_LABEL[f.role], says=f.name.toLowerCase().includes(tag.split(" ")[0].toLowerCase());
+          og.appendChild(new Option((f.role!==roles[0]&&!says?tag+" · ":"")+f.name,"nid:"+f.path)); });
       sel.appendChild(og);
     });
   }
@@ -2172,6 +2231,7 @@ function prodSetup(){
   else native("settings").then(s=>{ if(s&&s.model) $("prodModel").value=s.model; }).catch(()=>{});
 }
 prodSetup();
+niGroupBuiltInKitOptions();
 niSetup();
 </script>
 <script>
@@ -2746,11 +2806,11 @@ function studioOn(){
   STUDIO.duo=P.duo;
   const side=stEl("aside","st-side"), main=stEl("main","st-main"), edit=stEl("section","st-edit");
   edit.setAttribute("aria-label","Editors"); side.setAttribute("aria-label","Library");
-  const sideTabs=[["producer","Producer",P.prod],["library","Library",NATIVE?P.ni:null],["setup","Beat",P.deck]];
+  const sideTabs=[["producer","Producer",P.prod],["library","NI Library",NATIVE?P.ni:null],["setup","Beat Setup",P.deck]];
   STUDIO.pickSide=stTabs(side,sideTabs,STUDIO.sideTab,k=>{ STUDIO.sideTab=k; stSave(); });
   main.append(P.seq,P.song);
   const grip=stEl("div","st-grip"); grip.title="Drag to resize"; edit.appendChild(grip);
-  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["sounds","Sounds",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
+  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["sounds","Sounds & Kits",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
     STUDIO.editTab,k=>{ STUDIO.editTab=k; stSave(); if(k==="sampler"&&typeof drawWave==="function") setTimeout(drawWave,30); });
   [...app.children].forEach(c=>c.remove());
   app.append(P.bar,side,main,edit);

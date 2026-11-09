@@ -65,6 +65,11 @@ enum LibraryScanner {
                 let kit = group(parts, rootName: root.lastPathComponent)
                 let stem = (url.lastPathComponent as NSString).deletingPathExtension
 
+                let (noteInName, _) = noteAndBase(stem)
+                if !allTokens.isDisjoint(with: vocalWords), noteInName == nil {
+                    drums.append(DrumFile(path: full, name: stem, role: "vocal", kit: kit))
+                    continue
+                }
                 if let role = drumRole(parts) {
                     drums.append(DrumFile(path: full, name: stem, role: role, kit: kit))
                     continue
@@ -115,28 +120,36 @@ enum LibraryScanner {
         return out
     }
 
-    static let skipWords: Set<String> = ["loop", "loops", "bpm", "fx", "sfx", "riser", "risers", "impact", "impacts", "vox", "vocal",
-                                         "vocals", "chant", "speech", "phrase", "phrases", "texture", "textures", "stem", "stems"]
+    static let skipWords: Set<String> = ["loop", "loops", "bpm", "fx", "sfx", "riser", "risers", "impact", "impacts", "speech",
+                                         "phrase", "phrases", "texture", "textures", "stem", "stems", "sweep", "sweeps", "downlifter"]
+    static let vocalWords: Set<String> = ["vox", "vocal", "vocals", "voice", "voices", "choir", "choirs", "chant", "chants", "ooh", "aah", "ahh", "adlib", "adlibs"]
     static let kickWords: Set<String> = ["kick", "kicks", "kik", "bd", "bassdrum", "kck"]
     static let hatWords: Set<String> = ["hat", "hats", "hihat", "hihats", "hh", "chh", "ohh", "closedhat", "openhat", "hhc", "hho"]
     static let openWords: Set<String> = ["open", "ohh", "openhat", "hho", "oh"]
-    static let clapWords: Set<String> = ["clap", "claps", "clp", "snap", "snaps"]
-    static let snareWords: Set<String> = ["snare", "snares", "snr", "sd", "rim", "rims", "rimshot"]
-    static let cymbalWords: Set<String> = ["crash", "crashes", "ride", "rides", "cymbal", "cymbals", "cym", "splash", "china"]
+    static let clapWords: Set<String> = ["clap", "claps", "clp"]
+    static let snapWords: Set<String> = ["snap", "snaps", "finger", "fingers"]
+    static let rimWords: Set<String> = ["rim", "rims", "rimshot", "rimshots", "sidestick", "stick"]
+    static let snareWords: Set<String> = ["snare", "snares", "snr", "sd"]
+    static let rideWords: Set<String> = ["ride", "rides"]
+    static let crashWords: Set<String> = ["crash", "crashes", "cymbal", "cymbals", "cym", "splash", "china"]
+    static let shakerWords: Set<String> = ["shaker", "shakers", "tamb", "tambourine", "tambourines", "cabasa", "maraca", "maracas"]
     static let tomWords: Set<String> = ["tom", "toms"]
-    static let percWords: Set<String> = ["perc", "percs", "percussion", "conga", "congas", "bongo", "bongos", "shaker", "shakers", "tamb",
-                                         "tambourine", "cowbell", "clave", "claves", "block", "guiro", "cabasa", "triangle", "timbale", "timbales"]
+    static let percWords: Set<String> = ["perc", "percs", "percussion", "conga", "congas", "bongo", "bongos", "cowbell", "clave", "claves",
+                                         "block", "guiro", "triangle", "timbale", "timbales", "agogo", "djembe", "tabla", "woodblock"]
 
     static let categories: [(String, Set<String>)] = [
         ("bass", ["bass", "basses", "bassline", "808", "sub", "subs", "reese"]),
-        ("keys", ["piano", "pianos", "keys", "key", "rhodes", "epiano", "ep", "wurli", "wurlitzer", "organ", "organs", "clav", "clavinet"]),
+        ("organ", ["organ", "organs", "hammond", "b3"]),
+        ("keys", ["piano", "pianos", "keys", "key", "rhodes", "epiano", "ep", "wurli", "wurlitzer", "clav", "clavinet"]),
+        ("voice", ["choir", "choirs", "voice", "voices", "vocal", "vocals", "vox"]),
+        ("lead", ["lead", "leads", "mono"]),
         ("pad", ["pad", "pads", "drone", "drones", "atmos", "ambient"]),
         ("pluck", ["pluck", "plucks"]),
         ("bell", ["bell", "bells", "mallet", "mallets", "marimba", "vibes", "vibraphone", "kalimba", "glock", "glockenspiel", "celesta", "xylophone"]),
         ("strings", ["string", "strings", "violin", "violins", "cello", "cellos", "viola", "orchestra", "orchestral", "harp"]),
         ("brass", ["brass", "horn", "horns", "trumpet", "trumpets", "sax", "saxophone", "trombone", "flute", "woodwind", "woodwinds", "clarinet"]),
         ("guitar", ["guitar", "guitars", "gtr"]),
-        ("synth", ["synth", "synths", "lead", "leads", "saw", "square", "poly", "arp", "chord", "chords", "stab", "stabs"])
+        ("synth", ["synth", "synths", "saw", "square", "poly", "arp", "chord", "chords", "stab", "stabs"])
     ]
 
     /// Drum role from the file name first, then the nearest folder that says.
@@ -164,8 +177,12 @@ enum LibraryScanner {
         if !s.isDisjoint(with: hatWords) || (s.contains("hi") && s.contains("hat")) { return s.isDisjoint(with: openWords) ? "closedHat" : "openHat" }
         if !s.isDisjoint(with: clapWords) { return "clap" }
         if !s.isDisjoint(with: snareWords) { return "snare" }
-        if !s.isDisjoint(with: cymbalWords) { return "cymbal" }
+        if !s.isDisjoint(with: rimWords) { return "rim" }
+        if !s.isDisjoint(with: snapWords) { return "snap" }
+        if !s.isDisjoint(with: rideWords) { return "ride" }
+        if !s.isDisjoint(with: crashWords) { return "crash" }
         if !s.isDisjoint(with: tomWords) { return "tom" }
+        if !s.isDisjoint(with: shakerWords) { return "shaker" }
         if !s.isDisjoint(with: percWords) { return "perc" }
         return nil
     }
