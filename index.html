@@ -5220,7 +5220,7 @@ function scrPlugin(text){
    ("Dark piano" → a dark piano), the drum kit's expansion, then instruments with the most recorded notes (they sound best
    across the keyboard). Several close ones? One is picked at random so scripts don't all sound alike. */
 const SCR_WORDS_SKIP=new Set(["synth","sound","section","bass","the","and","ether"]);
-function scrNiBest(key,isBass,kit,avoid){
+function scrNiBest(key,isBass,kit,avoid,slot){
   if(typeof NI==="undefined"||!NI.lib) return null;
   const d=isBass?BASSES[key]:INST[key]; if(!d) return null;
   const cat=isBass?"bass":INST_CAT[key]; if(!cat) return null;
@@ -5229,10 +5229,67 @@ function scrNiBest(key,isBass,kit,avoid){
   if(key==="808"||key==="dist808") words.push("808");
   const pool=NI.lib.instruments.filter(i=>i.category===cat&&!(avoid||[]).includes(i.id)); if(!pool.length) return null;
   const score=i=>{ const n=(i.name+" "+i.kit).toLowerCase(); let sc=0; words.forEach(w=>{ if(n.includes(w)) sc+=3; });
-    if(kit&&i.kit===kit) sc+=2; sc+=Math.min(8,i.zones.length)/4; return sc; };
+    if(kit&&i.kit===kit) sc+=2.5; sc+=Math.min(8,i.zones.length)/4;
+    if(slot){ const fit=scrRangeFit(i,slot); sc-=Math.max(0,fit-5)*.35; } // stretched more than ~5 notes: it starts to sound wrong
+    return sc; };
   const ranked=pool.map(i=>[score(i),i]).sort((a,b)=>b[0]-a[0]), top=ranked[0][0];
   const near=ranked.filter(([sc])=>sc>=top-.6).slice(0,4).map(([,i])=>i);
   return near[Math.floor(R()*near.length)];
+}
+/* ---- Keeping your NI sounds in tune with the script ----
+   File names give a sound's note ("Rhodes C3", "808 F#"); without one the library guesses middle C. Beat Lab listens to
+   those files to find their real note, prefers instruments recorded close to where each part plays (a sample stretched
+   far from its own note sounds thin or muddy), and tunes pitched kicks (808s) to the song's key. Loops and anything with
+   a BPM in its name are never used, so nothing fights the tempo. */
+const SCR_NOTE_RE=/(?:^|[\s_\-(])([A-Ga-g])([#♯b♭]|sharp|flat)?(-?\d)?(?=$|[\s_\-.)])/g;
+function scrNameNote(name){ // pitch class (0-11) and octave (or null) from a file name, using the last note-like word
+  let m, last=null; const n=String(name).replace(/\.[^.]+$/,"");
+  SCR_NOTE_RE.lastIndex=0; while((m=SCR_NOTE_RE.exec(n))){ if(!m[3]&&(!/[A-G]/.test(m[1])||/[a-z]{2}/i.test(n.slice(m.index+m[0].length)))) continue; last=m; } // "E Piano" is an electric piano, not the note E
+  if(!last) return null;
+  const acc=last[2]?(/^(#|♯|sharp)$/i.test(last[2])?1:-1):0, pc=(SCR_PC[last[1].toLowerCase()]+acc+12)%12;
+  return {pc,midi:last[3]!=null?pc+12*(+last[3]+2):null};
+}
+function scrPitch(info){ // the note a sample plays (YIN-style), or null when it isn't clearly pitched
+  const buf=info.buf, sr=buf.sampleRate, d=buf.getChannelData(0), from=Math.floor((info.start||0)*sr+.03*sr), n=Math.min(Math.floor(.12*sr),d.length-from-Math.floor(sr/30));
+  if(n<Math.floor(.04*sr)) return null;
+  const minLag=Math.floor(sr/1200), maxLag=Math.floor(sr/30), df=new Float32Array(maxLag+1);
+  for(let lag=minLag;lag<=maxLag;lag++){ let sum=0; for(let i=0;i<n;i++){ const x=d[from+i]-d[from+i+lag]; sum+=x*x; } df[lag]=sum; }
+  let run=0, best=-1, bestV=1;
+  for(let lag=minLag;lag<=maxLag;lag++){ run+=df[lag]; const v=run>0?df[lag]*(lag-minLag+1)/run:1; if(v<bestV){ bestV=v; best=lag; } if(v<.12){ while(lag+1<=maxLag&&df[lag+1]<df[lag]) lag++; best=lag; bestV=v; break; } }
+  if(best<0||bestV>.25) return null;
+  const f=sr/best; return 69+12*Math.log2(f/440);
+}
+const SCR_SPAN={a:[0,19],b:[0,19],mel:[12,26],bass:[0,12]};
+function scrPartRange(slot){ const lo=slot==="bass"?36+state.root:keysBase(); const [a,b]=SCR_SPAN[slot]; return [lo+a,lo+b]; }
+function scrRangeFit(inst,slot){ // 0 = recorded right where the part plays; higher = stretched further
+  const [lo,hi]=scrPartRange(slot); let worst=0;
+  for(let m=lo;m<=hi;m+=2){ let near=1e9; inst.zones.forEach(z=>{ near=Math.min(near,Math.abs(z.root-m)); }); worst=Math.max(worst,near); }
+  return worst;
+}
+async function scrCheckRoots(inst){ // fix zones whose file name had no note (the library guessed C3 = 60)
+  let fixed=0;
+  for(const z of inst.zones){
+    if(z.checked) continue; z.checked=true;
+    const nn=scrNameNote(z.path.split("/").pop()); if(nn&&nn.midi!=null) continue;
+    let info; try{ info=await niLoad(z.path); }catch(e){ continue; }
+    const p=scrPitch(info); if(p==null) continue;
+    const m=Math.round(p); if(nn&&nn.midi==null&&((m%12)+12)%12!==nn.pc) continue; // the name says another note: trust neither
+    if(Math.abs(m-z.root)>=1){ z.root=m; fixed++; }
+  }
+  if(fixed) inst.zones.sort((a,b)=>a.root-b.root);
+  return fixed;
+}
+async function scrTuneDrums(){ // pitched kicks (808s, tuned kicks) onto the song's root note
+  const out=[];
+  for(const t of ["kick","tom"]){
+    const smp=samples[t]; if(!smp||!smp.ni||smp.voice) continue;
+    let pc=null; const nn=scrNameNote(smp.name); if(nn) pc=nn.pc;
+    else if(smp.buf.duration>.45){ const p=scrPitch({buf:smp.buf,start:smp.start*smp.buf.duration}); if(p!=null) pc=((Math.round(p)%12)+12)%12; }
+    if(pc==null) continue;
+    let st=((state.root-pc)%12+12)%12; if(st>6) st-=12;
+    smp.p.tune=st; if(st) out.push(`${t} ${st>0?"+":""}${st}`);
+  }
+  return out;
 }
 const scrNiOn=()=>{ const c=$("scriptNI"); return !c||c.checked; };
 const SCR_PC={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
@@ -5288,7 +5345,7 @@ function runScript(text){
       const what=scrNorm(arg.slice(0,s2)), val=arg.slice(s2+1).trim(), I=state.inst;
       const set=(map,key,label)=>{ const k=scrFind(map,val); if(k==null) return warn(`no ${label} called "${val}"`); I[key]=k; };
       const useInst=(slotKey,name)=>{ const r=scrInst(name,slotKey==="bass"); if(!r){ warn(`no ${slotKey==="bass"?"bass":"instrument"} called "${name}"`); return false; }
-        if(r.key) I[slotKey]=r.key; else { explicit.add(slotKey); jobs.push(()=>niAssignInst(slotKey,r.ni,true)); } return true; };
+        if(r.key) I[slotKey]=r.key; else { explicit.add(slotKey); jobs.push(async()=>{ await scrCheckRoots(r.ni); await niAssignInst(slotKey,r.ni,true); }); } return true; };
       if(what==="chords"||what==="keys"){ const [a,b]=val.split("+").map(x=>x.trim());
         if(!useInst("a",a)) return;
         if(b){ const bl=b.match(/(\d+)\s*%?\s*$/), bn=bl?b.slice(0,bl.index).trim():b; if(useInst("b",bn)&&bl) I.blend=Math.max(0,Math.min(100,+bl[1]))/100; }
@@ -5364,7 +5421,7 @@ function runScript(text){
     if(!songSet) state.songMode=false; }
   if(len!=null) SLOTS.forEach(k=>fitLen(state.patterns[k]));
   // Your NI sounds in place of Beat Lab's own: a kit that fits the genre and the closest instrument for each part
-  const niPicked=[];
+  const niPicked=[], tuned=[];
   if(niAuto&&typeof NI!=="undefined"&&NI.lib&&!state.locks.sounds){
     const words=vibe.join(" ").toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>=3);
     let kit=null;
@@ -5372,12 +5429,14 @@ function runScript(text){
     const used=[];
     [["a","chords",false],["b","chords 2",false],["mel","melody",false],["bass","bass",true]].forEach(([sl,label,isBass])=>{
       const cur=state.inst[sl]; if(explicit.has(sl)||!cur||cur==="none"||/^(ni|au):/.test(cur)) return;
-      const best=scrNiBest(cur,isBass,kit,used); if(!best) return;
-      used.push(best.id); jobs.push(()=>niAssignInst(sl,best,true)); niPicked.push(`${label} ${best.name}`); });
+      const best=scrNiBest(cur,isBass,kit,used,sl); if(!best) return;
+      used.push(best.id); jobs.push(async()=>{ const f=await scrCheckRoots(best); if(f) tuned.push(`${best.name} (${f} note${f>1?"s":""} found by ear)`); await niAssignInst(sl,best,true); }); niPicked.push(`${label} ${best.name}`); });
   }
+  if(typeof NI!=="undefined"&&NI.lib) jobs.push(async()=>{ const d=await scrTuneDrums(); if(d.length) tuned.push("tuned to "+NAMES[state.root]+": "+d.join(", ")); });
   refreshAll(); renderGrid(); renderSlots();
   if(title&&typeof PROJ!=="undefined"&&!PROJ.path&&/^Untitled/.test(PROJ.name)){ PROJ.name=title; if(typeof projTitle==="function") projTitle(); }
-  (async()=>{ for(const j of jobs){ try{ await j(); }catch(e){} } if(jobs.length){ syncSounds(); renderGrid(); renderPads(); if(typeof niPreloadCurrent==="function") niPreloadCurrent(); } })();
+  (async()=>{ for(const j of jobs){ try{ await j(); }catch(e){} } if(jobs.length){ syncSounds(); renderGrid(); renderPads(); if(typeof niPreloadCurrent==="function") niPreloadCurrent(); }
+    if(tuned.length){ const t=document.createElement("div"); t.className="ni"; t.textContent="In tune: "+tuned.join(" · "); $("scriptReport").appendChild(t); } })();
   const rep=$("scriptReport"); rep.innerHTML="";
   const ok=document.createElement("div"); ok.className="ok";
   ok.textContent=`✓ Loaded${title?` “${title}”`:""}: ${GENRES[state.genre].n}, ${state.bpm} BPM, ${NAMES[state.root]} ${MODES[state.mode].n}`
