@@ -19,7 +19,7 @@
   --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
-  --cell:32px; --label:196px;
+  --cell:32px; --label:218px;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -51,6 +51,40 @@ h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
 #rec .ic{color:var(--rec)} #rec[aria-pressed="true"] .ic{color:#1a0705}
 #play[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .spacer{flex:1}
+/* Piano roll */
+.proll{display:flex;flex-direction:column;gap:8px}
+.pr-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pr-h{margin-right:4px}
+#prTracks button.has::after{content:" ♪";color:var(--accent)}
+.pr-pat{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;color:var(--dim)}
+.pr-f{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--dim)}
+.pr-f select{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:3px 6px}
+.pr-f input[type=range]{width:90px}
+.pr-f output{font-family:var(--f-mono);font-size:11px;min-width:22px}
+.pr-sel{font-family:var(--f-mono);font-size:11px;color:var(--text);white-space:nowrap}
+.pr-zoom{display:inline-flex;gap:2px}
+.pr-status{margin:0;font-size:13px;color:var(--dim)}
+.pr-status b{color:var(--text);font-weight:600}
+.pr-scroll{overflow:auto;max-height:440px;border:1px solid var(--line);border-radius:10px;background:#0a0907;overscroll-behavior:contain}
+.pr-inner{display:grid;grid-template-columns:46px max-content;grid-template-rows:18px max-content;width:max-content}
+.pr-corner{position:sticky;left:0;top:0;z-index:3;background:var(--panel-2)}
+.pr-ruler{position:sticky;top:0;z-index:2;display:block}
+.pr-keys{position:sticky;left:0;z-index:2;display:block;cursor:pointer}
+.pr-gridbox{position:relative}
+#prGrid{display:block;cursor:crosshair;touch-action:none}
+#prGrid:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pr-head{position:absolute;top:0;bottom:0;left:0;width:2px;background:var(--accent);pointer-events:none;box-shadow:0 0 8px var(--accent)}
+.pr-hint{margin:0;font-size:12px}
+body.studio .st-pane>.proll{height:100%;box-sizing:border-box;padding:10px 12px}
+body.studio .st-pane>.proll .pr-scroll{flex:1;min-height:120px;max-height:none}
+body.studio .pr-h{display:none}
+body.studio .pr-hint{display:none}
+body.studio .proll.help .pr-hint{display:block}
+.cell.rolled{outline:1px dashed color-mix(in srgb,var(--h) 60%,transparent);outline-offset:-3px}
+.mute.rolled span::after{content:" ♪";color:var(--accent)}
+.rowlab .pr-open{color:var(--dim)}
+.rowlab .pr-open:hover{color:var(--accent)}
+
 /* Mixer */
 .mx-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
 .mx-top .hint{margin:0;flex:1;min-width:240px}
@@ -578,6 +612,32 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
       </div>
     </section>
   </div>
+
+  <section class="panel proll" aria-label="Piano roll" id="prPanel">
+    <div class="pr-bar">
+      <h2 class="pr-h">Piano roll</h2>
+      <div class="seg" id="prTracks" role="group" aria-label="Track to edit"></div>
+      <span class="pr-pat" id="prPat"></span>
+      <label class="pr-f">Snap <select id="prSnap"><option value="0.5">1/32</option><option value="1" selected>1/16</option><option value="2">1/8</option><option value="4">1/4</option></select></label>
+      <label class="pr-f">Velocity <input type="range" id="prVel" min="1" max="127" value="100"><output id="prVelOut">–</output></label>
+      <span class="pr-sel" id="prSelInfo"></span>
+      <span class="spacer"></span>
+      <button class="mini" id="prScale" title="Move any note that's outside the key into it">Fit to key</button>
+      <button class="mini" id="prReset" title="Throw away the piano roll notes for this track and play the generated ones again">Back to generated</button>
+      <span class="pr-zoom"><button class="mini" id="prZoomOut" aria-label="Zoom out" title="Zoom out">−</button><button class="mini" id="prZoomIn" aria-label="Zoom in" title="Zoom in">+</button></span>
+      <button class="mini st-only" id="prBig" aria-pressed="false" title="Make the editors taller (press again to go back)">⤢ Taller</button>
+      <button class="mini st-only" id="prHelp" aria-pressed="false" aria-controls="prHint" title="How to use the piano roll">?</button>
+    </div>
+    <p class="pr-status" id="prStatus"></p>
+    <div class="pr-scroll" id="prScroll">
+      <div class="pr-inner">
+        <div class="pr-corner"></div><canvas id="prRuler" class="pr-ruler" aria-hidden="true"></canvas>
+        <canvas id="prKeys" class="pr-keys" title="Click a key to hear it"></canvas>
+        <div class="pr-gridbox"><canvas id="prGrid" tabindex="0" aria-label="Piano roll notes. Click to add a note; with a note selected use the arrow keys to move it and Delete to remove it."></canvas><i id="prHead" class="pr-head" hidden></i></div>
+      </div>
+    </div>
+    <p class="hint pr-hint" id="prHint">Click to add a note (drag right as you click to make it longer). Drag a note to move it, drag its right edge to change its length, ⌥-drag to copy it, double-click or right-click to delete. Selected note: ↑ ↓ pitch (⇧ octave), ← → move, ⌥ ← → length, Delete removes. The ♪ button on the Melody, Bass and Chords rows of the Pattern grid opens them here.</p>
+  </section>
 
   <section class="panel mixer" aria-label="Mixer" id="mixPanel">
     <div class="mx-top"><h2>Mixer</h2>
@@ -1213,7 +1273,7 @@ function trigger(ctx,bus,id,t,v,o){
     case "chops": { const sl=sliceList(), k=o.slice||0; if(!sampler.buf||k>=sl.length) return null;
       return playSlice(ctx,out,t,sampler.buf,sl[k].s,sl[k].e,chopParams[k],o.len,sampler.mono?"chops":"chop"+k,v); }
     case "bass": { const nb=state.inst.bass; if(nb.startsWith("ni:")&&INST[nb]) INST[nb].play(ctx,out,t,o.f,v*.75,o.len); else V.bass(ctx,out,t,v,o.f,o.len,nb,o.fNext); break; }
-    case "keys": V.keys(ctx,out,t,v,o.freqs,o.len,rhythm(),g,state.energy); break;
+    case "keys": V.keys(ctx,out,t,v,o.freqs,o.len,o.kt||rhythm(),g,state.energy); break;
     case "fx": V["fx_"+state.inst.fx](ctx,out,t,v,o.len||1.6); break;
   }
 }
@@ -3195,7 +3255,7 @@ function stEl(tag,cls,html){ const e=document.createElement(tag); if(cls) e.clas
 function stPanels(){
   return {bar:stQ("header.top"),deck:stQ('[aria-label="Beat settings"]'),prod:stQ('[aria-label="AI Producer"]'),ni:stQ("#niPanel"),
     sounds:stQ('[aria-label="Sounds"]'),seq:stQ('[aria-label="Pattern"]'),pads:stQ('[aria-label="Pads"]'),song:stQ('[aria-label="Song"]'),
-    sampler:stQ('[aria-label="Sampler"]'),mix:stQ("#mixPanel"),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo"),fav:stQ("#favPanel")};
+    sampler:stQ('[aria-label="Sampler"]'),mix:stQ("#mixPanel"),roll:stQ("#prPanel"),viz:stQ('[aria-label="Visualizer"]'),exp:stQ('[aria-label="Export"]'),duo:stQ(".duo"),fav:stQ("#favPanel")};
 }
 function stTabs(host,tabs,current,onPick){
   const bar=stEl("div","st-tabs"); bar.setAttribute("role","tablist");
@@ -3222,8 +3282,10 @@ function studioOn(){
   STUDIO.pickSide=stTabs(side,sideTabs,STUDIO.sideTab,k=>{ STUDIO.sideTab=k; stSave(); });
   main.append(P.seq,P.song);
   const grip=stEl("div","st-grip"); grip.title="Drag to resize"; edit.appendChild(grip);
-  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["mix","Mixer",P.mix],["sounds","Sounds & Kits",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
-    STUDIO.editTab,k=>{ STUDIO.editTab=k; stSave(); if(k==="sampler"&&typeof drawWave==="function") setTimeout(drawWave,30); });
+  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["roll","Piano roll",P.roll],["mix","Mixer",P.mix],["sounds","Sounds & Kits",P.sounds],["sampler","Sampler",P.sampler],["viz","Visualizer",P.viz],["export","Export",P.exp]],
+    STUDIO.editTab,k=>{ STUDIO.editTab=k; stSave(); if(k==="sampler"&&typeof drawWave==="function") setTimeout(drawWave,30);
+      if(typeof prTall==="function"){ if(k==="roll"&&!PR.big&&PR.auto!==false){ prTall(true); PR.auto=true; } else if(k!=="roll"&&PR.big&&PR.auto){ prTall(false); } }
+      if(k==="roll"&&typeof prRefresh==="function") setTimeout(()=>{ prRefresh(); prCenter(); },30); });
   [...app.children].forEach(c=>c.remove());
   const favCol=stEl("aside","st-fav"); favCol.setAttribute("aria-label","Favorites list"); favCol.appendChild(P.fav);
   app.append(P.bar,side,main,favCol,edit);
@@ -3235,7 +3297,7 @@ function studioOff(){
   duo.append(P.pads,P.song);
   [...app.children].forEach(c=>c.remove());
   // Back to the classic page order.
-  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.fav,P.seq,duo,P.mix,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
+  [P.bar,P.deck,P.prod,P.ni,P.sounds,P.fav,P.seq,duo,P.roll,P.mix,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
   document.body.classList.remove("studio","st-noside","st-noedit","st-nofav"); STUDIO.on=false; stSyncToggles(); stSave();
 }
 function stGrip(grip){
@@ -3729,6 +3791,271 @@ projSetup();
 </script>
 
 <script>
+/* ---------- Piano roll ----------
+   Melody, Bass and Chords can be edited note by note over the pattern's full 4 bars (64 steps).
+   Until you edit, the roll shows the generated notes (faded). The first edit copies them into the roll, and from then
+   on the roll plays that track: any pitch, any length, chords as you like. Generating or re-rolling that track brings
+   back generated notes (Undo gets yours back). Notes are stored in the pattern as {t: start step, d: length in steps,
+   m: MIDI note, v: velocity 0–1}, so they're saved with projects and exported to MIDI and stems. */
+const PR_TRACKS={mel:{label:"Melody",lo:48,hi:96},bass:{label:"Bass",lo:24,hi:64},keys:{label:"Chords",lo:36,hi:88}};
+const PR={track:"mel",W:20,H:14,snap:1,sel:null,lastLen:{mel:2,bass:2,keys:4},drag:null,big:false,prevH:""};
+const PR_STEPS=64, PR_ZOOM=[10,14,20,28,40];
+const prRoll=(pat,id)=>pat.roll&&pat.roll[id];
+const prNoteName=m=>["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"][((m%12)+12)%12]+(Math.floor(m/12)-2); // C3 = 60, like Logic and NI
+
+/* The notes a track plays from its steps, worked out exactly the way the sequencer does. */
+function prFromSteps(pat,id){
+  const out=[], st=pat.steps, L=st.kick.length, sd=stepDur(), vel=x=>x===2?1:.55;
+  for(let i=0;i<PR_STEPS;i++){
+    const s=i%L, bar=Math.floor(i/16)%4, a=st[id]; if(!a||!a[s]) continue;
+    const nx=nextHit(a,s)-s;
+    if(id==="mel") out.push({t:i,d:Math.min(nx,1.6/sd),m:keysBase()+12+sn(pat.prog[bar]+pat.melDeg[s]),v:vel(a[s])});
+    else if(id==="bass") out.push({t:i,d:Math.max(.5,nx*(state.inst.bass.includes("808")?1:.8)),m:bassBase()+sn(pat.prog[bar]+pat.bassDeg[s]),v:vel(a[s])});
+    else if(id==="keys"){
+      const rel=chordRel(pat,bar), kb=keysBase(), kt=rhythm();
+      const ms=kt==="arp"?[kb+12+rel[(s/2|0)%rel.length]]:kt==="seq"?[kb+12*(1+(Math.floor(s/4)%2))+rel[[0,1,2,3,2,1][s%6]%rel.length]]:rel.map(r=>kb+r);
+      const d=kt==="seq"?.9:kt==="stab"?Math.min(nx,Math.max(.5,.16/sd)):nx;
+      ms.forEach(m=>out.push({t:i,d,m,v:vel(a[s])*.9}));
+    }
+  }
+  return out.map(n=>Object.assign(n,{d:Math.round(n.d*100)/100}));
+}
+function prNotes(pat,id){ return prRoll(pat,id)||prFromSteps(pat,id); }
+function prTakeOver(){
+  const pat=P(), id=PR.track; if(prRoll(pat,id)) return;
+  pushUndo(); if(!pat.roll) pat.roll={}; pat.roll[id]=prFromSteps(pat,id); PR.undone=true;
+  renderGrid(); prStatus();
+}
+
+/* Playback: rolled tracks play their notes instead of their steps. */
+{ const raw=scheduleStep; scheduleStep=function(c,out,pat,i,t0,marks){
+    if(!pat.roll){ raw.apply(this,arguments); return; }
+    const rolled=Object.keys(PR_TRACKS).filter(id=>pat.roll[id]);
+    if(!rolled.length){ raw.apply(this,arguments); return; }
+    // let the sequencer play everything else
+    const m=state.mutes, keep={}; rolled.forEach(id=>{ keep[id]=m[id]; m[id]=true; });
+    try{ raw.apply(this,arguments); } finally { rolled.forEach(id=>{ m[id]=keep[id]; if(keep[id]===undefined) delete m[id]; }); }
+    const sd=stepDur(), s=i%pat.steps.kick.length, bar=Math.floor(i/16)%4, swing=state.swing/100*sd*.66, base={pat,bar,step:s};
+    const at=n=>t0+(n.t-i)*sd+(n.t===i&&i%2===1?swing:0);
+    for(const id of rolled){
+      if(state.mutes[id]) continue;
+      const notes=pat.roll[id].filter(n=>Math.floor(n.t)===i); if(!notes.length) continue;
+      if(id==="keys"){
+        const groups=new Map(); notes.forEach(n=>{ const k=n.t+"|"+n.d; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(n); });
+        groups.forEach(g=>{ const v=Math.max(...g.map(n=>n.v)); trigger(c,out,"keys",at(g[0]),v,Object.assign({},base,{freqs:g.map(n=>mtof(n.m)),len:g[0].d*sd,kt:"roll"})); });
+      } else for(const n of notes){
+        let fNext=0;
+        if(id==="bass"&&G().slide){ const nx=pat.roll.bass.filter(x=>x.t>n.t&&x.t-n.t<=4).sort((a,b)=>a.t-b.t)[0]; if(nx) fNext=mtof(nx.m); }
+        trigger(c,out,id,at(n),n.v,Object.assign({},base,{f:mtof(n.m),len:n.d*sd,fNext}));
+      }
+    }
+  }; }
+// Generating a track (Randomize, New pattern, ⚄ on the track, Mutate) brings back its generated notes.
+{ const raw=genTrack; genTrack=function(id,pat){ const p=pat||P(), out=raw.apply(this,arguments); if(p.roll&&p.roll[id]) delete p.roll[id]; return out; }; }
+{ const raw=mutatePattern; mutatePattern=function(pat,amt){ const before=JSON.stringify(Object.keys(PR_TRACKS).map(k=>pat.steps[k])); raw.apply(this,arguments);
+    if(pat.roll) Object.keys(PR_TRACKS).forEach((k,j)=>{ if(!state.trackLocks[k]&&pat.roll[k]&&JSON.stringify(pat.steps[k])!==JSON.stringify(JSON.parse(before)[j])) delete pat.roll[k]; }); }; }
+
+/* ---------- Drawing ---------- */
+function prRange(){ return PR_TRACKS[PR.track]; }
+function prSize(){ const r=prRange(); return {w:PR_STEPS*PR.W,h:(r.hi-r.lo+1)*PR.H}; }
+function prCanvas(cv,w,h){ const dpr=window.devicePixelRatio||1; if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); cv.style.width=w+"px"; cv.style.height=h+"px"; }
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); return g; }
+function prInScale(m){ const sc=MODES[state.mode].s.map(x=>((x%12)+12)%12); return sc.includes((((m-state.root)%12)+12)%12); }
+const prCss=()=>{ const cs=getComputedStyle(document.documentElement); return k=>cs.getPropertyValue(k).trim(); };
+function prDraw(){
+  const panel=$("prPanel"); if(!panel||panel.offsetParent===null) return;
+  const r=prRange(), {w,h}=prSize(), col=prCss(), pat=P(), rolled=!!prRoll(pat,PR.track), notes=prNotes(pat,PR.track);
+  // keys
+  const kg=prCanvas($("prKeys"),46,h); kg.clearRect(0,0,46,h);
+  for(let m=r.hi;m>=r.lo;m--){ const y=(r.hi-m)*PR.H, black=[1,3,6,8,10].includes(((m%12)+12)%12);
+    kg.fillStyle=black?"#1a1712":"#d8ccb1"; kg.fillRect(0,y,46,PR.H); kg.fillStyle="#0a0907"; kg.fillRect(0,y+PR.H-1,46,1);
+    if(((m-state.root)%12+12)%12===0){ kg.fillStyle=col("--accent"); kg.fillRect(42,y,4,PR.H); }
+    if(m%12===0||PR.H>=16&&!black){ kg.fillStyle=black?"#d8ccb1":"#2a241b"; kg.font="600 9px "+col("--f-mono"); kg.fillText(prNoteName(m),3,y+PR.H-3.5); } }
+  // ruler
+  const rg=prCanvas($("prRuler"),w,18); rg.clearRect(0,0,w,18); rg.fillStyle=col("--panel-2"); rg.fillRect(0,0,w,18);
+  rg.font="600 10px "+col("--f-mono");
+  for(let i=0;i<PR_STEPS;i+=4){ const x=i*PR.W; rg.fillStyle=i%16===0?col("--accent"):col("--dim"); rg.fillRect(x,i%16===0?2:10,1,i%16===0?16:8);
+    if(i%16===0) rg.fillText(String(i/16+1),x+4,12); else if(PR.W>=14) rg.fillText(`${Math.floor(i/16)+1}.${(i%16)/4+1}`,x+3,12); }
+  // grid
+  const g=prCanvas($("prGrid"),w,h); g.clearRect(0,0,w,h);
+  for(let m=r.hi;m>=r.lo;m--){ const y=(r.hi-m)*PR.H; g.fillStyle=prInScale(m)?"#1b1813":"#110f0b"; g.fillRect(0,y,w,PR.H);
+    if(((m-state.root)%12+12)%12===0){ g.fillStyle="rgba(216,171,62,.07)"; g.fillRect(0,y,w,PR.H); }
+    g.fillStyle="#0a0907"; g.fillRect(0,y+PR.H-1,w,1); }
+  for(let i=0;i<=PR_STEPS;i++){ const x=i*PR.W; g.fillStyle=i%16===0?"#5a4c38":i%4===0?"#3a3227":"#211d17"; g.fillRect(x,0,i%16===0?2:1,h); }
+  // pattern length marker: a 16-step pattern repeats its steps every bar
+  const L=pat.steps.kick.length;
+  // chord names along the top of each bar
+  g.font="600 10px "+col("--f-mono"); g.fillStyle="rgba(239,227,200,.35)";
+  for(let b=0;b<4;b++) g.fillText(chordName(pat,b),b*16*PR.W+6,12);
+  const c=col(`--h-${PR.track}`)||col("--accent");
+  notes.forEach((n,k)=>{ if(n.m<r.lo||n.m>r.hi) return; const x=n.t*PR.W+1, y=(r.hi-n.m)*PR.H+1, nw=Math.max(4,n.d*PR.W-2), nh=PR.H-3;
+    const sel=rolled&&PR.sel===k;
+    g.globalAlpha=rolled?(.45+.55*n.v):.32; g.fillStyle=c; g.beginPath(); g.roundRect?g.roundRect(x,y,nw,nh,3):g.rect(x,y,nw,nh); g.fill();
+    g.globalAlpha=1; if(sel){ g.strokeStyle=col("--text"); g.lineWidth=2; g.stroke(); }
+    if(rolled){ g.fillStyle="rgba(0,0,0,.35)"; g.fillRect(x+nw-4,y+2,2,nh-4); }
+    if(nw>34&&PR.H>=12){ g.fillStyle="#0a0907"; g.font="600 9px "+col("--f-mono"); g.fillText(prNoteName(n.m),x+4,y+nh-3); } });
+  g.globalAlpha=1;
+}
+function prStatus(){
+  const pat=P(), rolled=!!prRoll(pat,PR.track), name=PR_TRACKS[PR.track].label;
+  $("prStatus").innerHTML=rolled?`<b>Piano roll is playing the ${name}.</b> Generating or ⚄ re-rolling this track brings back generated notes (Undo gets yours back).`
+    :`Faded notes are the generated ${name.toLowerCase()}. <b>Click to add a note</b> or drag one, and the piano roll takes over this track.`;
+  $("prReset").disabled=!rolled;
+  $("prPat").textContent=`Pattern ${state.cur} · 4 bars`;
+  document.querySelectorAll("#prTracks button").forEach(b=>{ b.setAttribute("aria-pressed",b.dataset.t===PR.track); b.classList.toggle("has",!!prRoll(pat,b.dataset.t)); });
+  const sel=rolled&&PR.sel!=null?pat.roll[PR.track][PR.sel]:null;
+  $("prVel").disabled=!sel; $("prVelOut").textContent=sel?Math.round(sel.v*127):"–"; if(sel) $("prVel").value=Math.round(sel.v*127);
+  $("prSelInfo").textContent=sel?`${prNoteName(sel.m)} · bar ${Math.floor(sel.t/16)+1} beat ${Math.floor((sel.t%16)/4)+1} · ${prLenName(sel.d)}`:"No note selected";
+}
+function prLenName(d){ const map={.5:"1/32",1:"1/16",2:"1/8",3:"dotted 1/8",4:"1/4",6:"dotted 1/4",8:"1/2",16:"1 bar"}; return map[d]||(Math.round(d*100)/100+" steps"); }
+function prRefresh(){ prStatus(); prDraw(); }
+
+/* ---------- Editing ---------- */
+function prHit(x,y){
+  const pat=P(), notes=prNotes(pat,PR.track), r=prRange(), m=r.hi-Math.floor(y/PR.H), t=x/PR.W;
+  for(let k=notes.length-1;k>=0;k--){ const n=notes[k]; if(n.m===m&&t>=n.t&&t<=n.t+n.d) return {k,edge:x>=(n.t+n.d)*PR.W-7&&n.d*PR.W>10}; }
+  return null;
+}
+function prSnapT(t){ return Math.max(0,Math.min(PR_STEPS-PR.snap,Math.floor(t/PR.snap)*PR.snap)); }
+function prPreview(m,len){
+  ensureCtx(); ctx.resume(); const id=PR.track, f=mtof(m), t=ctx.currentTime+.02;
+  trigger(ctx,chain,id,t,.8,{pat:P(),bar:0,step:0,f,freqs:[f],len:len||.3,kt:"roll"});
+}
+function prSort(arr){ const sel=PR.sel!=null?arr[PR.sel]:null; arr.sort((a,b)=>a.t-b.t||a.m-b.m); PR.sel=sel?arr.indexOf(sel):null; }
+function prPointerDown(e){
+  if(e.button===2) return;
+  const cv=$("prGrid"), rc=cv.getBoundingClientRect(), x=e.clientX-rc.left, y=e.clientY-rc.top, r=prRange();
+  cv.focus(); e.preventDefault();
+  const hit=prHit(x,y);
+  prTakeOver(); const pat=P(), arr=pat.roll[PR.track];
+  let n, mode;
+  if(hit){
+    if(!PR.undone) pushUndo();
+    n=arr[hit.k];
+    if(e.altKey&&!hit.edge){ n=Object.assign({},n); arr.push(n); }
+    mode=hit.edge?"len":"move";
+  } else {
+    if(!PR.undone) pushUndo();
+    const m=r.hi-Math.floor(y/PR.H); if(m<r.lo||m>r.hi) return;
+    n={t:prSnapT(x/PR.W),d:PR.lastLen[PR.track],m,v:.8}; if(n.t+n.d>PR_STEPS) n.d=PR_STEPS-n.t; arr.push(n); mode="len"; prPreview(n.m);
+  }
+  PR.undone=false; PR.justCreated=!hit;
+  PR.sel=arr.indexOf(n);
+  PR.drag={n,mode,x0:x,y0:y,t0:n.t,d0:n.d,m0:n.m,moved:false,created:!hit};
+  cv.setPointerCapture(e.pointerId);
+  prRefresh();
+}
+function prPointerMove(e){
+  const D=PR.drag; if(!D) { const cv=$("prGrid"), rc=cv.getBoundingClientRect(), h=prHit(e.clientX-rc.left,e.clientY-rc.top); cv.style.cursor=h?(h.edge?"ew-resize":"grab"):"crosshair"; return; }
+  const rc=$("prGrid").getBoundingClientRect(), x=e.clientX-rc.left, y=e.clientY-rc.top, r=prRange(), n=D.n;
+  if(D.mode==="move"){
+    const t=Math.max(0,Math.min(PR_STEPS-n.d,Math.round((D.t0+(x-D.x0)/PR.W)/PR.snap)*PR.snap));
+    const m=Math.max(r.lo,Math.min(r.hi,D.m0-Math.round((y-D.y0)/PR.H)));
+    if(m!==n.m) prPreview(m,.2);
+    if(t!==n.t||m!==n.m){ n.t=t; n.m=m; D.moved=true; }
+  } else if(D.created){
+    // a new note reaches to where you drag (or keeps the last length if you just click)
+    const reach=Math.ceil((x/PR.W-n.t)/PR.snap-1e-6)*PR.snap;
+    if(Math.abs(x-D.x0)<3) return;
+    const d=Math.max(PR.snap,reach); if(d!==n.d){ n.d=Math.min(d,PR_STEPS-n.t); D.moved=true; }
+  } else {
+    const d=Math.max(PR.snap,Math.round((D.d0+(x-D.x0)/PR.W)/PR.snap)*PR.snap);
+    if(d!==n.d){ n.d=Math.min(d,PR_STEPS-n.t); D.moved=true; }
+  }
+  prDraw(); prStatus();
+}
+function prPointerUp(){
+  const D=PR.drag; if(!D) return; PR.drag=null;
+  if(D.mode==="len"&&(D.moved||D.created)) PR.lastLen[PR.track]=D.n.d;
+  if(D.mode==="move"&&!D.moved&&!D.created) prPreview(D.n.m,.3);
+  const arr=P().roll[PR.track]; prSort(arr); renderGrid(); prRefresh();
+}
+function prDelete(k){ const pat=P(); prTakeOver(); pushUndo(); pat.roll[PR.track].splice(k,1); PR.sel=null; renderGrid(); prRefresh(); }
+function prKey(e){
+  const pat=P(), arr=prRoll(pat,PR.track); const k=e.key;
+  if(!arr||PR.sel==null||!arr[PR.sel]){ return; }
+  const n=arr[PR.sel], r=prRange(); let used=true;
+  if(k==="Delete"||k==="Backspace"){ prDelete(PR.sel); }
+  else if(k==="ArrowUp"||k==="ArrowDown"){ mixUndo("pr"+PR.sel); n.m=Math.max(r.lo,Math.min(r.hi,n.m+(k==="ArrowUp"?1:-1)*(e.shiftKey?12:1))); prPreview(n.m,.2); }
+  else if(k==="ArrowLeft"||k==="ArrowRight"){ mixUndo("pr"+PR.sel); const d=(k==="ArrowRight"?1:-1)*PR.snap;
+    if(e.altKey) n.d=Math.max(PR.snap,Math.min(PR_STEPS-n.t,n.d+d)); else n.t=Math.max(0,Math.min(PR_STEPS-n.d,n.t+d)); }
+  else if(k==="Escape"){ PR.sel=null; }
+  else used=false;
+  if(used){ e.preventDefault(); e.stopPropagation(); prSort(arr); renderGrid(); prRefresh(); }
+}
+function prToScale(){
+  const pat=P(); prTakeOver(); pushUndo();
+  pat.roll[PR.track].forEach(n=>{ if(prInScale(n.m)) return; n.m=prInScale(n.m-1)?n.m-1:n.m+1; });
+  renderGrid(); prRefresh(); toast("Notes moved into "+NAMES[state.root]+" "+MODES[state.mode].n);
+}
+function prShowTrack(id){ PR.track=id; PR.sel=null; prRefresh(); prCenter(); }
+function prCenter(){
+  const notes=prNotes(P(),PR.track), r=prRange(), sc=$("prScroll"); if(!sc) return;
+  const mid=notes.length?notes.reduce((a,n)=>a+n.m,0)/notes.length:(r.lo+r.hi)/2;
+  sc.scrollTop=Math.max(0,(r.hi-mid)*PR.H-sc.clientHeight/2+18);
+}
+/* Open the roll from a grid cell or a track. */
+function prOpen(id,step){
+  if(PR_TRACKS[id]) PR.track=id; PR.sel=null;
+  if(STUDIO.on){ document.body.classList.remove("st-noedit"); STUDIO.pickEdit("roll"); stSyncToggles(); stSave(); }
+  else $("prPanel").scrollIntoView({behavior:"smooth",block:"center"});
+  setTimeout(()=>{ prRefresh(); prCenter(); if(step!=null){ const sc=$("prScroll"); sc.scrollLeft=Math.max(0,step*PR.W-80); } $("prGrid").focus(); },40);
+}
+// Grid rows that the piano roll plays show its notes, and clicking them opens the roll.
+{ const raw=renderGrid; renderGrid=function(){ raw.apply(this,arguments);
+    const pat=P(), L=pat.steps.kick.length;
+    Object.keys(PR_TRACKS).forEach(id=>{ const roll=prRoll(pat,id), cells=cellEls[id]; if(!cells) return;
+      const lab=$("mute-"+id); if(lab) lab.classList.toggle("rolled",!!roll);
+      cells.forEach((c,s)=>{ c.classList.toggle("rolled",!!roll);
+        if(roll){ const hit=roll.filter(n=>Math.floor(n.t)%L===s); c.dataset.v=hit.length?(hit.some(n=>n.v>.7)?2:1):0; c.title=hit.length?`${hit.map(n=>prNoteName(n.m)).slice(0,4).join(" ")} · open in Piano roll`:"Open in Piano roll"; }
+        else c.removeAttribute("title"); }); });
+    if($("prPanel")&&$("prPanel").offsetParent!==null) prRefresh(); }; }
+{ const raw=setPlayhead; setPlayhead=function(e){ raw.apply(this,arguments); const ph=$("prHead"); if(!ph) return;
+    if(e&&e.slot===state.cur){ ph.hidden=false; ph.style.transform=`translateX(${e.i*PR.W}px)`; } else ph.hidden=true; }; }
+/* The piano roll needs room: it makes the editors taller while it's open (⤢ Taller switches that off and on). */
+function prTall(on){
+  if(!STUDIO.on||on===PR.big) return; const root=document.documentElement;
+  if(on){ PR.prevH=root.style.getPropertyValue("--edit-h"); const cur=$("prPanel").closest(".st-edit"), h=cur?cur.getBoundingClientRect().height:0;
+    if(h>=window.innerHeight*.6){ return; } root.style.setProperty("--edit-h","64vh"); }
+  else { if(PR.prevH) root.style.setProperty("--edit-h",PR.prevH); else root.style.removeProperty("--edit-h"); }
+  PR.big=on; $("prBig").setAttribute("aria-pressed",on); setTimeout(()=>{ prDraw(); },30);
+}
+function prGridButtons(){
+  Object.keys(PR_TRACKS).forEach(id=>{ const lab=$("mute-"+id); if(!lab||lab.parentElement.querySelector(".pr-open")) return;
+    const b=document.createElement("button"); b.className="ico pr-open"; b.textContent="♪"; b.title=`Edit ${PR_TRACKS[id].label} in the Piano roll`;
+    b.setAttribute("aria-label",b.title); b.onclick=()=>prOpen(id,0); $("dice-"+id).after(b); });
+}
+function prSetup(){
+  const tr=$("prTracks");
+  Object.entries(PR_TRACKS).forEach(([id,o])=>{ const b=document.createElement("button"); b.dataset.t=id; b.textContent=o.label; b.onclick=()=>prShowTrack(id); tr.appendChild(b); });
+  const cv=$("prGrid");
+  cv.addEventListener("pointerdown",prPointerDown); cv.addEventListener("pointermove",prPointerMove);
+  cv.addEventListener("pointerup",prPointerUp); cv.addEventListener("pointercancel",prPointerUp);
+  // double-click deletes a note (not one you just added with the first click)
+  cv.addEventListener("dblclick",e=>{ if(PR.justCreated) return; const rc=cv.getBoundingClientRect(), h=prHit(e.clientX-rc.left,e.clientY-rc.top); if(h&&prRoll(P(),PR.track)) prDelete(h.k); });
+  cv.addEventListener("contextmenu",e=>{ e.preventDefault(); const rc=cv.getBoundingClientRect(), h=prHit(e.clientX-rc.left,e.clientY-rc.top); if(h) prDelete(h.k); });
+  cv.addEventListener("keydown",prKey);
+  $("prKeys").addEventListener("pointerdown",e=>{ const rc=e.target.getBoundingClientRect(), m=prRange().hi-Math.floor((e.clientY-rc.top)/PR.H); prPreview(m,.5); });
+  $("prSnap").onchange=e=>{ PR.snap=+e.target.value; };
+  $("prVel").oninput=e=>{ const arr=prRoll(P(),PR.track); if(!arr||PR.sel==null) return; mixUndo("prvel"); arr[PR.sel].v=e.target.value/127; prRefresh(); };
+  $("prScale").onclick=prToScale;
+  $("prReset").onclick=()=>{ const pat=P(); if(!prRoll(pat,PR.track)) return; pushUndo(); delete pat.roll[PR.track]; PR.sel=null; renderGrid(); prRefresh(); toast("Generated notes are back"); };
+  $("prZoomIn").onclick=()=>{ const i=PR_ZOOM.indexOf(PR.W); PR.W=PR_ZOOM[Math.min(PR_ZOOM.length-1,i+1)]; prDraw(); };
+  $("prZoomOut").onclick=()=>{ const i=PR_ZOOM.indexOf(PR.W); PR.W=PR_ZOOM[Math.max(0,i-1)]; prDraw(); };
+  $("prBig").onclick=()=>{ PR.auto=false; prTall(!PR.big); };
+  $("prHelp").onclick=()=>{ const on=$("prPanel").classList.toggle("help"); $("prHelp").setAttribute("aria-pressed",on); };
+  $("grid").addEventListener("click",e=>{ const c=e.target.closest(".cell"); if(!c) return; const [,id,s]=c.id.split("-");
+    if(PR_TRACKS[id]&&prRoll(P(),id)){ e.stopPropagation(); e.preventDefault(); prOpen(id,+s); } },true);
+  // A ♪ button on the Melody, Bass and Chords rows opens the roll.
+  { const raw=buildGrid; buildGrid=function(){ raw.apply(this,arguments); prGridButtons(); }; }
+  prGridButtons();
+  window.addEventListener("resize",()=>prDraw());
+  prRefresh();
+}
+prSetup();
+</script>
+
+<script>
 /* ---------- Stems and MIDI in the export ----------
    Stems: one WAV per track, the same length as beat.wav so they line up from zero in any DAW. Each stem is the track
    through its mixer strip with its own reverb and echo, at the level it has in the mix (not normalized).
@@ -3737,7 +4064,7 @@ projSetup();
 const GM_DRUM={kick:36,snare:38,clap:39,hat:42,ohat:46,perc:37,tom:45,crash:49};
 const safeName=x=>String(x||"").normalize("NFKD").replace(/[^\w .()+-]+/g,"-").replace(/-+/g,"-").replace(/^[-. ]+|[-. ]+$/g,"").slice(0,60)||"track";
 function exportSlots(bars,useSong){ const out=[]; for(let g=0;g<bars*16;g++) out.push(useSong?state.song[Math.floor(g/64)]:state.cur); return out; }
-function trackUsed(id,slots){ return !state.mutes[id]&&[...new Set(slots)].some(L=>{ const a=state.patterns[L].steps[id]; return a&&a.some(v=>v); }); }
+function trackUsed(id,slots){ return !state.mutes[id]&&[...new Set(slots)].some(L=>{ const p=state.patterns[L]; if(p.roll&&p.roll[id]) return p.roll[id].length>0; const a=p.steps[id]; return a&&a.some(v=>v); }); }
 
 async function renderStem(id,bars,useSong,sr,len){
   const off=new OfflineAudioContext(2,len,sr), ch=buildChain(off,off.destination), sd=stepDur();
@@ -3792,8 +4119,16 @@ function buildMidi(bars,useSong){
     if(st.crash[s]&&bar===0&&!m.crash) note("drums",9,t,GM_DRUM.crash,vel(st.crash[s]),ST*4);
     if(st.chop[s]&&!m.chop){ const rel=chordRel(pat,bar); note("chop",3,t,keysBase()+rel[(pat.chopDeg[s]||0)%rel.length],vel(st.chop[s]),Math.min(len("chop"),ST*2)); }
     if(st.chops&&st.chops[s]&&!m.chops) note("chops",4,t,36+(pat.chopIdx?pat.chopIdx[s]:0),vel(st.chops[s]),Math.min(len("chops"),ST*4));
+    // tracks edited in the piano roll: its notes, as written
+    const roll=pat.roll||{}, rolledHere=k=>{ if(!roll[k]) return false; if(m[k]) return true;
+      const chn={mel:2,bass:0,keys:1}[k];
+      roll[k].forEach(n=>{ if(Math.floor(n.t)!==i) return; note(k,chn,gs*ST+Math.round((n.t-i)*ST)+(n.t===i&&s%2===1?swingT:0),n.m,n.v*112+12,n.d*ST); });
+      return true; };
+    if(rolledHere("mel")) {} else
     if(st.mel[s]&&!m.mel) note("mel",2,t,keysBase()+12+sn(pat.prog[bar]+pat.melDeg[s]),vel(st.mel[s]),Math.min(len("mel"),ST*12.8*state.bpm/120));
+    if(rolledHere("bass")) {} else
     if(st.bass[s]&&!m.bass) note("bass",0,t,bassBase()+sn(pat.prog[bar]+pat.bassDeg[s]),vel(st.bass[s]),len("bass")*(state.inst.bass.includes("808")?1:.8));
+    if(rolledHere("keys")) {} else
     if(st.keys[s]&&!m.keys){
       const rel=chordRel(pat,bar), kb=keysBase(), kt=rhythm();
       const ps=kt==="arp"?[kb+12+rel[(s/2|0)%rel.length]]:kt==="seq"?[kb+12*(1+(Math.floor(s/4)%2))+rel[[0,1,2,3,2,1][s%6]%rel.length]]:rel.map(r=>kb+r);

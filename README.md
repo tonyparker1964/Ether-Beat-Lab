@@ -45,6 +45,16 @@ The **Project** button at the left of the top bar shows your beat's name (a gold
 - **Autosave:** your beat is kept automatically every few seconds. Close the app (or lose power) and next time it opens right where you left off; unsaved changes still show as unsaved. New beat and Open ask before replacing unsaved work.
 - If a project uses NI sounds and the drive isn't connected, it still opens and tells you which sounds it couldn't find.
 
+## Piano roll
+
+Melody, Bass and Chords can be edited note by note in the **Piano roll** (an editor tab in Studio view, a section on the classic page, or the ♪ button on those rows of the Pattern grid). It covers the pattern's full 4 bars with the chord names along the top, and rows in the key are lighter (the key's root is marked in gold).
+
+- At first it shows the generated notes, faded. Click to add a note (drag right as you click to make it longer) or drag one, and the piano roll takes over that track: any pitch, any length, and chords as big as you like. Rows played by the piano roll show ♪ in the grid; clicking their cells opens the roll.
+- Drag a note to move it (up and down changes pitch), drag its right edge to change its length, ⌥-drag to copy, double-click or right-click to delete. With a note selected: ↑ ↓ pitch (⇧ for an octave), ← → to move, ⌥ ← → to change length, Delete removes it; **Velocity** sets how hard it plays.
+- **Snap** 1/32, 1/16, 1/8 or 1/4; **Fit to key** moves stray notes into the key; **−/+** zoom; click a piano key to hear it. In Studio view the editors grow taller while the roll is open (**⤢ Taller** switches that), and **?** shows these tips.
+- Randomize, New pattern, Mutate or ⚄ on that track bring back generated notes; Undo gets yours back. **Back to generated** does it on purpose.
+- Piano roll notes are saved with the project and go into the export, stems and MIDI.
+
 ## Mixer
 
 The **Mixer** tab (in the editors along the bottom of Studio view, or its own section on the classic page) has a channel strip for every track and a master strip.
