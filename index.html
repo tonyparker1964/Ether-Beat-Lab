@@ -148,12 +148,16 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .ni-row select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;max-width:260px}
 .ni-status{font-size:13px;color:var(--dim);margin:8px 0 0}
 .ni-results{margin-top:12px;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px}
-.ni-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line)}
+.ni-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line)}
 .ni-item:last-child{border-bottom:0}
 .ni-item .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ni-item .meta{display:block;color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ni-item select{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:13px}
 .ni-empty{padding:14px;color:var(--dim);font-size:14px}
+.fav{border:0;background:none;padding:0 4px;font-size:17px;line-height:1;color:var(--dim);cursor:pointer}
+.fav[aria-pressed="true"]{color:var(--h-kick)}
+.fav:hover{color:var(--text)}
+.field .head-fav{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .prod-note{margin:10px 0 0;font-size:14px;color:var(--dim);min-height:1.2em}
 .prod-set{margin-top:10px}
 .prod-set summary{cursor:pointer}
@@ -2028,23 +2032,25 @@ function niEntries(){
   if(!NI.lib) return [];
   const q=$("niSearch").value.trim().toLowerCase(), type=$("niType").value, kit=$("niKitFilter").value, out=[];
   const match=(...xs)=>!q||q.split(/\s+/).every(w=>xs.some(x=>x.toLowerCase().includes(w)));
-  if(!type||type.startsWith("d:")) for(const f of NI.lib.drums){
-    if(type&&type!=="d:"+f.role) continue; if(kit&&f.kit!==kit) continue;
+  const favOnly=type==="fav";
+  if(!type||favOnly||type.startsWith("d:")) for(const f of NI.lib.drums){
+    if(favOnly?!FAV.has("nid:"+f.path):type&&type!=="d:"+f.role) continue; if(kit&&f.kit!==kit) continue;
     if(match(f.name,f.kit,NI_ROLE_LABEL[f.role])) out.push({kind:"drum",f}); if(out.length>=200) return out; }
-  if(!type||type.startsWith("i:")) for(const i of NI.lib.instruments){
-    if(type&&type!=="i:"+i.category) continue; if(kit&&i.kit!==kit) continue;
+  if(!type||favOnly||type.startsWith("i:")) for(const i of NI.lib.instruments){
+    if(favOnly?!FAV.has("ni:"+i.id):type&&type!=="i:"+i.category) continue; if(kit&&i.kit!==kit) continue;
     if(match(i.name,i.kit,NI_CATS[i.category]||"")) out.push({kind:"inst",i}); if(out.length>=200) return out; }
   return out;
 }
 function niRender(){
   const box=$("niResults"); box.innerHTML=""; const list=niEntries();
-  if(!list.length){ const e=document.createElement("div"); e.className="ni-empty"; e.textContent=NI.lib?"Nothing matches.":"Add your NI folders to browse."; box.appendChild(e); return; }
+  if(!list.length){ const e=document.createElement("div"); e.className="ni-empty"; e.textContent=!NI.lib?"Add your NI folders to browse.":$("niType").value==="fav"?"No favorites yet. Press ♡ on any sound to add it.":"Nothing matches."; box.appendChild(e); return; }
   for(const it of list){
     const row=document.createElement("div"); row.className="ni-item"; row.setAttribute("role","listitem");
     const play=document.createElement("button"); play.className="mini"; play.textContent="▶"; play.title="Listen";
     const txt=document.createElement("div"), nm=document.createElement("span"), meta=document.createElement("span");
     nm.className="nm"; meta.className="meta";
     const sel=document.createElement("select"); sel.add(new Option("Use on…",""));
+    const heart=favButton(it.kind==="drum"?"nid:"+it.f.path:"ni:"+it.i.id,()=>it.kind==="drum"?it.f.name:it.i.name);
     if(it.kind==="drum"){
       nm.textContent=it.f.name; meta.textContent=`${NI_ROLE_LABEL[it.f.role]} · ${it.f.kit}`;
       play.onclick=()=>niAuditionDrum(it.f);
@@ -2058,7 +2064,7 @@ function niRender(){
       Object.entries(NI_SLOTS).forEach(([k,label])=>sel.add(new Option(label,k)));
       sel.onchange=async()=>{ const s=sel.value; sel.value=""; if(!s) return; pushUndo(); await niAssignInst(s,it.i); preview(s==="a"||s==="b"?"keys":s); };
     }
-    txt.append(nm,meta); row.append(play,txt,sel); box.appendChild(row);
+    txt.append(nm,meta); row.append(play,txt,heart,sel); box.appendChild(row);
   }
 }
 async function niAuditionDrum(f){
@@ -2331,6 +2337,89 @@ function voiceSetup(){
   }).catch(()=>{});
 }
 voiceSetup();
+
+/* ---------- Favorites ---------- */
+// ♥ any sound: Beat Lab's own, your NI drums and instruments, natural voice words, and whole NI kits.
+// Favorites appear at the top of each menu, and as a filter in Browse and assign. Saved on this Mac.
+const FAV=new Set();
+const FAV_SELECTS=["instA","instB","instMel","instBass","kitKick","kitSnare","kitHat","kitOhat","percSel","kitTom","kitCrash","fxSel","kitChop","niKit"];
+function favKey(selId,value){
+  if(!value||value==="auto"||value==="none"||value==="") return null;
+  if(value.startsWith("nid:")||value.startsWith("ni:")) return value;
+  if(selId==="instA"||selId==="instB"||selId==="instMel") return "inst:"+value;
+  if(selId==="instBass") return "bass:"+value;
+  if(selId==="niKit") return "kit:"+value;
+  return selId+":"+value;
+}
+async function favLoad(){
+  let list=[];
+  try{ if(NATIVE){ const r=await native("getFavs"); list=Array.isArray(r)?r:[]; } else list=JSON.parse(localStorage.getItem("beatlab.favs")||"[]"); }catch(e){}
+  list.forEach(k=>FAV.add(k)); favRefresh();
+}
+function favSave(){
+  const list=[...FAV];
+  if(NATIVE) native("setFavs",{favs:list}).catch(()=>{});
+  else try{ localStorage.setItem("beatlab.favs",JSON.stringify(list)); }catch(e){}
+}
+function favToggle(key,name){
+  if(!key) return;
+  if(FAV.has(key)){ FAV.delete(key); toast(`Removed ${name} from favorites`); } else { FAV.add(key); toast(`♥ ${name} added to favorites`); }
+  favSave(); favRefresh();
+}
+function favButton(key,name){
+  const b=document.createElement("button"); b.type="button"; b.className="fav"; b.dataset.key=key;
+  const sync=()=>{ const on=FAV.has(key); b.textContent=on?"♥":"♡"; b.setAttribute("aria-pressed",on); b.title=on?"Remove from favorites":"Add to favorites"; b.setAttribute("aria-label",(on?"Remove ":"Add ")+name()+(on?" from":" to")+" favorites"); };
+  b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); favToggle(key,name()); };
+  b.__sync=sync; sync(); return b;
+}
+/* A "♥ Favorites" group at the top of a menu, holding the favorite choices that menu already offers. */
+function favGroup(sel){
+  if(!sel) return; [...sel.querySelectorAll("optgroup.favs")].forEach(g=>g.remove());
+  const seen=new Set(), picks=[];
+  [...sel.options].forEach(o=>{ const k=favKey(sel.id,o.value); if(k&&FAV.has(k)&&!seen.has(o.value)){ seen.add(o.value); picks.push(o); } });
+  if(!picks.length) return;
+  const cur=sel.value, og=document.createElement("optgroup"); og.className="favs"; og.label="♥ Favorites";
+  picks.forEach(o=>{ const g=o.parentElement&&o.parentElement.tagName==="OPTGROUP"?o.parentElement.label.replace(/ — Native Instruments$/,""):"";
+    const c=new Option("♥ "+o.text+(g&&!/^(Best for|Beat Lab|Synth voices)/.test(g)&&!o.text.includes(" — ")?` — ${g}`:""),o.value); og.appendChild(c); });
+  const first=sel.querySelector("option[value=auto],option[value=none]");
+  const anchor=first&&first.parentElement===sel?first.nextSibling:sel.firstChild;
+  sel.insertBefore(og,anchor); sel.value=cur;
+}
+/* The heart beside each menu favorites whatever that menu is set to. */
+function favMenuHearts(){
+  FAV_SELECTS.forEach(id=>{
+    const sel=$(id); if(!sel||sel.__heart) return;
+    const label=sel.closest("label.field"), lbl=label&&label.querySelector(".lbl");
+    const name=()=>{ const o=sel.selectedOptions[0]; return o?o.text.replace(/^♥ /,""):"sound"; };
+    const b=document.createElement("button"); b.type="button"; b.className="fav";
+    const sync=()=>{ const k=favKey(id,sel.value), on=!!k&&FAV.has(k); b.textContent=on?"♥":"♡"; b.disabled=!k;
+      b.setAttribute("aria-pressed",on); b.title=!k?"Pick a sound to favorite it":on?`Remove ${name()} from favorites`:`Add ${name()} to favorites`; b.setAttribute("aria-label",b.title); };
+    b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); favToggle(favKey(id,sel.value),name()); };
+    // The heart sits outside the <label>, so clicking the label still opens the menu.
+    if(label){ const wrap=document.createElement("div"); wrap.className="field"; wrap.style.cssText=label.getAttribute("style")||"";
+      label.replaceWith(wrap); label.classList.remove("field"); label.removeAttribute("style"); label.style.display="contents";
+      const head=document.createElement("span"); head.className="head-fav"; head.append(lbl,b);
+      sel.setAttribute("aria-label",lbl.textContent); wrap.append(head,label); label.append(sel); }
+    sel.addEventListener("change",sync); sel.__heart=sync; sync();
+  });
+}
+function favRefresh(){
+  FAV_SELECTS.forEach(id=>{ const sel=$(id); if(sel){ favGroup(sel); sel.__heart&&sel.__heart(); } });
+  document.querySelectorAll(".ni-item .fav").forEach(b=>b.__sync&&b.__sync());
+  if($("niType").value==="fav") niRender();
+}
+{ const raw=fillInstSelect; fillInstSelect=function(sel,...a){ raw.call(this,sel,...a); favGroup(sel); }; }
+{ const raw=fillBassSelect; fillBassSelect=function(...a){ raw.apply(this,a); favGroup($("instBass")); }; }
+{ const raw=niFillKitSelects; niFillKitSelects=function(...a){ raw.apply(this,a); favRefresh(); }; }
+{ const raw=syncSounds; syncSounds=function(...a){ raw.apply(this,a); FAV_SELECTS.forEach(id=>{ const sel=$(id); sel&&sel.__heart&&sel.__heart(); }); }; }
+{ const raw=niApplyLibrary; niApplyLibrary=function(...a){ raw.apply(this,a); favGroup($("niKit")); $("niKit").__heart&&$("niKit").__heart(); }; }
+{ const raw=voiceFillChopMenu; voiceFillChopMenu=function(...a){ raw.apply(this,a); favGroup($("kitChop")); }; }
+function favSetup(){
+  const ty=$("niType"); if(ty&&!ty.querySelector("option[value=fav]")){ const o=new Option("♥ Favorites","fav"); ty.insertBefore(o,ty.options[0]?ty.options[0].nextSibling:null); }
+  favMenuHearts();
+  favLoad();
+}
+favSetup();
 
 </script>
 <script>

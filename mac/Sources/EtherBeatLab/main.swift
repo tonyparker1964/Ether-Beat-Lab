@@ -153,6 +153,14 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
             rescan(replyHandler)
         case "rescan":
             rescan(replyHandler)
+        case "getFavs":
+            let favs = UserDefaults.standard.stringArray(forKey: "favorites") ?? []
+            let text = (try? JSONSerialization.data(withJSONObject: favs)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+            replyHandler(text, nil)
+        case "setFavs":
+            let favs = (body["favs"] as? [Any] ?? []).compactMap { $0 as? String }
+            UserDefaults.standard.set(Array(favs.prefix(5000)), forKey: "favorites")
+            replyHandler("{}", nil)
         case "voices":
             DispatchQueue.global(qos: .userInitiated).async {
                 let list = Voices.list()
