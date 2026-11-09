@@ -372,6 +372,14 @@ body.studio .st-side .ni-row select{max-width:none;flex:1 1 120px}
 .script textarea{display:block;width:100%;min-height:220px;margin-top:10px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-family:var(--f-mono);font-size:13px;line-height:1.55;tab-size:4;white-space:pre;overflow-x:auto}
 .script textarea.drag{border-color:var(--accent)}
 .script-report{margin-top:10px;font-size:13px}
+.md-guide{margin-top:8px;max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--ink);padding:4px 14px 12px;font-size:13.5px}
+.md-guide h1,.md-guide h2,.md-guide h3{font-family:var(--f-display);margin:14px 0 6px}
+.md-guide h1{font-size:19px} .md-guide h2{font-size:16px} .md-guide h3{font-size:14px}
+.md-guide p,.md-guide ul{margin:6px 0} .md-guide ul{padding-left:18px}
+.md-guide pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow:auto;font-size:12px;line-height:1.5}
+.md-guide code{font-family:var(--f-mono);font-size:.92em;background:var(--panel-2);border-radius:4px;padding:0 3px}
+.md-guide pre code{background:none;padding:0}
+.md-guide table{border-collapse:collapse;margin:6px 0;font-size:12.5px} .md-guide td,.md-guide th{border:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top}
 .ai-prompt{display:block;width:100%;min-height:200px;margin-top:8px;resize:vertical;background:var(--ink);color:var(--dim);border:1px solid var(--line);border-radius:10px;padding:10px;font-family:var(--f-mono);font-size:12px;line-height:1.5;white-space:pre;overflow-x:auto}
 .script-report .ok{color:#8fe3a8}
 .script-report .ni{color:var(--text);margin-top:4px}
@@ -507,6 +515,162 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
 .viz-red{font-size:14px;font-weight:500}
 .viz-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+/* ---------- Themes ---------- */
+html[data-theme="ether"]{--ink:#121217;--panel:#1b1b22;--panel-2:#24242d;--line:#33333f;--text:#ecebf3;--dim:#9c9aad;--accent:#9b6bff;--accent-ink:#ffffff;--rec:#f0505f;
+  --green:#3fd0a8;--green-ink:#06231b;--tan:#d6a93a;--gold-2:#e8bd45;
+  --h-kick:#a87bff;--h-snare:#c58cff;--h-hat:#8fa2ff;--h-ohat:#7cc4ff;--h-perc:#5fd6c0;--h-tom:#e58cc8;--h-crash:#e5e4f0;--h-chop:#ff9bd2;
+  --h-mel:#c9a5ff;--h-fx:#ffc86b;--h-chops:#f08fb0;--h-bass:#6f8cff;--h-keys:#b58cff;--dw-sec:#d6a93a}
+html[data-theme="midnight"]{--ink:#0b1018;--panel:#121a26;--panel-2:#1a2433;--line:#2a3648;--text:#e6edf7;--dim:#93a3b8;--accent:#4fa3ff;--accent-ink:#04121f;--rec:#ff5d6c;
+  --green:#3fd0a8;--tan:#62b5ff;--gold-2:#8cc7ff;--h-kick:#4fa3ff;--h-snare:#7fb8ff;--h-hat:#9ad0ff;--h-ohat:#6fe0ff;--h-perc:#4fd6c0;--h-tom:#a99bff;--h-crash:#e6edf7;
+  --h-chop:#ff9bd2;--h-mel:#7ce0ff;--h-fx:#ffc86b;--h-chops:#c99bff;--h-bass:#3f7bff;--h-keys:#6fb0ff;--dw-sec:#4fa3ff}
+html[data-theme="forest"]{--ink:#0b120d;--panel:#121b14;--panel-2:#1a261d;--line:#2b3b2f;--text:#e7f1e7;--dim:#97ab9b;--accent:#55c47a;--accent-ink:#04170a;--rec:#ff6a5a;
+  --green:#55c47a;--tan:#b7c95a;--gold-2:#d8e07a;--h-kick:#55c47a;--h-snare:#9fd36a;--h-hat:#d8e07a;--h-ohat:#b7c95a;--h-perc:#4fd6c0;--h-tom:#c9a27c;--h-crash:#e7f1e7;
+  --h-chop:#a7c98d;--h-mel:#6fc2a0;--h-fx:#e2c27f;--h-chops:#b9935a;--h-bass:#3f8f62;--h-keys:#98b862;--dw-sec:#b7c95a}
+html[data-theme="ember"]{--ink:#130c0a;--panel:#1c1310;--panel-2:#271a16;--line:#3d2a23;--text:#f5e6df;--dim:#b49a8f;--accent:#ff7a3d;--accent-ink:#1d0a02;--rec:#ff4d5e;
+  --green:#ffb13d;--tan:#ffb13d;--gold-2:#ffd06b;--h-kick:#ff7a3d;--h-snare:#ff9f5a;--h-hat:#ffd06b;--h-ohat:#ffb13d;--h-perc:#f7c873;--h-tom:#ff8f8f;--h-crash:#f5e6df;
+  --h-chop:#ff9bd2;--h-mel:#ffb98f;--h-fx:#ffd06b;--h-chops:#e8916b;--h-bass:#e2563d;--h-keys:#ff9f7a;--dw-sec:#ffb13d}
+html:not([data-theme="gold"]) .arr-row{border-bottom-color:var(--line)}
+html:not([data-theme="gold"]) .arr-lane{background-image:linear-gradient(90deg,var(--line) 1px,transparent 1px)}
+html:not([data-theme="gold"]) .pr-scroll{background:var(--ink)}
+html:not([data-theme="gold"]) .btn.primary{color:var(--accent-ink)}
+
+/* ---------- Ether Beat Lab layout (Studio view) ---------- */
+.dw-only,.dw-views,.dw-status,.dw-tx{display:none}
+body.studio.daw .app{grid-template-columns:var(--side-w,290px) minmax(0,1fr) var(--fav-w,300px);
+  grid-template-rows:auto auto minmax(0,1fr) var(--edit-h,40vh) auto;
+  grid-template-areas:"bar bar bar" "views views views" "side main fav" "side edit fav" "status status status"}
+body.studio.daw.st-noedit .app{grid-template-rows:auto auto minmax(0,1fr) 0 auto}
+body.studio.daw .st-lcd,body.studio.daw #scope,body.studio.daw #stView{display:none}
+body.studio.daw header.top{background:var(--panel);padding:8px 14px;gap:14px}
+body.studio.daw .brand{flex-direction:row;align-items:center;gap:10px}
+body.studio.daw .brand .mark{font-size:0!important;display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 45%,#000));
+  color:#fff;font-family:var(--f-display);font-size:18px;font-weight:800;letter-spacing:0;overflow:hidden;line-height:1}
+body.studio.daw .brand h1{font-size:17px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;white-space:nowrap}
+body.studio.daw .dw-tx{display:flex;align-items:center;gap:6px;flex:none}
+.dw-grp{display:flex;align-items:center;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:3px}
+.dw-ib{border:0;background:none;color:var(--text);width:38px;height:32px;border-radius:7px;font-size:15px;display:inline-grid;place-items:center}
+.dw-ib:hover{background:var(--panel)}
+.dw-ib[aria-pressed="true"]{background:var(--accent);color:#fff}
+.dw-ib.rec{color:var(--rec)}
+.dw-ib.rec[aria-pressed="true"]{background:var(--rec);color:#fff}
+body.studio.daw #play,body.studio.daw #rec{display:none}
+.dw-chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;
+  font-family:var(--f-body);font-weight:600;font-size:14px;white-space:nowrap;color:var(--text)}
+.dw-chip input{width:44px;border:0;background:none;font:inherit;text-align:right;padding:0}
+.dw-chip select{border:0;background:none;font:inherit;padding:0;max-width:150px}
+.dw-chip select option{background:var(--panel-2)}
+.dw-tog{width:42px;height:38px;border:1px solid var(--line);background:var(--panel-2);border-radius:10px;font-size:16px;color:var(--dim)}
+.dw-tog[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+body.studio.daw .transport{gap:6px}
+body.studio.daw .transport .btn{padding:7px 11px}
+body.studio.daw #randomize{font-size:14px}
+body.studio.daw #gen{display:none}
+.dw-exp{display:inline-flex;align-items:center;gap:6px}
+body.studio.daw .dw-views{grid-area:views;display:flex;justify-content:center;gap:4px;padding:6px;background:var(--panel);border-bottom:1px solid var(--line)}
+.dw-views button{border:0;background:var(--panel-2);color:var(--text);padding:7px 30px;border-radius:8px;font-weight:600;font-size:14px}
+.dw-views button[aria-pressed="true"]{background:var(--accent);color:#fff}
+body.studio.daw .st-views{display:none}
+body.studio.daw .st-main{background:var(--ink)}
+body.studio.daw .st-main>[data-dwv]{display:none}
+body.studio.daw[data-dwv="beat"] .st-main>[data-dwv="beat"],body.studio.daw[data-dwv="arr"] .st-main>[data-dwv="arr"],body.studio.daw[data-dwv="mix"] .st-main>[data-dwv="mix"]{display:block}
+body.studio.daw[data-dwv="beat"] .st-main>.dw-beat{display:flex;flex-direction:column;gap:12px}
+body.studio.daw .st-tabs button{font-family:var(--f-body);font-size:13px;letter-spacing:0;text-transform:none;font-weight:600;padding:8px 14px;border-radius:8px 8px 0 0}
+body.studio.daw .st-tabs button[aria-selected="true"]{background:var(--accent);color:#fff;box-shadow:none;border-radius:8px}
+body.studio.daw .st-edit .st-tabs{padding:6px 8px;gap:4px}
+body.studio.daw .st-edit .st-tabs button{background:var(--panel);border-radius:8px}
+body.studio.daw .st-edit .st-tabs button[aria-selected="true"]{background:var(--accent)}
+body.studio.daw .dw-status{grid-area:status;display:flex;align-items:center;gap:0;padding:6px 14px;border-top:1px solid var(--line);background:var(--panel);
+  font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden}
+.dw-status>span{padding:0 12px;border-right:1px solid var(--line)}
+.dw-status>span:first-child{padding-left:0;color:var(--text);font-weight:600}
+.dw-status .sp{flex:1;border:0}
+.dw-status .last{border-right:0}
+.dw-status select{border:0;background:none;color:var(--dim);font:inherit;padding:0}
+.dw-status select option{background:var(--panel-2);color:var(--text)}
+.dw-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:-1px}
+.dw-dot.play{background:var(--accent)} .dw-dot.rec{background:var(--rec)}
+body.studio.daw #toast{bottom:calc(var(--edit-h,40vh) + 44px)}
+
+/* Sound Browser */
+.dwb{display:flex;flex-direction:column;gap:10px;padding:14px;min-height:0}
+.dwb h3,.dwi h3{margin:0;font-family:var(--f-body);font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.dwb-search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);padding:0 10px}
+.dwb-search input{flex:1;border:0;background:none;padding:9px 0;min-width:0}
+.dwb-cats{display:flex;flex-direction:column;gap:2px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.dwb-cats button{display:flex;align-items:center;gap:12px;border:0;background:none;padding:9px 10px;border-radius:8px;font-size:15px;text-align:left}
+.dwb-cats button .ic{width:20px;text-align:center;color:var(--dim)}
+.dwb-cats button .n{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.dwb-cats button .car{color:var(--dim)}
+.dwb-cats button[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 30%,var(--panel-2))}
+.dwb-list{display:flex;flex-direction:column;gap:2px;overflow:auto;min-height:120px}
+.dwb-row{display:grid;grid-template-columns:30px 30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 4px;border-radius:8px;cursor:pointer}
+.dwb-row:hover,.dwb-row.on{background:var(--panel-2)}
+.dwb-row .pl{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);padding:0;font-size:11px}
+.dwb-row .wv{height:22px;color:var(--accent)}
+.dwb-row .nm{min-width:0}
+.dwb-row .nm b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dwb-row .nm span{display:block;font-size:10.5px;letter-spacing:.06em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dwb-row .du{font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+.dwb-empty{color:var(--dim);font-size:13px;padding:10px 4px}
+.dwb-more{color:var(--dim);font-size:12px;padding:6px 4px}
+
+/* Track Inspector */
+.dwi{display:flex;flex-direction:column;gap:12px;padding:14px}
+.dwi-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.dwi-card .ic{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 30%,var(--panel));color:var(--c);font-size:18px}
+.dwi-card b{display:block;font-size:16px;letter-spacing:.04em;text-transform:uppercase}
+.dwi-card span{display:block;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.dwi-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:center;font-size:14px}
+.dwi-row .k{color:var(--dim)}
+.dwi-box{border:1px solid var(--line);border-radius:8px;background:var(--panel-2);padding:7px 10px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dwi-sl{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px;align-items:center}
+.dwi-sl output{border:1px solid var(--line);border-radius:7px;background:var(--panel-2);padding:5px 6px;font-family:var(--f-mono);font-size:12px;text-align:center}
+.dwi input[type=range]{width:100%;accent-color:var(--accent)}
+.dwi-ms{display:flex;gap:6px}
+.dwi-ms button{flex:1;border:1px solid var(--line);background:var(--panel-2);border-radius:8px;padding:6px;font-weight:700}
+.dwi-ms button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.dwi-ms .so[aria-pressed="true"]{background:var(--gold-2);border-color:var(--gold-2);color:#1a1300}
+.dwi h4{margin:6px 0 0;font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding-top:10px;border-top:1px solid var(--line)}
+.dwi-fx{border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.dwi-fx>summary{display:flex;align-items:center;gap:10px;padding:9px 10px;cursor:pointer;list-style:none;font-weight:600}
+.dwi-fx>summary::-webkit-details-marker{display:none}
+.dwi-fx>summary::after{content:"⌄";margin-left:auto;color:var(--dim)}
+.dwi-fx[open]>summary::after{content:"⌃"}
+.dwi-fx input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.dwi-fx .body{display:flex;flex-direction:column;gap:8px;padding:0 10px 10px}
+.dwi-fx .body select{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:5px}
+.dwi-note{font-size:12px;color:var(--dim);margin:0}
+
+/* Arranger: sections and instrument lanes */
+.arr-secs .arr-lane{height:26px;background:var(--panel)}
+.arr-sec{position:absolute;top:3px;bottom:3px;display:flex;align-items:center;justify-content:center;border:0;padding:0 14px 0 10px;
+  background:color-mix(in srgb,var(--dw-sec,#d6a93a) 75%,#000);color:#120c00;font-weight:800;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
+  clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%,6px 50%);white-space:nowrap;overflow:hidden}
+.arr-sec.empty{background:transparent;color:var(--dim);font-weight:500;clip-path:none;border:1px dashed var(--line);border-radius:6px;opacity:.6}
+.arr-sec.empty:hover{opacity:1}
+.arr-sec input{width:100%;border:0;background:#fff;color:#000;font:inherit;text-align:center;padding:2px}
+.arr-lanes .arr-lane{height:40px}
+.arr-lanes .arr-head{flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;font-weight:600;font-size:13px}
+body.studio.daw .brand .mark::before{content:"E";font-size:19px}
+body.studio.daw .brand h1::before{content:"Ether "}
+.arr-clip.empty{opacity:.35}
+body.studio.daw .st-pane>#scriptPanel>summary{display:none}
+body.studio.daw .st-pane>#scriptPanel{padding:14px 16px}
+.arr-lanes .arr-head i{width:4px;align-self:stretch;border-radius:2px;background:var(--c)}
+.arr-clip{position:absolute;top:4px;bottom:4px;border:1px solid color-mix(in srgb,var(--c) 70%,var(--line));border-radius:6px;background:color-mix(in srgb,var(--c) 26%,var(--panel-2));
+  overflow:hidden;cursor:pointer;padding:0}
+.arr-clip.off{background:transparent;border-style:dashed;opacity:.45}
+.arr-clip canvas{width:100%;height:100%;display:block}
+.arr-pat.dragging{opacity:.6;outline:2px solid var(--accent);z-index:4}
+
+/* Piano roll tools and velocity lane */
+.pr-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+.pr-tools .lbl{margin-right:2px}
+.pr-vel{display:flex;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel);height:64px;overflow:hidden}
+.pr-vel-k{flex:none;display:grid;place-items:center;font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;color:var(--dim);border-right:1px solid var(--line)}
+.pr-vel-s{flex:1;overflow:hidden;position:relative}
+.pr-vel canvas{display:block;height:64px;cursor:ns-resize}
+body.studio .st-pane>.proll .pr-scroll{border-radius:10px 10px 0 0}
 </style>
 </head>
 <body>
@@ -650,6 +814,12 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
         <button class="mini" id="scriptClear" title="Empty the script box (your beat stays as it is)">Clear</button>
       </div>
       <div class="script-report" id="scriptReport" role="status"></div>
+      <details class="prod-set" id="scriptGuide">
+        <summary class="lbl">Format guide (BEAT-SCRIPT.md)</summary>
+        <p class="prod-note" style="margin-top:6px">Every line a Beat Script can use. Claude follows these rules when it writes scripts for you.</p>
+        <div class="md-guide" id="scriptGuideBody"></div>
+        <div class="ni-row"><button class="mini" id="scriptGuideCopy">Copy guide</button><button class="mini" id="scriptGuideSave">Save as .md</button></div>
+      </details>
       <details class="prod-set" id="aiPromptBox">
         <summary class="lbl">Prompt for another AI</summary>
         <p class="prod-note" style="margin-top:6px">Paste this into ChatGPT, Gemini or any AI once, then describe the beat you want. It answers with a script to paste above. It includes the names of your NI kits, NI instruments and plug-ins.</p>
@@ -2141,8 +2311,8 @@ async function doExport(){
     const off=new OfflineAudioContext(2,len,sr), ch=buildChain(off,off.destination);
     const marks={kicks:[],snares:[]}, sections=[];
     for(let g=0;g<bars*16;g++){
-      const slot=useSong?state.song[Math.floor(g/64)]:state.cur;
-      if(g%64===0) sections.push({pattern:slot,start:Math.round(g*sd*1000)/1000});
+      const slot=useSong?state.song[Math.floor(g/64)]:state.cur; if(typeof DW_BLOCK!=="undefined") DW_BLOCK=useSong?Math.floor(g/64):-1;
+      if(g%64===0) sections.push(Object.assign({pattern:slot,start:Math.round(g*sd*1000)/1000},useSong&&state.sections&&state.sections[Math.floor(g/64)]?{name:state.sections[Math.floor(g/64)]}:{}));
       scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,marks);
       if(useSong&&typeof arrStep==="function") arrStep(off,ch,g,g*sd);
     }
@@ -4423,7 +4593,7 @@ async function renderStem(id,bars,useSong,sr,len){
   ch.crackle.gain.cancelScheduledValues(0); ch.crackle.gain.setValueAtTime(id==="texture"?textureLevel()*.5:0,0);
   const mutes=state.mutes, solo=state.solo;
   state.mutes=Object.fromEntries(TRACKS.map(t=>[t,t!==id])); state.solo={};
-  try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null); } }
+  try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; if(typeof DW_BLOCK!=="undefined") DW_BLOCK=useSong?Math.floor(g/64):-1; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null); } }
   finally{ state.mutes=mutes; state.solo=solo; }
   return off.startRendering();
 }
@@ -4844,7 +5014,7 @@ function arrSetup(){
     const off=new OfflineAudioContext(2,len,sr), ch=buildChain(off,off.destination), sd=stepDur();
     ch.crackle.gain.cancelScheduledValues(0); ch.crackle.gain.setValueAtTime(id==="texture"?textureLevel()*.5:0,0);
     const mutes=state.mutes, solo=state.solo; state.mutes=Object.fromEntries(TRACKS.map(t=>[t,t!==id])); state.solo={};
-    try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null);
+    try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; if(typeof DW_BLOCK!=="undefined") DW_BLOCK=useSong?Math.floor(g/64):-1; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null);
         if(useSong) arrStep(off,ch,g,g*sd,{only:id.startsWith("aud:")?id:"none"}); } }
     finally{ state.mutes=mutes; state.solo=solo; }
     if(typeof auExportPass==="function") await auExportPass(off,ch);
@@ -5510,10 +5680,13 @@ function runScript(text){
     if(cmd==="mutate"){ const v=scrPct(arg,0,100); mutatePattern(curPat(),(v==null?15:v)/100); return; }
     if(cmd==="reroll"||cmd==="roll"){ const id=trk(arg); if(!id) return warn(`unknown track "${arg}"`); genTrack(id,curPat()); return; }
     if(cmd==="clear"){ const id=trk(arg); if(!id) return warn(`unknown track "${arg}"`); curPat().steps[id]=z(); return; }
-    if(cmd==="song"){ const t=arg.toUpperCase().split(/[\s,]+/).filter(Boolean);
-      if(t[0]==="OFF"){ state.songMode=false; songSet=true; return; }
-      const bad=t.filter(x=>!SLOTS.includes(x)); if(bad.length||!t.length) return warn("song uses pattern letters A to D, like song A A B A");
-      state.song=t.slice(0,32); state.songMode=true; songSet=true; return; }
+    if(cmd==="song"){
+      if(/^off$/i.test(arg.trim())){ state.songMode=false; songSet=true; return; }
+      const toks=arg.match(/\[[^\]]*\]|[^\s,]+/g)||[], song=[], secs=[]; let sec="", bad=[];
+      toks.forEach(x=>{ if(x[0]==="["){ sec=x.slice(1,-1).trim().slice(0,24); return; } const u=x.toUpperCase(); if(SLOTS.includes(u)){ song.push(u); secs.push(sec); } else bad.push(x); });
+      if(bad.length||!song.length) return warn("song uses pattern letters A to D, with optional [Section] names, like song [Intro] A [Verse] A B [Hook] C");
+      state.song=song.slice(0,32); state.sections=secs.slice(0,32); state.lanes=state.song.map(()=>({})); if(typeof DW!=="undefined") DW.lastSong=state.song.slice();
+      state.songMode=true; songSet=true; return; }
     if(cmd==="mute"||cmd==="unmute"){ arg.split(/[\s,]+/).forEach(x=>{ const id=trk(x); if(id) state.mutes[id]=cmd==="mute"; else warn(`unknown track "${x}"`); }); return; }
     if(cmd==="volume"||cmd==="vol"){ const m=arg.match(/^(\S+)\s+(\d+)/), id=m&&trk(m[1]); if(!id) return warn(`volume needs a track and a number, like "volume hat 80"`); state.vol[id]=Math.min(150,+m[2])/100; return; }
     if(cmd==="padfx"||cmd==="pad-fx"||cmd==="effect"){
@@ -5599,7 +5772,7 @@ function beatToScript(){
         s+=c+(i%4===3&&i<N-1?" ":""); }
       L.push(pad(SCR_NAME[id])+s); });
   });
-  if(state.songMode) L.push("",`song ${state.song.join(" ")}`);
+  if(state.songMode){ let last=null; L.push("","song "+state.song.map((k,i)=>{ const sc=(state.sections||[])[i]||""; const tag=sc!==last&&sc?`[${sc}] `:""; last=sc; return tag+k; }).join(" ")); }
   const muted=TRACKS.filter(t=>state.mutes[t]); if(muted.length) L.push(`mute ${muted.map(t=>SCR_NAME[t]).join(" ")}`);
   TRACKS.forEach(t=>{ const v=state.vol[t]; if(v!=null&&Math.abs(v-1)>.004) L.push(`volume ${pad(SCR_NAME[t])}${Math.round(v*100)}`); });
   TRACKS.forEach(t=>{ const f=state.fx[t]; if(f&&f.type!=="none"&&PADFX[f.type]) L.push(`effect ${pad(SCR_NAME[t])}${PADFX[f.type][0]} ${Math.round(f.amt*100)}% ${Math.round(f.mix*100)}%`); });
@@ -5719,6 +5892,7 @@ Other lines: mutate 15%  |  reroll hat  |  clear perc
 
 SONG AND MIX
 song A A B A          (play order, up to 32)
+song [Intro] A [Verse] A B [Hook] C C      (optional section names before the patterns)
 volume <track> <0-150>
 mute <track>
 effect <track> <Reverb | Delay | Chorus | Phaser | Overdrive | Bitcrusher | Lo-fi | Telephone | Compressor> <amount>% <mix>%
@@ -5766,7 +5940,454 @@ function setupAiPrompt(){
     a.download="Beat Script prompt.md"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
 }
 setupAiPrompt();
+/* ---------- The Beat Script format guide (BEAT-SCRIPT.md), readable in the app ---------- */
+const BEAT_SCRIPT_MD="# Beat Script\n\nA Beat Script is a plain-text description of a whole beat. Ask Claude for a beat (\"dusty lo-fi at 82 with lazy hats and Rhodes\"), paste the script into **AI Producer \u2192 Beat Script** in Beat Lab (or open the .txt file), and press **Load script**. Undo takes it back. A new, untitled project takes the script's title.\n\nLines that start with `#` or `//` are notes. Capital letters don't matter except in step patterns (`X` vs `x`). Lines Beat Lab can't understand are skipped and listed with their line numbers; everything else still loads.\n\n## Settings\n\n| Line | Meaning |\n|---|---|\n| `title Late Night Ether` | Name shown when it loads; also the file name for Save as .txt |\n| `genre lofi` | Boom Bap, Lo-fi, Trap, Drill, House, Afrobeats, Dembow, Drum & Bass, Phonk. Read first, so `sound` lines can change its defaults |\n| `tempo 82` | 60\u2013180 BPM |\n| `swing 24` | 0\u201360 |\n| `key A minor` | Any note (`C#`, `Bb`, `F\u266f`) plus major, minor, dorian, phrygian, lydian, mixolydian, harmonic minor, hijaz, bhairav, hungarian minor, pelog |\n| `energy 60` `complexity 40` `wildness 20` | 0\u2013100 |\n| `space 35` `echo 15` | Reverb and echo, 0\u2013100 |\n| `vintage mpc60` | off, MPC60, MPC3000, SP-1200 |\n| `steps 32` | 16 or 32 steps per pattern. Left out, it's 32 when any step line is longer than 16, otherwise 16 |\n\n## Sounds\n\nNames are matched loosely, so \"rhodes\", \"Rhodes\" and \"Rhodes piano\" all find Rhodes.\n\n```\nsound chords  Rhodes + Vibraphone 25%   # layer A + layer B, blend\nsound voicing 7ths                      # Triads, 7ths, 9ths, Sus2, Sus4, Power, Open spread\nsound rhythm  Stabs                     # Hold, Stabs, Arpeggio, Sequence\nsound melody  Vibraphone\nsound bass    808                       # Sub, 808, Distorted 808, Upright, Electric, Synth, Pluck, Acid, Reese\nsound kick    Soft lo-fi                # 808 boom, Punchy, Deep house, Boom bap thump, Distorted, Soft lo-fi\nsound snare   Lo-fi snare               # Acoustic, Clap, Trap, Lo-fi, Finger snap, Rimshot, Gated\nsound hat     Lo-fi hat                 # Closed, 808, Lo-fi, Shaker, Tambourine\nsound ohat    Open hat                  # Open, 808 open, Ride, Sizzle\nsound tom     Congas                    # Tom, Congas, 808 tom, Floor tom, Electronic tom\nsound crash   Splash                    # Crash, Splash, China, Swell hit, Gong\nsound perc    Shaker                    # Rim, Shaker, Conga, Cowbell, Timbales, Bodhr\u00e1n, Tabla, Darbuka, Djembe, Talking drum, Bongos, Gong\nsound vox     Vox ooh                   # Vox ahh, Vox ooh, Vox ee, Hey shout, Choir chop\nsound fx      Riser                     # Impact, Riser, Downlifter, Sub drop, Reverse swell\n```\n\n### Your Native Instruments sounds and plug-ins (Mac app)\n\n```\nsound chords  \"Rhodes Classic \u00b7 Sunset Expansion\"   # an NI instrument: name \u00b7 expansion, as in the NI Library\nsound chords2 Synth pad 30%                          # the second chord layer and its blend\nsound bass    \"Deep Sub \u00b7 Sunset Expansion\"\nkit \"Sunset Expansion\"                               # an NI drum kit on the kit pads\nsample snare  \"Snare Dusty\"                          # one NI drum sound onto a kit pad (after kit, it replaces that pad)\nplugin melody \"Kontakt 8\"                            # an Audio Unit plug-in on chords, chords2, melody or bass\n```\n\n**Your NI sounds by themselves.** With **Use my NI sounds** ticked (beside Load script; it's on unless you untick it), every sound a script asks for from Beat Lab's own list is swapped for the closest one on your NI drive. Beat Lab looks for the same kind of instrument, the most words in common (\"Dark piano\" finds a dark piano), the drum kit's expansion, and instruments with the most recorded notes. A drum kit that suits the genre, the title and the `#` notes goes on the kit pads. The report under the script lists what it picked. Anything the script names itself (an NI instrument, `kit`, `plugin`) is kept as written. Put `ni off` in a script to keep Beat Lab's own sounds for that script.\n\n**In tune and in time.** NI sounds follow the script's key and tempo. Every recorded note of an NI instrument is listened to once and played at its real pitch, fine tuning included, because file names can be wrong or a little out of tune (a bass named C1 that is really a quarter-tone sharp sounds sour against the chords). Sounds without a clear pitch, like bells, keep the note in their name. This happens wherever an NI instrument is used, not only in scripts. NI instruments also play at the loudness of Beat Lab's own sounds (measured by how loud they sound, not their peak), so a held NI bass no longer drowns out the keys. Instruments recorded close to where a part plays (chords, melody up an octave, bass low) are preferred, because a sound stretched far from its own note sounds thin or muddy. Pitched kicks and toms (808s, tuned kicks) are tuned to the song's root note. Loops and anything with a BPM in its name are never used, so everything follows the script's tempo. The report says what was tuned.\n\n`kit synth` goes back to Beat Lab's own drums. A plug-in loads with its default sound: open its window (\ud83c\udf9b Plug-in window) to pick the Kontakt instrument or preset, and that choice is saved with your project, not in the script.\n\nInstruments include piano, Rhodes, soft piano, dark piano, organ, music box, kalimba, vibraphone, marimba, synth bells, steel drum, electric and jazz guitar, harp, synth pluck, synth pad, strings, choir, voice ooh, violin, cello, sax, trumpet, flute, synth brass, synth lead, the Ether families (Ether Choir, Silk Vox, Prism Vox, Ascend, Midnight Keys, Bloom, Twin Lead, Analog Dream, Fusion Keys, Tape Glow, Earth Pad, Dune Drone, Fable Pad, Haze, Glass, Dark Metal, Flux Mallet, Toybox) and world instruments (tin whistle, fiddle, sitar, bansuri, oud, kora, balafon, tres, gamelan).\n\n## Patterns\n\nUp to four patterns, A to D. Each is a 4-bar loop played over the 4 chords. The steps are one bar of 16ths (16 steps) or two bars (32 steps), repeated.\n\n```\npattern A\nprogression 1 6 4 5      # scale-degree chords, or roman numerals: i VI iv V\nkick    X... ..x. ..x. ....\nsnare   .... X... .... X..x\nhat     x.x. x.xr x.x. x.x.\nbass    X... ..5. ..x. ...8\nmelody  .... 5.3. .... 2...\nchords  X... .... X... ....\n\npattern B = A            # start B as a copy of A, then change it\ncrash   X... .... .... ....\nmutate 15%               # change about 15% of the steps\nreroll hat               # new hat part in the genre's style\nclear perc\n\nsong A A B A             # play the patterns in this order (up to 32)\nsong [Intro] A [Verse] A B B [Hook] C C [Outro] A   # with section names\n```\n\n**Sections:** a name in square brackets before patterns names that part of the song. Names show as the Intro / Verse / Hook ribbons in Arrange and go into the Ether Cut markers. In Arrange you can also switch instrument groups (Drums, Bass, Chords, Melody, Vocals) off in any part of the song, and drag blocks to move them.\n\n**Steps:** `X` accent, `x` soft hit, `.` rest. Spaces and `|` are ignored, so group by 4 for readability. Shorter lines repeat to fill the pattern (16 steps fill 32).\n- `r` on the hat track is a triplet roll.\n- On **bass** and **melody**, numbers 1\u20139 are notes: the scale degree counted from the current chord (1 root, 3 third, 5 fifth, 8 octave). `X`/`x` play the root.\n- On **vox**, 1\u20134 pick the chop's pitch.\n- On **chops** (your Sampler chops), `1`\u2013`9` then `a`\u2013`g` pick chops 1\u201316.\n\n**Piano-roll notes** for melody, bass or chords: `notes melody 1:F4:2 3:Ab4:2:0.8 9:C5:4`. Each note is *step:note:length[:velocity]*. Steps count 16ths from 1 to 64 across the pattern's 4 bars, length is in 16ths, velocity is 0\u20131 (or 1\u2013127). Notes are named like Logic and NI (C3 = middle C), or written as MIDI numbers. That track then plays exactly these notes, at any pitch, instead of following the chords.\n\n**Tracks:** kick, snare (or clap), hat, ohat, perc, tom, crash, fx, vox, chops, melody, bass, chords.\n\nA script with patterns describes the whole beat: patterns it doesn't mention are cleared, and it plays as a song only when there is a `song` line.\n\n## Mix\n\n```\nvolume hat 80            # 0\u2013150\nmute fx\neffect snare reverb 40% 35%   # pad FX, amount %, mix %\n```\n\nPad FX: reverb, delay, ping-pong delay, chorus, flanger, phaser, tremolo, auto-pan, low-pass filter, high-pass filter, auto filter, filter gate, overdrive, fuzz, bitcrusher, lo-fi, telephone, compressor, bass boost, air / bright, ring mod.\n\n**Copy this beat as a script** writes whatever is in Beat Lab out in this format, so any beat can be saved, shared and edited.\n";
+function mdHTML(md){ // a small Markdown reader: headings, code blocks, tables, lists, bold, italic, code and links
+  const esc=t=>t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const inl=t=>esc(t).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/(^|\W)\*([^*]+)\*/g,"$1<i>$2</i>").replace(/\[([^\]]+)\]\([^)]+\)/g,"$1");
+  const out=[], L=md.split("\n"); let i=0;
+  while(i<L.length){ const l=L[i];
+    if(l.startsWith("```")){ const code=[]; i++; while(i<L.length&&!L[i].startsWith("```")) code.push(L[i++]); i++; out.push("<pre><code>"+esc(code.join("\n"))+"</code></pre>"); continue; }
+    const h=l.match(/^(#{1,3})\s+(.*)/); if(h){ out.push(`<h${h[1].length}>${inl(h[2])}</h${h[1].length}>`); i++; continue; }
+    if(l.startsWith("|")){ const rows=[]; while(i<L.length&&L[i].startsWith("|")) rows.push(L[i++]);
+      out.push("<table>"+rows.filter(r=>!/^\|[\s|:-]+\|$/.test(r)).map((r,k)=>"<tr>"+r.slice(1,-1).split("|").map(c=>k?`<td>${inl(c.trim())}</td>`:`<th>${inl(c.trim())}</th>`).join("")+"</tr>").join("")+"</table>"); continue; }
+    if(/^- /.test(l)){ const items=[]; while(i<L.length&&/^- /.test(L[i])) items.push(L[i++].slice(2)); out.push("<ul>"+items.map(x=>`<li>${inl(x)}</li>`).join("")+"</ul>"); continue; }
+    if(!l.trim()){ i++; continue; }
+    const para=[]; while(i<L.length&&L[i].trim()&&!/^(#|```|\||- )/.test(L[i])) para.push(L[i++]); out.push(`<p>${inl(para.join(" "))}</p>`);
+  }
+  return out.join("");
+}
+function setupScriptGuide(){
+  const box=$("scriptGuide"); if(!box) return; let done=false;
+  box.addEventListener("toggle",()=>{ if(box.open&&!done){ $("scriptGuideBody").innerHTML=mdHTML(BEAT_SCRIPT_MD); done=true; } });
+  $("scriptGuideCopy").onclick=async()=>{ try{ await navigator.clipboard.writeText(BEAT_SCRIPT_MD); toast("Guide copied"); }catch(e){ toast("Couldn't copy here. Use Save as .md"); } };
+  $("scriptGuideSave").onclick=()=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([BEAT_SCRIPT_MD],{type:"text/markdown"})); a.download="BEAT-SCRIPT.md"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+}
+setupScriptGuide();
 </script>
 
+<script>
+"use strict";
+/* ---------- Ether Beat Lab layout ----------
+   Studio view laid out like a DAW: transport across the top, Beat Lab / Arrange / Mixer in the middle, the Sound Browser
+   on the left, the Track Inspector on the right, editors along the bottom (Pads, Piano Roll, Sample Editor, Beat Script…)
+   and a status bar. Also here: themes, the metronome (with a one-bar count-in), loop on/off for songs, arranger sections
+   and instrument lanes, and the piano roll tools (quantize, chop, strum, arpeggiate, humanize, velocity lane). */
+const DW={sel:"kick",cat:"kits",q:"",view:"beat",metro:false,countIn:true,loop:true,counting:false,countEnd:0,stopT:null,scriptHome:null,browser:null,insp:null};
+try{ const s=JSON.parse(localStorage.getItem("beatlab.dw")||"{}"); ["view","metro","countIn","loop","cat","sel","seen"].forEach(k=>{ if(s[k]!=null) DW[k]=s[k]; }); }catch(e){}
+function dwSave(){ try{ localStorage.setItem("beatlab.dw",JSON.stringify({view:DW.view,metro:DW.metro,countIn:DW.countIn,loop:DW.loop,cat:DW.cat,sel:DW.sel,seen:DW.seen})); }catch(e){} }
+const DW_LANES=[["drums","Drums",["kick","snare","hat","ohat","perc","tom","crash","fx"],"kick"],["bass","Bass",["bass"],"bass"],["chords","Chords",["keys"],"keys"],
+  ["melody","Melody",["mel"],"mel"],["vocals","Vocals",["chop","chops"],"chop"]];
+const DW_ICON={kick:"◉",snare:"◎",hat:"✳",ohat:"✺",perc:"◈",tom:"◍",crash:"✸",fx:"✦",chop:"♪",chops:"✂",mel:"♫",bass:"〰",keys:"▥"};
+
+/* ----- Themes ----- */
+const THEMES={ether:"Ether purple",gold:"Gold (classic)",midnight:"Midnight blue",forest:"Forest",ember:"Ember"};
+function dwTheme(t){ if(!THEMES[t]) t="ether"; document.documentElement.dataset.theme=t; try{ localStorage.setItem("beatlab.theme",t); }catch(e){} const s=$("dwTheme"); if(s) s.value=t;
+  if(typeof prRefresh==="function") try{ prRefresh(); }catch(e){} if(typeof arrRender==="function"&&STUDIO.on) try{ arrRender(); }catch(e){} }
+dwTheme((()=>{ try{ return localStorage.getItem("beatlab.theme"); }catch(e){ return null; } })()||"ether");
+
+/* ----- Metronome: a click on every beat while playing (never in exports), with a one-bar count-in ----- */
+function dwClick(c,t,accent){
+  const o=c.createOscillator(), g=c.createGain(); o.type="square"; o.frequency.value=accent?1760:1175;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(accent?.22:.13,t+.002); g.gain.exponentialRampToValueAtTime(.0001,t+.05);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t+.06);
+}
+{ const raw=play; play=async function(){
+    if(DW.stopT){ clearTimeout(DW.stopT); DW.stopT=null; }
+    if(DW.metro&&DW.countIn){ ensureCtx(); await ctx.resume(); const t=ctx.currentTime+.08, bd=stepDur()*16;
+      for(let k=0;k<4;k++) dwClick(ctx,t+k*bd/4,k===0); DW.countEnd=t+bd; DW.counting=true; }
+    return raw.apply(this,arguments); }; }
+{ const raw=stop; stop=function(){ DW.counting=false; if(DW.stopT){ clearTimeout(DW.stopT); DW.stopT=null; } return raw.apply(this,arguments); }; }
+{ const raw=tick; tick=function(){
+    if(DW.counting){ if(ctx.currentTime<DW.countEnd-.14) return; nextTime=DW.countEnd; DW.counting=false; }
+    // Loop off: a song plays once and stops at its end
+    if(!DW.loop&&songOn()&&gStep>=state.song.length*64){ if(!DW.stopT) DW.stopT=setTimeout(()=>{ DW.stopT=null; if(playing) stop(); },Math.max(0,(nextTime-ctx.currentTime)*1000)+30); return; }
+    return raw.apply(this,arguments); }; }
+// Song position for the lanes (which instrument groups play in each part of the song)
+let DW_BLOCK=-1;
+{ const raw=where; where=function(g){ const w=raw.apply(this,arguments); DW_BLOCK=w.link; return w; }; }
+{ const raw=scheduleStep; scheduleStep=function(c,out,pat,i,t0,marks){
+    if(c===ctx&&DW.metro&&playing&&i%4===0) dwClick(c,t0,i%16===0);
+    const lanes=DW_BLOCK>=0&&songOn()&&state.lanes&&state.lanes[DW_BLOCK];
+    if(!lanes) return raw.apply(this,arguments);
+    const off=DW_LANES.filter(([k])=>lanes[k]===false); if(!off.length) return raw.apply(this,arguments);
+    const saved=state.mutes, m=Object.assign({},saved); off.forEach(([,,ids])=>ids.forEach(id=>m[id]=true)); state.mutes=m;
+    try{ return raw.apply(this,arguments); } finally{ state.mutes=saved; } }; }
+
+/* ----- Song sections and lanes, kept in step with the song ----- */
+function dwArrSync(){
+  if(!Array.isArray(state.sections)) state.sections=[]; if(!Array.isArray(state.lanes)) state.lanes=[];
+  const n=state.song.length, prev=DW.lastSong;
+  if(prev&&prev.length===n+1){ // one block removed: find it and remove its section and lanes too
+    let j=0; while(j<n&&prev[j]===state.song[j]) j++; state.sections.splice(j,1); state.lanes.splice(j,1); }
+  while(state.sections.length<n) state.sections.push("");
+  while(state.lanes.length<n) state.lanes.push(Object.assign({},state.lanes[state.lanes.length-1]||{}));
+  state.sections.length=n; state.lanes.length=n; DW.lastSong=state.song.slice();
+}
+const DW_SECS=["","Intro","Verse","Pre-hook","Hook","Bridge","Break","Drop","Outro"];
+{ const raw=arrRender; arrRender=function(){
+    dwArrSync(); raw.apply(this,arguments);
+    const box=$("arrBody"); if(!box||!box.children.length) return;
+    const W=arrX(arrTotal())+AUD.barW*2, ruler=box.children[0], pats=box.children[1];
+    const mk=(cls,head)=>{ const r=document.createElement("div"); r.className="arr-row "+cls; const h=document.createElement("div"); h.className="arr-head";
+      if(typeof head==="string") h.textContent=head; else h.append(...head); const l=document.createElement("div"); l.className="arr-lane"; l.style.width=W+"px"; r.append(h,l); return [r,l]; };
+    // Sections: click a block to pick Intro, Verse, Hook…; double-click to type any name
+    const [sr,sl]=mk("arr-secs","Sections");
+    let i=0; while(i<state.song.length){
+      const name=state.sections[i]; let j=i+1; while(name&&j<state.song.length&&state.sections[j]===name) j++;
+      const b=document.createElement("button"); b.className="arr-sec"+(name?"":" empty"); b.style.left=arrX(i*64)+"px"; b.style.width=(arrX((j-i)*64)-3)+"px";
+      b.textContent=name||"+ section"; const at=i;
+      b.title=name?`${name}: bars ${i*4+1}–${j*4}. Click to change, double-click to rename.`:"Click to name this part of the song";
+      b.onclick=()=>{ pushUndo(); const cur=state.sections[at], nx=DW_SECS[(DW_SECS.indexOf(cur)+1)%DW_SECS.length]; for(let k=at;k<(cur?j:at+1);k++) state.sections[k]=nx; arrRender(); };
+      b.ondblclick=e=>{ e.preventDefault(); const inp=document.createElement("input"); inp.value=state.sections[at]||""; b.textContent=""; b.appendChild(inp); inp.focus(); inp.select();
+        const done=ok=>{ if(ok){ pushUndo(); const v=inp.value.trim().slice(0,24); for(let k=at;k<(state.sections[at]?j:at+1);k++) state.sections[k]=v; } arrRender(); };
+        inp.addEventListener("keydown",ev=>{ ev.stopPropagation(); if(ev.key==="Enter") done(true); if(ev.key==="Escape") done(false); }); inp.onblur=()=>done(true); };
+      sl.appendChild(b); i=name?j:i+1;
+    }
+    box.insertBefore(sr,pats);
+    // Lanes: one per instrument group; each part of the song can switch a group off (drag to paint)
+    let paint=null;
+    const after=pats.nextSibling;
+    DW_LANES.forEach(([key,label,ids,color])=>{
+      const dot=document.createElement("i"); const lab=document.createElement("span"); lab.textContent=label;
+      const [r,l]=mk("arr-lanes",[dot,lab]); r.style.setProperty("--c",`var(--h-${color})`);
+      state.song.forEach((k,bi)=>{
+        const on=state.lanes[bi][key]!==false, pat=state.patterns[k], has=ids.some(id=>(pat.steps[id]||[]).some(Boolean)||(pat.roll&&pat.roll[id]&&pat.roll[id].length));
+        const c=document.createElement("button"); c.className="arr-clip"+(on?"":" off")+(has?"":" empty"); c.style.left=arrX(bi*64)+"px"; c.style.width=(arrX(64)-3)+"px";
+        c.setAttribute("aria-label",`${label} in bars ${bi*4+1}–${bi*4+4}: ${on?"on":"off"}`); c.title=`${label}, bars ${bi*4+1}–${bi*4+4}: ${on?"playing":"off"}. Click (or drag across) to switch.`;
+        if(has){ const cv=document.createElement("canvas"); c.appendChild(cv); requestAnimationFrame(()=>dwClipDraw(cv,pat,ids,color)); }
+        const set=v=>{ state.lanes[bi][key]=v?undefined:false; if(v) delete state.lanes[bi][key]; c.classList.toggle("off",!v); };
+        c.addEventListener("pointerdown",e=>{ e.preventDefault(); pushUndo(); paint=!(state.lanes[bi][key]!==false); set(paint); });
+        c.addEventListener("pointerenter",e=>{ if(paint!==null&&e.buttons) set(paint); });
+        c.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); pushUndo(); set(!(state.lanes[bi][key]!==false)); } });
+        l.appendChild(c); });
+      box.insertBefore(r,after);
+    });
+    window.addEventListener("pointerup",()=>{ paint=null; },{once:true});
+    // Move a pattern block by dragging it along the song
+    pats.querySelectorAll(".arr-pat").forEach((b,idx)=>{
+      b.addEventListener("pointerdown",e=>{ if(e.button!==0) return; const x0=e.clientX; let moved=false;
+        const mv=ev=>{ if(!moved&&Math.abs(ev.clientX-x0)>8){ moved=true; b.classList.add("dragging"); } if(moved) b.style.transform=`translateX(${ev.clientX-x0}px)`; };
+        const up=ev=>{ window.removeEventListener("pointermove",mv); window.removeEventListener("pointerup",up);
+          if(!moved) return; b.classList.remove("dragging"); b.style.transform="";
+          const to=Math.max(0,Math.min(state.song.length-1,idx+Math.round((ev.clientX-x0)/arrX(64))));
+          b.addEventListener("click",ce=>{ ce.stopImmediatePropagation(); ce.preventDefault(); },{capture:true,once:true});
+          if(to!==idx){ pushUndo(); [state.song,state.sections,state.lanes].forEach(a=>{ const [x]=a.splice(idx,1); a.splice(to,0,x); }); DW.lastSong=state.song.slice(); renderChain(); arrRender(); } };
+        window.addEventListener("pointermove",mv); window.addEventListener("pointerup",up); });
+    });
+  }; }
+function dwClipDraw(cv,pat,ids,color){
+  const r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1; if(!r.width) return;
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr); const g=cv.getContext("2d"); g.scale(dpr,dpr);
+  g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--h-"+color).trim()||"#9b6bff";
+  const w=r.width, h=r.height;
+  if(ids.length>1){ // drums: a tick per hit, rows per drum
+    const rows=ids.filter(id=>(pat.steps[id]||[]).some(Boolean)), L=pat.steps.kick.length;
+    rows.forEach((id,ri)=>{ const y=4+ri*(h-8)/Math.max(1,rows.length); const rh=Math.max(2,(h-8)/Math.max(1,rows.length)-2);
+      for(let s=0;s<64;s++){ const v=pat.steps[id][s%L]; if(v) g.fillRect(2+s/64*(w-4),y,1.6,rh); } });
+  } else { // pitched: the notes
+    const notes=prNotes(pat,ids[0]); if(!notes.length) return; const lo=Math.min(...notes.map(n=>n.m)), hi=Math.max(...notes.map(n=>n.m)), span=Math.max(6,hi-lo);
+    notes.forEach(n=>{ const y=h-5-(n.m-lo)/span*(h-10); g.fillRect(2+n.t/64*(w-4),y-1.5,Math.max(2,n.d/64*(w-4)-1),3); });
+  }
+}
+
+/* ----- Piano roll tools: quantize, chop, strum, arpeggiate, humanize, and a velocity lane ----- */
+function prTool(kind){
+  const pat=P(), id=PR.track; prTakeOver(); pushUndo(); const arr=pat.roll[id]; if(!arr||!arr.length){ toast("No notes to change"); return; }
+  const q=Math.max(.25,PR.snap||1), sel=PR.sel!=null&&arr[PR.sel]?[arr[PR.sel]]:null, pick=sel||arr.slice();
+  const groups=()=>{ const m=new Map(); pick.forEach(n=>{ const k=Math.round(n.t*100); if(!m.has(k)) m.set(k,[]); m.get(k).push(n); }); return [...m.values()]; };
+  if(kind==="quantize") pick.forEach(n=>{ n.t=Math.min(PR_STEPS-q,Math.max(0,Math.round(n.t/q)*q)); n.d=Math.max(q,Math.round(n.d/q)*q); });
+  else if(kind==="chop") pick.forEach(n=>{ if(n.d<=q*1.01) return; const pieces=Math.min(32,Math.floor(n.d/q)); const rest=[];
+      for(let k=1;k<pieces;k++) rest.push({t:n.t+k*q,d:q,m:n.m,v:n.v}); n.d=q; arr.push(...rest.filter(x=>x.t<PR_STEPS)); });
+  else if(kind==="strum") groups().forEach(g=>{ if(g.length<2) return; g.sort((a,b)=>a.m-b.m).forEach((n,k)=>{ const off=k*.25; n.t=Math.min(PR_STEPS-.25,n.t+off); n.d=Math.max(.25,n.d-off); }); });
+  else if(kind==="arp") groups().forEach(g=>{ if(g.length<2) return; g.sort((a,b)=>a.m-b.m); const t0=g[0].t, len=Math.max(...g.map(n=>n.d)), stepL=Math.max(.5,q);
+      const ms=g.map(n=>n.m), v=Math.max(...g.map(n=>n.v)); g.forEach(n=>arr.splice(arr.indexOf(n),1));
+      for(let t=t0,k=0;t<t0+len-.01&&t<PR_STEPS;t+=stepL,k++) arr.push({t,d:Math.min(stepL,t0+len-t),m:ms[k%ms.length],v}); });
+  else if(kind==="human") pick.forEach(n=>{ n.v=Math.max(.15,Math.min(1,n.v*(.82+Math.random()*.3))); n.t=Math.max(0,Math.min(PR_STEPS-.1,n.t+(Math.random()-.5)*.2)); });
+  arr.forEach(n=>{ n.t=Math.round(n.t*1000)/1000; n.d=Math.round(n.d*1000)/1000; });
+  PR.sel=null; prSort(arr); renderGrid(); prRefresh();
+  toast({quantize:"Notes snapped to the grid",chop:"Long notes chopped into "+(q===1?"16ths":"grid steps"),strum:"Chords strummed",arp:"Chords turned into arpeggios",human:"Timing and velocity loosened"}[kind]);
+}
+function prVelDraw(){
+  const cv=$("prVelCv"); if(!cv) return; const pat=P(), notes=prNotes(pat,PR.track), rolled=!!prRoll(pat,PR.track), W=PR_STEPS*PR.W, H=64, dpr=window.devicePixelRatio||1;
+  if(cv.width!==Math.round(W*dpr)){ cv.width=Math.round(W*dpr); cv.height=H*dpr; cv.style.width=W+"px"; }
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const css=getComputedStyle(document.documentElement), acc=css.getPropertyValue("--accent").trim(), line=css.getPropertyValue("--line").trim();
+  g.fillStyle=line; for(let b=0;b<=PR_STEPS;b+=4) g.fillRect(b*PR.W,0,1,H);
+  notes.forEach((n,k)=>{ const x=n.t*PR.W+1, w=Math.max(3,Math.min(PR.W*n.d-2,PR.W*1.5)), h=Math.max(2,n.v*(H-6));
+    g.globalAlpha=rolled?1:.45; g.fillStyle=rolled&&PR.sel===k?"#fff":acc; g.fillRect(x,H-h,w,h); g.fillRect(x,H-h,Math.max(w,6),2); });
+  g.globalAlpha=1;
+  const lk=$("prVelK"), keys=$("prKeys"); if(lk&&keys) lk.style.width=keys.offsetWidth+"px";
+  const sc=$("prScroll"), vs=$("prVelS"); if(sc&&vs) vs.scrollLeft=sc.scrollLeft;
+}
+function prVelSetup(){
+  const scroll=$("prScroll"); if(!scroll||$("prVel2")) return;
+  const tools=document.createElement("div"); tools.className="pr-tools"; tools.innerHTML=`<span class="lbl">Tools</span>
+    <button class="mini" data-t="quantize" title="Snap note starts and lengths to the Snap grid">Quantize</button>
+    <button class="mini" data-t="chop" title="Cut long notes into pieces the size of the Snap grid">Chop</button>
+    <button class="mini" data-t="strum" title="Spread each chord's notes slightly, low to high, like a guitar strum">Strum</button>
+    <button class="mini" data-t="arp" title="Turn each chord into an arpeggio at the Snap grid">Arpeggiate</button>
+    <button class="mini" data-t="human" title="Loosen timing and velocity a little, so it feels played">Humanize</button>
+    <span class="dim" style="font-size:12px">Works on the selected note, or every note of this track.</span>`;
+  tools.querySelectorAll("button").forEach(b=>b.onclick=()=>prTool(b.dataset.t));
+  scroll.before(tools);
+  const lane=document.createElement("div"); lane.className="pr-vel"; lane.id="prVel2";
+  lane.innerHTML=`<div class="pr-vel-k" id="prVelK">VEL</div><div class="pr-vel-s" id="prVelS"><canvas id="prVelCv" aria-label="Velocity: drag up or down on a note's bar"></canvas></div>`;
+  scroll.after(lane);
+  scroll.addEventListener("scroll",()=>{ $("prVelS").scrollLeft=scroll.scrollLeft; });
+  const cv=$("prVelCv"); let dragging=false;
+  const setAt=e=>{ const r=cv.getBoundingClientRect(), x=(e.clientX-r.left)/PR.W, v=Math.max(.05,Math.min(1,1-(e.clientY-r.top)/64));
+    const pat=P(); if(!prRoll(pat,PR.track)) prTakeOver(); const arr=pat.roll[PR.track]; if(!arr) return;
+    let best=-1,bd=1e9; arr.forEach((n,k)=>{ const d=x>=n.t&&x<n.t+Math.max(1,n.d)?0:Math.abs(x-n.t); if(d<bd){ bd=d; best=k; } });
+    if(best<0||bd>1.5) return; arr.forEach(n=>{ if(Math.abs(n.t-arr[best].t)<.01&&(PR.sel==null||n===arr[best])) n.v=Math.round(v*100)/100; });
+    PR.sel=best; prRefresh(); };
+  cv.addEventListener("pointerdown",e=>{ dragging=true; cv.setPointerCapture(e.pointerId); pushUndo(); setAt(e); });
+  cv.addEventListener("pointermove",e=>{ if(dragging) setAt(e); });
+  cv.addEventListener("pointerup",()=>{ dragging=false; renderGrid(); });
+}
+{ const raw=prRefresh; prRefresh=function(){ const r=raw.apply(this,arguments); try{ prVelDraw(); }catch(e){} return r; }; }
+
+/* ----- Sound Browser ----- */
+const DWB_CATS=[["kits","Kits","▦"],["samples","Samples","ılı"],["instruments","Instruments","▥"],["effects","Effects","☷"]];
+function dwbItems(cat){
+  const hasNI=typeof NI!=="undefined"&&NI.lib, out=[];
+  const melSlot=()=>DW.sel==="mel"?"mel":DW.sel==="bass"?"bass":"a";
+  if(cat==="kits"){
+    out.push({name:"Beat Lab kit",sub:"KITS · "+G().n.toUpperCase(),use:()=>{ DRUMS.forEach(t=>{ if(KITS[t]) state.inst[t]="auto"; }); if(hasNI&&typeof niSynthKit==="function") niSynthKit(); return "Beat Lab's own kit for "+G().n; }});
+    if(hasNI) NI.kits.forEach(k=>out.push({name:kitShort(k),sub:"KITS · NATIVE INSTRUMENTS",use:async()=>{ await niUseKit(k,true); return kitShort(k)+" is on the pads"; },
+      prev:()=>{ const f=NI.lib.drums.find(d=>d.kit===k&&d.role==="kick")||NI.lib.drums.find(d=>d.kit===k); if(f) dwPrevFile(f.path); }}));
+  } else if(cat==="samples"){
+    if(hasNI) NI.lib.drums.forEach(f=>{ const t=Object.keys(NI_TRACKS).find(x=>NI_TRACKS[x].includes(f.role))||"perc";
+      out.push({name:f.name,sub:`SAMPLES · ${trackLabel(t).toUpperCase()} · ${kitShort(f.kit).toUpperCase()}`,prev:()=>dwPrevFile(f.path),
+        use:async()=>{ await niAssignDrum(t,f); dwSelect(t); return `${f.name} is on the ${trackLabel(t)} pad`; }}); });
+    Object.keys(KITS).forEach(t=>Object.entries(KITS[t]).forEach(([k,n])=>{ if(k==="auto") return;
+      out.push({name:n,sub:`SAMPLES · ${trackLabel(t).toUpperCase()} · BEAT LAB`,prev:()=>{ const o=state.inst[t]; state.inst[t]=k; try{ audition(t); }finally{ state.inst[t]=o; } },
+        use:()=>{ state.inst[t]=k; if(samples[t]&&samples[t].ni&&!samples[t].voice) delete samples[t]; return `${n} on the ${trackLabel(t)}`; }}); }));
+  } else if(cat==="instruments"){
+    Object.entries(INST).forEach(([k,d])=>{ if(/^(ni|au):/.test(k)) return;
+      out.push({name:d.n,sub:`INSTRUMENTS · ${(INST_CAT[k]||"synth").toUpperCase()}`,prev:()=>dwPrevInst(k),use:()=>{ const s=melSlot()==="bass"?"a":melSlot(); state.inst[s]=k; return `${d.n} on ${AU_SLOTS[s]||s}`; }}); });
+    Object.entries(BASSES).forEach(([k,n])=>{ if(/^(ni|au):/.test(k)) return; out.push({name:n,sub:"INSTRUMENTS · BASS",prev:()=>dwPrevBass(k),use:()=>{ state.inst.bass=k; return `${n} on the bass`; }}); });
+    if(hasNI) NI.lib.instruments.filter(i=>i.zones.length>=2&&(typeof scrIsNotes!=="function"||scrIsNotes(i))).forEach(i=>out.push({name:i.name,sub:`INSTRUMENTS · ${(i.category||"").toUpperCase()} · ${kitShort(i.kit).toUpperCase()}`,
+      prev:()=>dwPrevNI(i),use:async()=>{ const s=i.category==="bass"?"bass":melSlot()==="bass"?"a":melSlot(); await niAssignInst(s,i,true); return `${i.name} on ${AU_SLOTS[s]||s}`; }}));
+    if(typeof AUX!=="undefined") AUX.list.forEach(p=>out.push({name:p.name,sub:`PLUG-IN · ${(p.maker||"").toUpperCase()}`,use:()=>{ const s=melSlot(); auRegister(s,p.id); state.inst[s]=auKey(s,p.id); return `${p.name} on ${AU_SLOTS[s]}. Open its window to pick a sound`; }}));
+  } else if(cat==="effects"){
+    Object.entries(PADFX).forEach(([k,[n,kind]])=>{ if(k==="none") return; out.push({name:n,sub:`EFFECTS · INSERT${kind?" · "+kind.toUpperCase():""}`,
+      use:()=>{ state.fx[DW.sel]={type:k,amt:.5,mix:FX_MIX[k]??1}; return `${n} on the ${trackLabel(DW.sel)}`; }}); });
+    if(typeof MASTER!=="undefined") MASTER.list.forEach(p=>out.push({name:p.name,sub:`EFFECTS · MASTER · ${(p.maker||"").toUpperCase()}`,use:async()=>{ await masterSet(p.id,null); return `Exports will be mastered with ${p.name}`; }}));
+  }
+  return out;
+}
+const dwOut=()=>{ ensureCtx(); ctx.resume(); return analyser||ctx.destination; };
+function dwPrevInst(k){ const c=ctx||(ensureCtx(),ctx); INST[k].play(c,dwOut(),c.currentTime+.02,261.63,.8,.7); }
+function dwPrevBass(k){ const c=ctx||(ensureCtx(),ctx); V.bass(c,dwOut(),c.currentTime+.02,.9,65.41,.7,k,0); }
+async function dwPrevNI(i){ ensureCtx(); await niLoadInst(i); niPlay(i,ctx,dwOut(),ctx.currentTime+.02,261.63,.8,.7); }
+async function dwPrevFile(p){ ensureCtx(); try{ const info=await niLoad(p); const s=ctx.createBufferSource(), g=ctx.createGain(); s.buffer=info.buf; g.gain.value=Math.min(2,(info.norm||1)*.8);
+  s.connect(g).connect(dwOut()); s.start(ctx.currentTime+.01,info.start||0); }catch(e){ toast("Couldn't play that sound"); } }
+function dwbRender(){
+  const box=DW.browser; if(!box) return; const list=box.querySelector(".dwb-list"), q=DW.q.toLowerCase().trim();
+  box.querySelectorAll(".dwb-cats button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.cat===DW.cat&&!q));
+  let items=q?DWB_CATS.flatMap(([c])=>dwbItems(c)):dwbItems(DW.cat);
+  if(q){ const words=q.split(/\s+/); items=items.filter(it=>words.every(w=>(it.name+" "+it.sub).toLowerCase().includes(w))); }
+  list.innerHTML="";
+  if(!items.length){ list.innerHTML=`<p class="dwb-empty">${q?"Nothing matches. Try another word.":"Nothing here yet."+(NATIVE?"":" Your Native Instruments sounds show up in the Mac app.")}</p>`; return; }
+  items.slice(0,250).forEach(it=>{
+    const r=document.createElement("div"); r.className="dwb-row"; r.setAttribute("role","button"); r.tabIndex=0; r.title=`Click to use. ${it.sub.toLowerCase()}`;
+    r.innerHTML=`<button class="pl" aria-label="Preview">▶</button><svg class="wv" viewBox="0 0 30 22" aria-hidden="true"><path fill="currentColor" d="M1 10h2v2H1zM5 7h2v8H5zM9 3h2v16H9zM13 6h2v10h-2zM17 1h2v20h-2zM21 5h2v12h-2zM25 8h2v6h-2z"/></svg><div class="nm"><b></b><span></span></div><span class="du"></span>`;
+    r.querySelector("b").textContent=it.name; r.querySelector(".nm span").textContent=it.sub;
+    const pl=r.querySelector(".pl"); if(!it.prev) pl.style.visibility="hidden"; else pl.onclick=e=>{ e.stopPropagation(); try{ it.prev(); }catch(err){} };
+    const use=async()=>{ pushUndo(); let msg; try{ msg=await it.use(); }catch(e){ toast("That sound couldn't be loaded"); return; }
+      syncSounds(); renderGrid(); renderPads(); if(typeof mixApplyAll==="function") mixApplyAll(); dwInspector(); list.querySelectorAll(".on").forEach(x=>x.classList.remove("on")); r.classList.add("on"); if(msg) toast(msg); };
+    r.onclick=use; r.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); use(); } };
+    list.appendChild(r); });
+  if(items.length>250){ const m=document.createElement("p"); m.className="dwb-more"; m.textContent=`Showing 250 of ${items.length}. Search to narrow it down.`; list.appendChild(m); }
+}
+function dwbBuild(){
+  const box=document.createElement("div"); box.className="dwb";
+  box.innerHTML=`<h3>Sound Browser</h3><label class="dwb-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search sounds…" aria-label="Search sounds"></label><div class="dwb-cats"></div><div class="dwb-list" role="list"></div>`;
+  const cats=box.querySelector(".dwb-cats");
+  DWB_CATS.forEach(([k,l,ic])=>{ const b=document.createElement("button"); b.dataset.cat=k; b.innerHTML=`<span class="ic">${ic}</span><span>${l}</span><span class="car">›</span>`;
+    b.onclick=()=>{ DW.cat=k; DW.q=""; box.querySelector("input").value=""; dwSave(); dwbRender(); }; cats.appendChild(b); });
+  const inp=box.querySelector("input"); let t=null;
+  inp.addEventListener("input",()=>{ clearTimeout(t); t=setTimeout(()=>{ DW.q=inp.value; dwbRender(); },120); });
+  inp.addEventListener("keydown",e=>e.stopPropagation());
+  DW.browser=box; return box;
+}
+
+/* ----- Track Inspector ----- */
+function dwSoundName(id){
+  const i=state.inst, s=samples[id];
+  if(s&&s.name&&DRUMS.includes(id)) return s.name;
+  const inst=k=>{ const p=typeof auParse==="function"&&auParse(k); if(p) return auName(p.comp)+" (plug-in)"; return INST[k]?INST[k].n:k; };
+  if(id==="keys") return inst(i.a)+(i.b&&i.b!=="none"?" + "+inst(i.b):"");
+  if(id==="mel") return inst(i.mel);
+  if(id==="bass") return (INST[i.bass]&&INST[i.bass].ni)?INST[i.bass].n:(typeof auParse==="function"&&auParse(i.bass))?inst(i.bass):BASSES[i.bass]||i.bass;
+  if(KITS[id]) return KITS[id][i[id]]||"Genre default";
+  if(id==="perc") return PERCS[i.perc]||"Genre default";
+  if(id==="fx") return FXS[i.fx]||"";
+  return trackLabel(id);
+}
+function dwInspector(){
+  const box=DW.insp; if(!box||!STUDIO.on) return; const id=TRACKS.includes(DW.sel)?DW.sel:"kick", m=mixT(id);
+  const out=typeof auParse==="function"&&((id==="keys"&&auParse(state.inst.a))||(id==="mel"&&auParse(state.inst.mel))||(id==="bass"&&auParse(state.inst.bass)))?"Plug-in → Mac output":"Stereo Out";
+  const fx=state.fx[id]||{type:"none",amt:.5,mix:1};
+  box.innerHTML=`<h3>Track Inspector</h3>
+    <div class="dwi-card" style="--c:var(--h-${id})"><span class="ic">${DW_ICON[id]||"♪"}</span><div style="min-width:0"><b></b><span class="snd"></span></div></div>
+    <div class="dwi-row"><span class="k">Track</span><select id="dwiTrack" class="dwi-box" aria-label="Track to inspect"></select></div>
+    <div class="dwi-row"><span class="k">Output</span><span class="dwi-box">${out}</span></div>
+    <div class="dwi-row"><span class="k">Gain</span><div class="dwi-sl"><output id="dwiGainO"></output><input type="range" id="dwiGain" min="0" max="1.5" step=".01" aria-label="Gain"></div></div>
+    <div class="dwi-row"><span class="k">Pan</span><div class="dwi-sl"><output id="dwiPanO"></output><input type="range" id="dwiPan" min="-1" max="1" step=".02" aria-label="Pan"></div></div>
+    <div class="dwi-ms"><button id="dwiM" aria-pressed="${!!state.mutes[id]}">M  Mute</button><button class="so" id="dwiS" aria-pressed="${!!state.solo[id]}">S  Solo</button><button id="dwiHear">▶ Hear</button></div>
+    <h4>FX</h4><div id="dwiFx" style="display:flex;flex-direction:column;gap:6px"></div>
+    <p class="dwi-note">Same controls as the Mixer. Click a track's name in Beat Lab or the Mixer to inspect it.</p>`;
+  box.querySelector("b").textContent=trackLabel(id); box.querySelector(".snd").textContent=dwSoundName(id);
+  const ts=$("dwiTrack"); TRACKS.forEach(t=>ts.add(new Option(trackLabel(t),t))); ts.value=id; ts.onchange=()=>dwSelect(ts.value);
+  const gain=$("dwiGain"), go=$("dwiGainO"), pan=$("dwiPan"), po=$("dwiPanO");
+  const showG=()=>{ go.textContent=fmtVol(+gain.value); }, showP=()=>{ po.textContent=fmtPan(+pan.value); };
+  gain.value=state.vol[id]??1; pan.value=m.pan; showG(); showP();
+  gain.onpointerdown=()=>pushUndo(); pan.onpointerdown=()=>pushUndo();
+  gain.oninput=()=>{ state.vol[id]=+(+gain.value).toFixed(3); showG(); const tv=$("tv-"+id); if(tv){ tv.value=Math.round(gain.value*100); const o=$("tvo-"+id); if(o) o.textContent=Math.round(gain.value*100); } if(typeof mixSync==="function") mixSync(); };
+  pan.oninput=()=>{ mixSet(id,"pan",+pan.value); if(ctx) mixApplyStrip(ctx,id); showP(); if(typeof mixSync==="function") mixSync(); };
+  $("dwiM").onclick=()=>{ pushUndo(); state.mutes[id]=!state.mutes[id]; renderGrid(); if(typeof mixSync==="function") mixSync(); dwInspector(); };
+  $("dwiS").onclick=()=>{ pushUndo(); state.solo[id]=!state.solo[id]; mixApplyAll(); if(typeof mixSync==="function") mixSync(); dwInspector(); };
+  $("dwiHear").onclick=()=>audition(id);
+  // FX: EQ, compressor, delay and reverb sends, and the insert effect
+  const fxBox=$("dwiFx"), saved=((state.mix.tracks||{})[id]||{}).dwOff||{};
+  const fxRow=(key,label,on,body,toggle)=>{ const d=document.createElement("details"); d.className="dwi-fx"; d.innerHTML=`<summary><input type="checkbox" aria-label="${label} on"> <span>${label}</span></summary><div class="body"></div>`;
+    const cb=d.querySelector("input"); cb.checked=on; cb.onclick=e=>e.stopPropagation(); cb.onchange=()=>{ pushUndo(); toggle(cb.checked); if(ctx) mixApplyStrip(ctx,id); if(typeof mixSync==="function") mixSync(); dwInspector(); };
+    body(d.querySelector(".body")); fxBox.appendChild(d); };
+  const slider=(host,label,key,min,max,step,fmt)=>{ const w=document.createElement("label"); w.className="dwi-sl"; w.innerHTML=`<output></output><input type="range" min="${min}" max="${max}" step="${step}" aria-label="${label}">`;
+    const r=w.querySelector("input"), o=w.querySelector("output"); r.value=mixT(id)[key]; o.textContent=fmt(+r.value); r.title=label;
+    r.onpointerdown=()=>pushUndo(); r.oninput=()=>{ mixSet(id,key,+r.value); if(ctx) mixApplyStrip(ctx,id); o.textContent=fmt(+r.value); if(typeof mixSync==="function") mixSync(); };
+    const lab=document.createElement("span"); lab.className="dwi-note"; lab.textContent=label; host.append(lab,w); };
+  const keep=(key,vals)=>{ const T=state.mix.tracks||(state.mix.tracks={}), t=T[id]||(T[id]={}); t.dwOff=Object.assign({},t.dwOff||{},{[key]:vals}); };
+  const eqOn=m.lo||m.mid||m.hi;
+  fxRow("eq","EQ",!!eqOn,b=>{ slider(b,"Low","lo",-15,15,.5,fmtDb); slider(b,"Mid","mid",-15,15,.5,fmtDb); slider(b,"High","hi",-15,15,.5,fmtDb); },
+    on=>{ if(on){ const s=saved.eq||{lo:2,mid:0,hi:2}; ["lo","mid","hi"].forEach(k=>mixSet(id,k,s[k])); } else { keep("eq",{lo:m.lo,mid:m.mid,hi:m.hi}); ["lo","mid","hi"].forEach(k=>mixSet(id,k,0)); } });
+  [["comp","Compressor",0,1,.01,x=>x<.01?"Off":fmtPct(x),.35],["echo","Delay",0,1.5,.01,fmtPct,.3],["rev","Reverb",0,1.5,.01,fmtPct,.35]].forEach(([k,l,mn,mx,st,f,def])=>
+    fxRow(k,l,m[k]>0,b=>slider(b,l,k,mn,mx,st,f),on=>{ if(on) mixSet(id,k,saved[k]||def); else { keep(k,m[k]); mixSet(id,k,0); } }));
+  fxRow("insert","Insert: "+(fx.type!=="none"?PADFX[fx.type][0]:"none"),fx.type!=="none",b=>{
+    const sel=document.createElement("select"); sel.setAttribute("aria-label","Insert effect"); Object.entries(PADFX).forEach(([k,[n]])=>sel.add(new Option(n,k))); sel.value=fx.type;
+    sel.onchange=()=>{ pushUndo(); state.fx[id]=sel.value==="none"?{type:"none",amt:.5,mix:1}:{type:sel.value,amt:fx.amt??.5,mix:FX_MIX[sel.value]??1}; renderPads(); dwInspector(); };
+    b.appendChild(sel);
+    if(fx.type!=="none"){ [["amt","Amount"],["mix","Mix"]].forEach(([k,l])=>{ const w=document.createElement("label"); w.className="dwi-sl"; w.innerHTML=`<output></output><input type="range" min="0" max="1" step=".01" aria-label="${l}">`;
+      const r=w.querySelector("input"), o=w.querySelector("output"); r.value=fx[k]; o.textContent=fmtPct(+r.value); r.onpointerdown=()=>pushUndo();
+      r.oninput=()=>{ state.fx[id]=Object.assign({},state.fx[id],{[k]:+r.value}); o.textContent=fmtPct(+r.value); };
+      const lab=document.createElement("span"); lab.className="dwi-note"; lab.textContent=l; b.append(lab,w); }); } },
+    on=>{ if(on) state.fx[id]=saved.insert||{type:"reverb",amt:.5,mix:FX_MIX.reverb}; else { keep("insert",state.fx[id]); state.fx[id]={type:"none",amt:.5,mix:1}; } renderPads(); });
+}
+function dwSelect(id){ if(!TRACKS.includes(id)) return; DW.sel=id; dwSave(); dwInspector(); }
+// Clicking a track's name in the grid or the mixer picks it for the inspector
+document.addEventListener("click",e=>{ const el=e.target.closest&&e.target.closest('[id^="mute-"],.mx-strip,[id^="tl-"]'); if(!el) return;
+  const id=el.dataset.track||(el.id||"").replace(/^(mute|tl)-/,""); if(TRACKS.includes(id)) dwSelect(id); },true);
+
+/* ----- Layout ----- */
+function dwBuildBar(){
+  if($("dwPlay")) return;
+  const tr=stQ(".transport"), proj=$("proj"), tx=document.createElement("div"); tx.className="dw-tx";
+  tx.innerHTML=`<div class="dw-grp"><button class="dw-ib" id="dwHome" title="Back to the start" aria-label="Back to the start">⏮</button><button class="dw-ib" id="dwStop" title="Stop" aria-label="Stop">■</button><button class="dw-ib" id="dwPlay" title="Play (Space)" aria-label="Play" aria-pressed="false">▶</button><button class="dw-ib rec" id="dwRec" title="Record pad hits into the grid while playing" aria-label="Record" aria-pressed="false">●</button></div>
+    <label class="dw-chip" title="Tempo"><input id="dwBpm" type="number" min="60" max="180" aria-label="Tempo in BPM"> BPM</label>
+    <span class="dw-chip" title="Time signature">4/4</span>
+    <span class="dw-chip" title="Key"><select id="dwRoot" aria-label="Key"></select><select id="dwMode" aria-label="Scale"></select></span>
+    <button class="dw-tog" id="dwLoop" title="Loop the song. Off: a song plays once and stops" aria-label="Loop">⟲</button>
+    <button class="dw-tog" id="dwMetro" title="Metronome: a click on every beat, and a one-bar count-in when you press Play" aria-label="Metronome">△</button>`;
+  proj.after(tx);
+  NAMES.forEach((n,i)=>$("dwRoot").add(new Option(n,i))); Object.entries(MODES).forEach(([k,m])=>$("dwMode").add(new Option(m.n.split(" (")[0],k)));
+  const ex=document.createElement("button"); ex.className="btn dw-exp dw-only"; ex.id="dwExport"; ex.innerHTML="⤴ Export"; ex.title="Export the beat (WAV, stems, MIDI)"; tr.appendChild(ex);
+  $("dwPlay").onclick=()=>$("play").click(); $("dwRec").onclick=()=>$("rec").click();
+  $("dwStop").onclick=()=>{ if(playing) stop(); };
+  $("dwHome").onclick=()=>{ if(playing){ stop(); play(); } };
+  const bpm=$("dwBpm"); bpm.addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter") bpm.blur(); });
+  bpm.onchange=()=>{ const v=Math.max(60,Math.min(180,Math.round(+bpm.value||state.bpm))); pushUndo(); $("bpm").value=v; $("bpm").dispatchEvent(new Event("input")); bpm.value=v; };
+  $("dwRoot").onchange=e=>{ $("root").value=e.target.value; $("root").dispatchEvent(new Event("change")); };
+  $("dwMode").onchange=e=>{ $("mode").value=e.target.value; $("mode").dispatchEvent(new Event("change")); };
+  $("dwLoop").onclick=()=>{ DW.loop=!DW.loop; dwSave(); dwSyncBar(); toast(DW.loop?"Loop on":"Loop off: the song plays once and stops"); };
+  $("dwMetro").onclick=()=>{ DW.metro=!DW.metro; dwSave(); dwSyncBar(); toast(DW.metro?"Metronome on, with a one-bar count-in":"Metronome off"); };
+  ex.onclick=()=>{ if(STUDIO.on&&STUDIO.pickEdit){ document.body.classList.remove("st-noedit"); STUDIO.pickEdit("export"); } else stQ('[aria-label="Export"]').scrollIntoView({behavior:"smooth"}); };
+}
+function dwSyncBar(){
+  const set=(id,a,v)=>{ const e=$(id); if(e&&e.getAttribute(a)!==String(v)) e.setAttribute(a,v); };
+  set("dwPlay","aria-pressed",!!playing); set("dwRec","aria-pressed",!!recording); set("dwLoop","aria-pressed",!!DW.loop); set("dwMetro","aria-pressed",!!DW.metro);
+  const b=$("dwBpm"); if(b&&document.activeElement!==b&&+b.value!==state.bpm) b.value=state.bpm;
+  const r=$("dwRoot"); if(r&&document.activeElement!==r&&+r.value!==state.root) r.value=state.root;
+  const m=$("dwMode"); if(m&&document.activeElement!==m&&m.value!==state.mode) m.value=state.mode;
+}
+function dwStatus(){
+  const s=DW.status; if(!s||!STUDIO.on) return;
+  const bars=songOn()?state.song.length*4:4, n=typeof NI!=="undefined"&&NI.lib?NI.lib.drums.length+NI.lib.instruments.length:0;
+  const st=recording?["rec","Recording"]:playing?["play","Playing"]:["","Ready"];
+  const txt=[$("projName")?$("projName").textContent:"Untitled beat","44.1 kHz · 24-bit",n?`${n.toLocaleString()} NI sounds`:"Beat Lab sounds",
+    `Length: ${bars} bars`,`Loop: ${DW.loop?"On":"Off"}`,`Metronome: ${DW.metro?"On":"Off"}`];
+  const spans=s.querySelectorAll("[data-s]"); txt.forEach((t,k)=>{ if(spans[k].textContent!==t) spans[k].textContent=t; });
+  const d=s.querySelector(".dw-dot"); d.className="dw-dot "+st[0]; const l=s.querySelector("[data-st]"); if(l.textContent!==st[1]) l.textContent=st[1];
+}
+function dwBuildStatus(){
+  const s=document.createElement("footer"); s.className="dw-status"; s.setAttribute("aria-label","Status");
+  s.innerHTML=`<span data-s></span><span data-s></span><span data-s></span><span class="sp"></span><span data-s></span><span data-s></span><span data-s></span>
+    <span><select id="dwTheme" aria-label="Theme"></select></span><span class="last"><i class="dw-dot"></i><b data-st style="font-weight:600;color:var(--text)">Ready</b></span>`;
+  // keep the spans in reading order: name, rate, sounds | length, loop, metronome
+  const spans=[...s.querySelectorAll("[data-s]")]; spans.forEach(x=>x.removeAttribute("data-s")); [0,1,2,3,4,5].forEach(k=>spans[k].setAttribute("data-s",""));
+  const th=s.querySelector("#dwTheme"); Object.entries(THEMES).forEach(([k,n])=>th.add(new Option("Theme: "+n,k))); th.value=document.documentElement.dataset.theme; th.onchange=()=>dwTheme(th.value);
+  DW.status=s; return s;
+}
+function dwLoop(){ requestAnimationFrame(dwLoop); if(!STUDIO.on) return; const now=performance.now(); if(DW.t&&now-DW.t<200) return; DW.t=now; dwSyncBar(); dwStatus(); }
+function dwView(v){
+  DW.view=v; dwSave(); document.body.dataset.dwv=v; document.body.classList.toggle("st-arr",v==="arr");
+  document.querySelectorAll(".dw-views button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+  if(v==="arr"&&typeof arrRender==="function") arrRender(); if(v==="mix"&&typeof mixRender==="function") mixRender();
+}
+studioOn=function(){
+  if(STUDIO.on) return; const app=stQ(".app"), P=stPanels();
+  STUDIO.duo=P.duo; dwBuildBar();
+  // Beat Script gets its own editor tab (found before the producer panel moves into the sidebar)
+  const sp=$("scriptPanel"); if(sp&&!DW.scriptHome) DW.scriptHome={parent:sp.parentNode,next:sp.nextSibling}; if(sp) sp.open=true;
+  const aiSet=P.prod&&P.prod.querySelector("details.prod-set:not(#scriptPanel)"); if(aiSet&&!DW.seenAI){ aiSet.open=true; DW.seenAI=true; }
+  const side=stEl("aside","st-side"), main=stEl("main","st-main"), edit=stEl("section","st-edit"), insp=stEl("aside","st-fav");
+  side.setAttribute("aria-label","Sound browser"); insp.setAttribute("aria-label","Track inspector"); edit.setAttribute("aria-label","Editors");
+  const setup=stEl("div"); setup.append(...[P.deck,NATIVE?P.ni:null].filter(Boolean));
+  if(!DW.browser) dwbBuild();
+  if(!DW.seen){ STUDIO.sideTab="sounds"; DW.seen=true; dwSave(); }
+  const sideKey=["sounds","setup","audio"].includes(STUDIO.sideTab)?STUDIO.sideTab:"sounds";
+  STUDIO.pickSide=stTabs(side,[["sounds","Sounds",DW.browser],["setup","Setup",setup],["audio","Audio",P.aud]],sideKey,k=>{ STUDIO.sideTab=k; stSave(); if(k==="sounds") dwbRender(); });
+  const views=stEl("nav","dw-views"); views.setAttribute("aria-label","Main view");
+  [["beat","Beat Lab"],["arr","Arrange"],["mix","Mixer"]].forEach(([k,l])=>{ const b=stEl("button",null,l); b.dataset.v=k; b.onclick=()=>dwView(k); views.appendChild(b); });
+  const beat=stEl("div","dw-beat"); beat.dataset.dwv="beat"; beat.append(P.seq,P.song); P.arr.dataset.dwv="arr"; P.mix.dataset.dwv="mix";
+  main.append(beat,P.arr,P.mix);
+  const grip=stEl("div","st-grip"); grip.title="Drag to resize"; edit.appendChild(grip);
+  const ek=["pads","roll","sampler","script","prod","sounds","viz","export"].includes(STUDIO.editTab)?STUDIO.editTab:"pads";
+  STUDIO.pickEdit=stTabs(edit,[["pads","Pads",P.pads],["roll","Piano Roll",P.roll],["sampler","Sample Editor",P.sampler],["script","Beat Script",sp],["prod","AI Producer",P.prod],["sounds","Sounds & Kits",P.sounds],["viz","Visualizer",P.viz],["export","Export",P.exp]],
+    ek,k=>{ STUDIO.editTab=k; stSave(); if(k==="sampler"&&typeof drawWave==="function") setTimeout(drawWave,30);
+      if(typeof prTall==="function"){ if(k==="roll"&&!PR.big&&PR.auto!==false){ prTall(true); PR.auto=true; } else if(k!=="roll"&&PR.big&&PR.auto){ prTall(false); } }
+      if(k==="roll"&&typeof prRefresh==="function") setTimeout(()=>{ prRefresh(); prCenter(); },30); });
+  // Inspector and favorites share the right side
+  const ib=stEl("div","dwi"); DW.insp=ib;
+  STUDIO.pickRight=stTabs(insp,[["insp","Inspector",ib],["fav","Favorites",P.fav]],"insp",()=>{});
+  [...app.children].forEach(c=>c.remove());
+  app.append(P.bar,views,side,main,insp,edit,DW.status||dwBuildStatus());
+  stGrip(grip);
+  document.body.classList.add("studio","daw"); STUDIO.on=true; stSyncToggles(); stSave();
+  dwView(["beat","arr","mix"].includes(DW.view)?DW.view:"beat"); dwbRender(); dwInspector(); prVelSetup();
+};
+studioOff=function(){
+  if(!STUDIO.on) return; const app=stQ(".app"), P=stPanels(), duo=STUDIO.duo;
+  duo.append(P.pads,P.song);
+  const sp=$("scriptPanel"); if(sp&&DW.scriptHome){ DW.scriptHome.parent.insertBefore(sp,DW.scriptHome.next&&DW.scriptHome.next.parentNode===DW.scriptHome.parent?DW.scriptHome.next:null); }
+  [...app.children].forEach(c=>c.remove());
+  [P.bar,P.deck,P.prod,P.aud,P.ni,P.sounds,P.fav,P.seq,duo,P.arr,P.roll,P.mix,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
+  delete P.arr.dataset.dwv; delete P.mix.dataset.dwv; delete document.body.dataset.dwv;
+  document.body.classList.remove("studio","daw","st-noside","st-noedit","st-nofav","st-arr"); STUDIO.on=false; stSyncToggles(); stSave();
+};
+// Keep the inspector and browser current
+{ const raw=refreshAll; refreshAll=function(){ const r=raw.apply(this,arguments); try{ dwInspector(); }catch(e){} return r; }; }
+{ const raw=syncSounds; syncSounds=function(){ const r=raw.apply(this,arguments); try{ const n=DW.insp&&DW.insp.querySelector(".snd"); if(n) n.textContent=dwSoundName(DW.sel); }catch(e){} return r; }; }
+// Studio view is now this layout: switch it on again so it rebuilds
+if(STUDIO.on){ const s={side:document.body.classList.contains("st-noside"),edit:document.body.classList.contains("st-noedit")}; STUDIO.on=false;
+  const app=stQ(".app"), P=stPanels(), duo=STUDIO.duo; [...app.children].forEach(c=>c.remove()); document.body.classList.remove("studio","st-arr");
+  // put every panel back where Classic view expects it before building the new layout
+  if(duo) duo.append(P.pads,P.song);
+  [P.bar,P.deck,P.prod,P.aud,P.ni,P.sounds,P.fav,P.seq,duo,P.arr,P.roll,P.mix,P.sampler,P.viz,P.exp].forEach(n=>{ if(n) app.appendChild(n); });
+  studioOn(); document.body.classList.toggle("st-noside",s.side); document.body.classList.toggle("st-noedit",s.edit); document.body.classList.remove("st-nofav"); stSyncToggles(); }
+else dwBuildBar();
+requestAnimationFrame(dwLoop);
+</script>
 </body>
 </html>

@@ -79,7 +79,10 @@ reroll hat               # new hat part in the genre's style
 clear perc
 
 song A A B A             # play the patterns in this order (up to 32)
+song [Intro] A [Verse] A B B [Hook] C C [Outro] A   # with section names
 ```
+
+**Sections:** a name in square brackets before patterns names that part of the song. Names show as the Intro / Verse / Hook ribbons in Arrange and go into the Ether Cut markers. In Arrange you can also switch instrument groups (Drums, Bass, Chords, Melody, Vocals) off in any part of the song, and drag blocks to move them.
 
 **Steps:** `X` accent, `x` soft hit, `.` rest. Spaces and `|` are ignored, so group by 4 for readability. Shorter lines repeat to fill the pattern (16 steps fill 32).
 - `r` on the hat track is a triplet roll.

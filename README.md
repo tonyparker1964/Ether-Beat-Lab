@@ -35,6 +35,20 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 - Patterns A–D chained into a song, including random arrangements.
 - Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut. Tick **Stems** to add a WAV for every track (`stems/01 Kick.wav`, …), all the same length so they line up from the start in Logic or any DAW, each with its own mixer settings, reverb and echo; the vinyl texture gets its own stem. Tick **MIDI** to add `beat.mid` (tempo and swing included) with tracks for Drums (General MIDI notes: kick 36, snare 38, clap 39, closed hat 42, open hat 46, percussion 37, tom 45, crash 49), Bass, Chords, Melody, Vocal chop and Sampler chops (C1 is chop 1). Your choices are remembered.
 
+## The Ether Beat Lab layout (Studio view)
+
+- **Transport:** ⏮ ■ ▶ ●, tempo, 4/4, key and scale, **⟲ Loop** (off: a song plays once and stops), **△ Metronome** (a click on every beat, with a one-bar count-in; never in exports) and **Export**.
+- **Beat Lab / Arrange / Mixer** in the middle.
+- **Sound Browser** (left): Kits, Samples, Instruments and Effects (Beat Lab's own, your NI kits, samples and instruments, your plug-ins and mastering effects), with search and ▶ preview. Click a sound to use it.
+- **Track Inspector** (right): the selected track's sound, output, gain, pan, mute, solo, and its FX (EQ, compressor, delay, reverb, insert effect). Click a track's name in Beat Lab or the Mixer to inspect it.
+- **Editors** (bottom): Pads, Piano Roll, Sample Editor, Beat Script (with the format guide), AI Producer (with its AI model options), Sounds & Kits, Visualizer, Export.
+- **Arrange:** section ribbons (Intro, Verse, Hook…: click to pick, double-click to type a name), a lane per instrument group (Drums, Bass, Chords, Melody, Vocals) that can be switched off in any part of the song (click or drag across), and pattern blocks you can drag to move. Section names go into the Ether Cut markers.
+- **Piano roll tools:** Quantize, Chop, Strum, Arpeggiate and Humanize, plus a velocity lane you can drag.
+- **Themes** (status bar): Ether purple, Gold (classic), Midnight blue, Forest, Ember.
+- **Classic view** is still there.
+
+Feature ideas came from Lemon Studio (a GPL-3 DAW); no code from it is used.
+
 ## Mastering with Ozone (Mac app)
 
 **Export → Master with** lists every effect plug-in on your Mac, iZotope first. Pick **Ozone 11** (or one of its modules, or any EQ or compressor), press **🎛 Open** to choose its preset in Ozone's own window, and **Export** runs `beat.wav` through it faster than real time. Ozone's processing delay is trimmed, so the beat, bars and markers still line up for Ether Cut. Stems stay unmastered. The plug-in and its settings are saved with your project. If the plug-in can't run, the export uses Beat Lab's own mix and says so.
