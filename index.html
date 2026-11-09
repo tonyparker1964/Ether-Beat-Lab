@@ -52,6 +52,13 @@ h2{font-family:var(--f-display);font-weight:600;font-size:18px;margin:0}
 #play[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .spacer{flex:1}
 /* Audio & MIDI */
+.mx-snds{display:flex;flex-direction:column;gap:3px;width:100%}
+.mx-snd{width:100%;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;font-size:11px;padding:3px 2px;color:var(--text)}
+.mx-au{font-size:10.5px;padding:2px 4px}
+.midi-ind{display:inline-flex;position:relative;font-size:15px}
+.midi-ind .midi-led{position:absolute;right:4px;top:4px;width:6px;height:6px;border-radius:50%;background:var(--line)}
+.midi-ind.on .midi-led{background:var(--green)}
+.midi-ind.hit .midi-led{background:var(--accent);box-shadow:0 0 6px var(--accent)}
 .st-side .st-tabs button{padding:8px 8px;white-space:nowrap;letter-spacing:.1em}
 .audp{display:flex;flex-direction:column;gap:12px}
 .aud-sec{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
@@ -165,7 +172,7 @@ body.studio .proll.help .pr-hint{display:block}
 .mx-strips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;align-items:stretch}
 .mx-strip>*{flex:none}
 .mx-strip{flex:none;width:90px;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--panel-2);border:1px solid var(--line);
-  border-top:3px solid var(--c);border-radius:10px;padding:6px 5px 7px;transition:opacity .15s}
+  border-top:3px solid var(--c);border-radius:10px;padding:5px 5px 6px;transition:opacity .15s;gap:4px}
 .mx-strip.off{opacity:.45}
 .mx-master{width:112px;border-color:color-mix(in srgb,var(--accent) 45%,var(--line));margin-left:6px}
 .mx-name{border:0;background:none;padding:2px 4px;font-weight:600;font-size:12.5px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
@@ -181,7 +188,7 @@ button.mx-name:hover{color:var(--c)}
 .mx-dial::before{content:"";position:absolute;left:50%;top:5px;width:2px;height:7px;margin-left:-1px;border-radius:1px;background:var(--text)}
 .mx-knob:focus-visible,.mx-fader:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .mx-panrow .mx-k{width:auto}
-.mx-strip>.mx-fz{flex:1 1 auto;min-height:80px;display:flex;gap:6px;align-items:stretch;justify-content:center;width:100%}
+.mx-strip>.mx-fz{flex:1 1 auto;min-height:56px;display:flex;gap:6px;align-items:stretch;justify-content:center;width:100%}
 .mx-fader{--p:.8;position:relative;width:26px;cursor:ns-resize;touch-action:none}
 .mx-rail{position:absolute;left:50%;top:7px;bottom:7px;width:4px;margin-left:-2px;border-radius:2px;background:#0a0907;box-shadow:inset 0 0 0 1px var(--line)}
 .mx-fill{position:absolute;left:50%;bottom:7px;width:4px;margin-left:-2px;border-radius:2px;background:color-mix(in srgb,var(--c) 70%,transparent);height:calc((100% - 14px)*var(--p))}
@@ -456,8 +463,9 @@ body.studio .st-side .fields{grid-template-columns:1fr 1fr}
 @media (max-width:1380px){ body.studio .st-lcd>div:nth-child(4){display:none} body.studio #scope{display:none} }
 @media (max-width:1180px){ body.studio #gen{display:none} }
 @media (max-width:1800px){ body.studio #scope{display:none} }
-@media (max-width:1020px){ body.studio .proj-txt{display:none} }
-@media (max-width:1380px){ body.studio #gen{display:none} body.studio .proj-name{max-width:120px} }
+@media (max-width:1020px){ body.studio .proj-txt{display:none} body.studio .st-lcd>div:nth-child(2){display:none} body.studio .st-lcd>div:nth-child(1){border-right:0} }
+@media (max-width:1500px){ body.studio #gen{display:none} }
+@media (max-width:1380px){ body.studio .proj-name{max-width:120px} }
 @media (max-width:1240px){ body.studio .st-lcd>div:nth-child(3){display:none} body.studio .st-lcd>div:nth-child(2){border-right:0} body.studio .proj-k{display:none} }
 @media (max-width:1100px){ body.studio #mutate{display:none} body.studio .proj-name{max-width:90px} }
 body.studio .pads{grid-template-columns:repeat(8,minmax(0,1fr))}
@@ -4879,6 +4887,56 @@ function engineSetup(){
   ["instA","instB","instMel","instBass"].forEach(id=>$(id).addEventListener("change",()=>{ auButtons(); if(NATIVE) auSync(); }));
 }
 engineSetup();
+
+/* ---------- Sounds in the mixer ----------
+   Each channel strip has the track's sound menu (and the plug-in window button when a plug-in plays it), the same
+   menus as Sounds & Kits, so you can change the instrument while you mix. */
+const MIX_SOUND={kick:["kitKick"],snare:["kitSnare"],hat:["kitHat"],ohat:["kitOhat"],perc:["percSel"],tom:["kitTom"],crash:["kitCrash"],
+  chop:["kitChop"],fx:["fxSel"],keys:["instA","instB"],mel:["instMel"],bass:["instBass"]};
+const MIX_SOUND_LABEL={instA:"Sound",instB:"Layer 2"};
+function mixSoundSync(){
+  if(!MIX.els.master) return;
+  for(const [id,srcs] of Object.entries(MIX_SOUND)){
+    const e=MIX.els[id]; if(!e) continue;
+    let box=e.strip.querySelector(".mx-snds");
+    if(!box){ box=document.createElement("div"); box.className="mx-snds"; e.nm.after(box);
+      srcs.forEach(sid=>{ const sel=document.createElement("select"); sel.className="mx-snd"; sel.dataset.src=sid;
+        sel.setAttribute("aria-label",`${trackLabel(id)} ${MIX_SOUND_LABEL[sid]||"sound"}`);
+        sel.addEventListener("keydown",ev=>ev.stopPropagation());
+        sel.onchange=()=>{ const src=$(sid); if(!src) return; src.value=sel.value; src.dispatchEvent(new Event("change",{bubbles:true})); setTimeout(mixSoundSync,30); };
+        box.appendChild(sel); });
+      const au=document.createElement("button"); au.className="mini mx-au"; au.textContent="🎛 Plug-in"; au.hidden=true;
+      au.onclick=()=>{ const slot={mel:"mel",bass:"bass",keys:"a"}[id]; if(slot) auShow(slot); }; box.appendChild(au); }
+    box.querySelectorAll("select.mx-snd").forEach(sel=>{ const src=$(sel.dataset.src); if(!src) return;
+      // copy the menu only when it changed (NI kits can have thousands of sounds)
+      const sig=src.options.length+"|"+(src.options[0]&&src.options[0].value)+"|"+(src.options[src.options.length-1]&&src.options[src.options.length-1].value)+"|"+src.querySelectorAll("optgroup").length;
+      if(sel.dataset.sig!==sig){ sel.innerHTML=src.innerHTML; sel.dataset.sig=sig; }
+      sel.value=src.value; const o=src.selectedOptions[0]; sel.title=o?o.text:""; });
+    const au=box.querySelector(".mx-au"), slot={mel:"mel",bass:"bass",keys:"a"}[id];
+    au.hidden=!(slot&&auParse(state.inst[slot]));
+  }
+}
+{ const raw=mixSync; mixSync=function(){ raw.apply(this,arguments); mixSoundSync(); }; }
+{ const raw=syncSounds; syncSounds=function(){ raw.apply(this,arguments); mixSoundSync(); }; }
+{ const raw=mixRender; mixRender=function(){ raw.apply(this,arguments); mixSoundSync(); }; }
+
+/* ---------- MIDI keyboard button in the top bar ----------
+   Lights up when a keyboard is connected and blinks with every note; click it for the MIDI settings. */
+function midiIndSetup(){
+  const b=document.createElement("button"); b.className="st-tog midi-ind"; b.id="midiInd"; b.innerHTML='<span aria-hidden="true">🎹</span><i class="midi-led"></i>';
+  b.setAttribute("aria-label","MIDI keyboard"); $("rec").after(b);
+  b.onclick=()=>{ if(!NATIVE&&!AUX.devices.length) midiConnectWeb();
+    if(STUDIO.on){ document.body.classList.remove("st-noside"); STUDIO.pickSide("audio"); stSyncToggles(); stSave(); }
+    else $("audPanel").scrollIntoView({behavior:"smooth",block:"start"}); };
+  midiIndSync();
+}
+function midiIndSync(){ const b=$("midiInd"); if(!b) return; const n=AUX.devices.length;
+  b.classList.toggle("on",n>0); b.title=n?`MIDI: ${AUX.devices.join(", ")} (click for MIDI settings)`:(NATIVE?"No MIDI keyboard found. Plug one in (it's picked up by itself), or click for MIDI settings":"Click to connect a MIDI keyboard"); }
+{ const raw=midiDevices; midiDevices=function(){ raw.apply(this,arguments); midiIndSync(); }; }
+{ const raw=midiIn; midiIn=function(){ raw.apply(this,arguments); const b=$("midiInd"); if(b){ b.classList.add("hit"); clearTimeout(b._t); b._t=setTimeout(()=>b.classList.remove("hit"),90); } }; }
+midiIndSetup(); mixSoundSync();
+// The Mac app finds keyboards plugged in later by itself; check again now and then in case one was missed.
+if(NATIVE) setInterval(()=>native("midiDevices").then(midiDevices).catch(()=>{}),15000);
 </script>
 
 </body>
