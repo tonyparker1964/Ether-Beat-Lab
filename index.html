@@ -372,6 +372,12 @@ body.studio .st-side .ni-row select{max-width:none;flex:1 1 120px}
 .script textarea{display:block;width:100%;min-height:220px;margin-top:10px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-family:var(--f-mono);font-size:13px;line-height:1.55;tab-size:4;white-space:pre;overflow-x:auto}
 .script textarea.drag{border-color:var(--accent)}
 .script-report{margin-top:10px;font-size:13px}
+.script-list{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:320px;overflow:auto}
+.script-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);padding:7px 10px}
+.script-item b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.script-item span{display:block;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.script-item .acts{display:flex;gap:4px}
+.script-empty{color:var(--dim);font-size:13px;margin:6px 0}
 .md-guide{margin-top:8px;max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--ink);padding:4px 14px 12px;font-size:13.5px}
 .md-guide h1,.md-guide h2,.md-guide h3{font-family:var(--f-display);margin:14px 0 6px}
 .md-guide h1{font-size:19px} .md-guide h2{font-size:16px} .md-guide h3{font-size:14px}
@@ -805,7 +811,8 @@ body.studio .st-pane>.proll .pr-scroll{border-radius:10px 10px 0 0}
       <p class="prod-note" style="margin-top:6px">Paste a beat script from Claude, or open a .txt file, then press Load script. It sets the genre, tempo, key, sounds, NI kit, plug-ins, patterns and song.</p>
       <textarea id="scriptText" spellcheck="false" wrap="off" aria-label="Beat script" placeholder="# Paste a beat script here&#10;genre lofi&#10;tempo 82&#10;pattern A&#10;kick   X.....x...x....."></textarea>
       <div class="ni-row">
-        <button class="btn primary" id="scriptRun">Load script</button>
+        <button class="btn primary" id="scriptPaste" title="Paste the script you copied (from Claude, ChatGPT…) and load it">📋 Paste &amp; load</button>
+        <button class="btn" id="scriptRun">Load script</button>
         <button class="btn" id="scriptOpen">Open file…</button>
         <button class="mini" id="scriptCopy" title="Write the current beat out as a script">Copy this beat as a script</button>
         <button class="mini" id="scriptSave">Save as .txt</button>
@@ -814,6 +821,12 @@ body.studio .st-pane>.proll .pr-scroll{border-radius:10px 10px 0 0}
         <button class="mini" id="scriptClear" title="Empty the script box (your beat stays as it is)">Clear</button>
       </div>
       <div class="script-report" id="scriptReport" role="status"></div>
+      <details class="prod-set" id="scriptFolder">
+        <summary class="lbl">Scripts folder <span id="scriptCount"></span></summary>
+        <p class="prod-note" style="margin-top:6px" id="scriptFolderNote">Every script you load is kept here. Load one again, or delete the ones you don't want.</p>
+        <div class="ni-row"><input type="search" id="scriptFind" class="ni-input" placeholder="Search your scripts" aria-label="Search your scripts"><button class="mini" id="scriptReveal" hidden>Open in Finder</button></div>
+        <div class="script-list" id="scriptList" role="list"></div>
+      </details>
       <details class="prod-set" id="scriptGuide">
         <summary class="lbl">Format guide (BEAT-SCRIPT.md)</summary>
         <p class="prod-note" style="margin-top:6px">Every line a Beat Script can use. Claude follows these rules when it writes scripts for you.</p>
@@ -5583,7 +5596,7 @@ const scrPct=(t,lo,hi)=>{ const m=String(t).match(/-?\d+(\.\d+)?/); return m?Mat
 function runScript(text){
   const lines=String(text).split(/\r?\n/), warns=[], jobs=[], made=[];
   const W=(n,msg)=>warns.push(`Line ${n}: ${msg}`);
-  const clean=raw=>raw.replace(/^\s*(#|\/\/).*$/,"").replace(/\s\/\/.*$/,"").trim();
+  const clean=raw=>raw.replace(/^\s*(#|\/\/|```).*$/,"").replace(/\s\/\/.*$/,"").trim();
   pushUndo(); let title="", pat=null, slot=null, defProg=null, sawPattern=false, songSet=false, len=null, long=false;
   let kitGiven=false, niAuto=scrNiOn(); const explicit=new Set(), vibe=[];
   lines.forEach(raw=>{ const c=raw.match(/^\s*(#|\/\/)(.*)$/); if(c) vibe.push(c[2]); });
@@ -5815,9 +5828,9 @@ song A A B A
 function setupScript(){
   const ta=$("scriptText"), file=$("scriptFile");
   ta.addEventListener("keydown",e=>e.stopPropagation()); // typing here (and ⌘Z) edits the text, not the beat
-  $("scriptRun").onclick=()=>{ if(!ta.value.trim()) return toast("Paste a script first"); runScript(ta.value); };
+  $("scriptRun").onclick=()=>{ if(!ta.value.trim()) return toast("Paste a script first"); scrRunUI(ta.value); };
   $("scriptOpen").onclick=()=>file.click();
-  const readFile=async f=>{ if(!f) return; ta.value=await f.text(); $("scriptPanel").open=true; runScript(ta.value); };
+  const readFile=async f=>{ if(!f) return; ta.value=await f.text(); $("scriptPanel").open=true; scrRunUI(ta.value); };
   file.onchange=e=>{ const f=e.target.files[0]; e.target.value=""; readFile(f); };
   ta.addEventListener("dragover",e=>{ if(e.dataTransfer.types.includes("Files")){ e.preventDefault(); ta.classList.add("drag"); } });
   ta.addEventListener("dragleave",()=>ta.classList.remove("drag"));
@@ -5964,6 +5977,63 @@ function setupScriptGuide(){
   $("scriptGuideSave").onclick=()=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([BEAT_SCRIPT_MD],{type:"text/markdown"})); a.download="BEAT-SCRIPT.md"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
 }
 setupScriptGuide();
+/* ---------- Paste & load, and the Scripts folder (every script you load is kept) ----------
+   In the Mac app the folder is Music/Ether Beat Lab Projects/Beat Scripts (plain .txt files); in a browser the list is kept by the browser. */
+const SCR_LS="beatlab.scripts";
+const scrTitle=t=>{ const m=String(t).match(/^\s*title\s+(.+)$/mi); if(m) return m[1].replace(/^["“]|["”]$/g,"").trim();
+  const c=String(t).match(/^\s*#\s*(.+)$/m); if(c) return c[1].replace(/[:.].*$/,"").trim().slice(0,50); return "Beat Script"; };
+async function scrStoreList(){
+  if(NATIVE){ const l=await native("scriptsList").catch(()=>null); if(Array.isArray(l)) return l; }
+  try{ return JSON.parse(localStorage.getItem(SCR_LS)||"[]"); }catch(e){ return []; }
+}
+async function scrStoreSave(text){
+  if(NATIVE){ const r=await native("scriptSave",{text,name:scrTitle(text)}).catch(()=>null); if(r&&!r.error) return; }
+  try{ let l=JSON.parse(localStorage.getItem(SCR_LS)||"[]"); const old=l.find(x=>x.text===text); l=l.filter(x=>x.text!==text);
+    l.unshift({id:old?old.id:"s"+Date.now().toString(36),text,time:Date.now()}); localStorage.setItem(SCR_LS,JSON.stringify(l.slice(0,200))); }catch(e){}
+}
+async function scrStoreDelete(id){
+  if(NATIVE){ const r=await native("scriptDelete",{id}).catch(()=>null); if(r&&r.error) toast(r.error); if(r&&!r.error) return; }
+  try{ const l=JSON.parse(localStorage.getItem(SCR_LS)||"[]").filter(x=>x.id!==id); localStorage.setItem(SCR_LS,JSON.stringify(l)); }catch(e){}
+}
+async function scrRunUI(text){
+  const r=runScript(text);
+  if(String(text).trim().split("\n").length>=2&&!(r&&r.warns&&r.warns.length>=String(text).split("\n").filter(l=>l.trim()&&!/^\s*(#|\/\/)/.test(l)).length)) await scrStoreSave(text);
+  scrFolderRender();
+  return r;
+}
+async function scrFolderRender(){
+  const box=$("scriptList"); if(!box) return; const all=await scrStoreList(), q=($("scriptFind").value||"").toLowerCase().trim();
+  $("scriptCount").textContent=all.length?`(${all.length})`:"";
+  const list=q?all.filter(x=>x.text.toLowerCase().includes(q)||(x.id||"").toLowerCase().includes(q)):all;
+  box.innerHTML="";
+  if(!list.length){ const p=document.createElement("p"); p.className="script-empty"; p.textContent=all.length?"No scripts match.":"No scripts yet. Every script you load lands here."; box.appendChild(p); return; }
+  list.slice(0,200).forEach(x=>{
+    const it=document.createElement("div"); it.className="script-item"; it.setAttribute("role","listitem");
+    const g=x.text.match(/^\s*genre\s+(.+)$/mi), bpm=x.text.match(/^\s*(?:tempo|bpm)\s+(\d+)/mi), when=new Date(x.time||0);
+    it.innerHTML=`<div style="min-width:0"><b></b><span></span></div><div class="acts"><button class="mini" data-a="load">Load</button><button class="mini" data-a="edit" title="Put it in the box to change it">Edit</button><button class="mini" data-a="del" aria-label="Delete" title="Delete">✕</button></div>`;
+    it.querySelector("b").textContent=scrTitle(x.text);
+    it.querySelector("span").textContent=[g&&g[1].trim(),bpm&&bpm[1]+" BPM",when.getTime()>0&&when.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+when.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})].filter(Boolean).join(" · ");
+    it.querySelector('[data-a="load"]').onclick=()=>{ $("scriptText").value=x.text; scrRunUI(x.text); };
+    it.querySelector('[data-a="edit"]').onclick=()=>{ $("scriptText").value=x.text; $("scriptText").focus(); toast("In the box. Change it, then Load script"); };
+    it.querySelector('[data-a="del"]').onclick=async()=>{ await scrStoreDelete(x.id); scrFolderRender(); toast(NATIVE?"Moved to the Trash":"Deleted"); };
+    box.appendChild(it); });
+}
+function setupScriptFolder(){
+  const ta=$("scriptText");
+  $("scriptPaste").onclick=async()=>{
+    let text="";
+    try{ if(NATIVE){ const r=await native("clipText"); text=(r&&r.text)||""; } else text=await navigator.clipboard.readText(); }
+    catch(e){ toast("Couldn't read the clipboard here. Paste into the box with ⌘V, then Load script"); ta.focus(); return; }
+    text=String(text).replace(/^\s*```[a-z]*\s*\n/i,"").replace(/\n\s*```\s*$/,""); // the code block fences AI chats add
+    if(!text.trim()){ toast("The clipboard is empty. Copy a script first"); return; }
+    ta.value=text; scrRunUI(text); };
+  $("scriptFind").addEventListener("input",()=>scrFolderRender());
+  $("scriptFind").addEventListener("keydown",e=>e.stopPropagation());
+  $("scriptFolder").addEventListener("toggle",()=>{ if($("scriptFolder").open) scrFolderRender(); });
+  if(NATIVE){ $("scriptReveal").hidden=false; $("scriptReveal").onclick=()=>native("scriptsReveal").catch(()=>{}); $("scriptFolderNote").textContent="Every script you load is kept as a .txt file in Music › Ether Beat Lab Projects › Beat Scripts. Load one again, edit it, or delete it."; }
+  scrFolderRender();
+}
+setupScriptFolder();
 </script>
 
 <script>

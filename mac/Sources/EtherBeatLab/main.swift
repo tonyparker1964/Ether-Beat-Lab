@@ -264,6 +264,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
             // plug-ins, MIDI, audio devices and recording
             if Engine.shared.handle(action, body, reply: replyHandler) { return }
             if CloudAI.handle(action, body, reply: replyHandler) { return }
+            if ScriptsStore.handle(action, body, reply: replyHandler) { return }
             replyHandler(nil, "Unknown request: \(action)")
         }
     }
