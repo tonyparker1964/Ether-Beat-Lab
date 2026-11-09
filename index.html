@@ -369,6 +369,11 @@ body.studio .st-side .ni-row select{max-width:none;flex:1 1 120px}
 .favp-empty{color:var(--dim);font-size:14px;margin-top:12px}
 .prod-note{margin:10px 0 0;font-size:14px;color:var(--dim);min-height:1.2em}
 .prod-set{margin-top:10px}
+.script textarea{display:block;width:100%;min-height:220px;margin-top:10px;resize:vertical;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-family:var(--f-mono);font-size:13px;line-height:1.55;tab-size:4;white-space:pre;overflow-x:auto}
+.script textarea.drag{border-color:var(--accent)}
+.script-report{margin-top:10px;font-size:13px}
+.script-report .ok{color:#8fe3a8}
+.script-report ul{margin:6px 0 0;padding-left:18px;color:var(--accent)}
 #prodModelRow{flex-wrap:wrap}
 #prodModelRow .ni-input{flex:1 1 100%}
 #prodModelPick{flex:1 1 100%;min-width:0;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px}
@@ -627,6 +632,20 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
         <button class="mini" id="prodKeySave">Save key</button><button class="mini" id="prodKeyDel" hidden>Remove key</button>
       </div>
       <p class="ni-status" id="prodEngineNote"></p>
+    </details>
+    <details class="prod-set script" id="scriptPanel">
+      <summary class="lbl">Beat Script</summary>
+      <p class="prod-note" style="margin-top:6px">Paste a beat script from Claude, or open a .txt file, then press Load script. It sets the genre, tempo, key, sounds, NI kit, plug-ins, patterns and song.</p>
+      <textarea id="scriptText" spellcheck="false" wrap="off" aria-label="Beat script" placeholder="# Paste a beat script here&#10;genre lofi&#10;tempo 82&#10;pattern A&#10;kick   X.....x...x....."></textarea>
+      <div class="ni-row">
+        <button class="btn primary" id="scriptRun">Load script</button>
+        <button class="btn" id="scriptOpen">Open file…</button>
+        <button class="mini" id="scriptCopy" title="Write the current beat out as a script">Copy this beat as a script</button>
+        <button class="mini" id="scriptSave">Save as .txt</button>
+        <button class="mini" id="scriptExample">Example</button>
+      </div>
+      <div class="script-report" id="scriptReport" role="status"></div>
+      <input type="file" id="scriptFile" accept=".txt,.ebs,text/plain" hidden>
     </details>
   </section>
 
@@ -5120,6 +5139,311 @@ function midiIndSync(){ const b=$("midiInd"); if(!b) return; const n=AUX.devices
 midiIndSetup(); mixSoundSync();
 // The Mac app finds keyboards plugged in later by itself; check again now and then in case one was missed.
 if(NATIVE) setInterval(()=>native("midiDevices").then(midiDevices).catch(()=>{}),15000);
+</script>
+<script>
+"use strict";
+/* ---------- Beat Script: a plain-text beat (written by Claude or by hand) loaded in one press ---------- */
+const SCR_TRACK={kick:"kick",bd:"kick",snare:"snare",sd:"snare",clap:"snare",hat:"hat",hats:"hat",hh:"hat",hihat:"hat",ohat:"ohat",openhat:"ohat",oh:"ohat",
+  perc:"perc",percussion:"perc",tom:"tom",toms:"tom",crash:"crash",cymbal:"crash",fx:"fx",vox:"chop",vocal:"chop",chop:"chop",chops:"chops",
+  melody:"mel",mel:"mel",lead:"mel",bass:"bass",chords:"keys",keys:"keys"};
+const SCR_NAME={kick:"kick",snare:"snare",hat:"hat",ohat:"ohat",perc:"perc",tom:"tom",crash:"crash",fx:"fx",chop:"vox",chops:"chops",mel:"melody",bass:"bass",keys:"chords"};
+const SCR_IDX="123456789abcdefg"; // chop pad numbers for the Chops track
+const scrNorm=s=>String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/g,"");
+const scrLabel=v=>typeof v==="string"?v:Array.isArray(v)?v[0]:v.n;
+function scrFind(map,text){
+  const q=scrNorm(text); if(!q) return null; const e=Object.entries(map);
+  for(const [k] of e) if(scrNorm(k)===q) return k;
+  for(const [k,v] of e) if(scrNorm(scrLabel(v))===q) return k;
+  for(const [k,v] of e) if(scrNorm(scrLabel(v)).startsWith(q)) return k;
+  for(const [k,v] of e){ const n=scrNorm(scrLabel(v)); if(n.includes(q)||(n.length>3&&q.includes(n))) return k; }
+  return null;
+}
+function scrRoot(t){
+  const m=String(t).trim().match(/^([A-Ga-g])([#♯b♭]?)(?![a-z])/); if(!m) return null;
+  let n={c:0,d:2,e:4,f:5,g:7,a:9,b:11}[m[1].toLowerCase()]; if(m[2]==="#"||m[2]==="♯") n++; if(m[2]==="b"||m[2]==="♭") n--;
+  return {root:(n+12)%12,rest:String(t).trim().slice(m[0].length).trim()};
+}
+function scrMode(t){ const q=scrNorm(t); if(!q) return null; if(q==="major") return "ionian"; if(q==="minor"||q==="naturalminor") return "aeolian"; return scrFind(MODES,t); }
+function scrProg(t){
+  const out=[]; for(const tok of t.trim().split(/[\s,\-–>]+/)){ if(!tok) continue;
+    const d=tok.match(/^[1-7]/); if(d){ out.push(+d[0]-1); continue; }
+    const r=tok.replace(/^[b♭#♯]/,"").match(/^(vii|vi|iv|v|iii|ii|i)/i); if(r){ out.push(["i","ii","iii","iv","v","vi","vii"].indexOf(r[1].toLowerCase())); continue; }
+    return null; }
+  if(!out.length) return null;
+  while(out.length<4) out.push(out[out.length%Math.max(1,out.length===3?1:out.length)]);
+  return out.slice(0,4);
+}
+const scrLooksProg=s=>/^\s*([1-7]|[b#♭♯]?(vii|vi|iv|v|iii|ii|i)\S*)([\s,\-–>]+([1-7]|[b#♭♯]?(vii|vi|iv|v|iii|ii|i)\S*))*\s*$/i.test(s);
+const scrIsGrid=s=>/^[\sXx.\-_|0-9rRa-gA-G]+$/.test(s)&&/[Xx.\-_0-9rR]/.test(s);
+function scrSteps(str,id,pat,warn){
+  let s=str.replace(/[\s|]/g,""); const L=SL();
+  if(s.length<L){ if(L%s.length===0) s=s.repeat(L/s.length); else { warn(`${s.length} steps given, the rest are rests`); s=s.padEnd(L,"."); } }
+  if(s.length>L){ warn(`${s.length} steps given, used the first ${L}`); s=s.slice(0,L); }
+  ["bassDeg","melDeg","chopDeg","chopIdx"].forEach(k=>{ if(!pat[k]||pat[k].length!==L) pat[k]=zL(); });
+  const a=zL(); let bad="";
+  for(let i=0;i<L;i++){ const c=s[i], acc=i%4===0?2:1;
+    if(".-_0".includes(c)){ if(id==="bass") pat.bassDeg[i]=0; if(id==="mel") pat.melDeg[i]=0; if(id==="chop") pat.chopDeg[i]=0; if(id==="chops") pat.chopIdx[i]=0; continue; }
+    if(c==="X"){ a[i]=2; } else if(c==="x"){ a[i]=1; }
+    else if(c==="r"||c==="R"){ a[i]=id==="hat"?3:acc; }
+    else if(id==="chops"&&SCR_IDX.includes(c.toLowerCase())){ a[i]=acc; pat.chopIdx[i]=SCR_IDX.indexOf(c.toLowerCase()); continue; }
+    else if(/[1-9]/.test(c)){ a[i]=acc; const d=+c-1;
+      if(id==="bass") pat.bassDeg[i]=d; else if(id==="mel") pat.melDeg[i]=d; else if(id==="chop") pat.chopDeg[i]=Math.min(3,d); continue; }
+    else { bad+=c; continue; }
+    if(id==="bass") pat.bassDeg[i]=0; if(id==="mel") pat.melDeg[i]=0; if(id==="chop") pat.chopDeg[i]=0; if(id==="chops") pat.chopIdx[i]=0;
+  }
+  if(bad) warn(`didn't understand "${[...new Set(bad)].join("")}" in the steps (use X x . r or numbers)`);
+  pat.steps[id]=a; if(pat.roll&&pat.roll[id]) delete pat.roll[id]; // steps take over from piano-roll notes
+}
+/* Instruments: Beat Lab's own (exact name), then your NI instruments, then a looser match on Beat Lab's own. */
+function scrNiInst(text){
+  if(typeof NI==="undefined"||!NI.lib) return null; const q=scrNorm(text); if(!q) return null; const L=NI.lib.instruments;
+  return L.find(i=>scrNorm(i.name+" "+i.kit)===q)||L.find(i=>scrNorm(i.name+" "+kitShort(i.kit))===q)||L.find(i=>scrNorm(i.name)===q)
+    ||L.find(i=>scrNorm(i.name+" "+i.kit).includes(q))||null;
+}
+function scrInst(text,bass){
+  const map=bass?BASSES:INST, own=Object.fromEntries(Object.entries(map).filter(([k])=>!/^(ni|au):/.test(k))), q=scrNorm(text);
+  for(const [k,v] of Object.entries(own)) if(scrNorm(k)===q||scrNorm(scrLabel(v))===q) return {key:k};
+  const ni=scrNiInst(text); if(ni&&(!bass||ni.category==="bass")) return {ni};
+  const k=scrFind(own,text); return k?{key:k}:null;
+}
+const SCR_SLOT={chords:"a",keys:"a",chords1:"a",chordsa:"a",chords2:"b",chordsb:"b",layer2:"b",melody:"mel",mel:"mel",lead:"mel",bass:"bass"};
+const SCR_SLOT_NAME={a:"chords",b:"chords2",mel:"melody",bass:"bass"};
+function scrPlugin(text){
+  if(typeof AUX==="undefined"||!AUX.list.length) return null; const q=scrNorm(text);
+  return AUX.list.find(p=>scrNorm(p.name)===q)||AUX.list.find(p=>scrNorm(p.name+" "+p.maker)===q)||AUX.list.find(p=>scrNorm(p.name).startsWith(q))||AUX.list.find(p=>scrNorm(p.name+" "+p.maker).includes(q))||null;
+}
+const SCR_PC={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
+function scrNote(t){ // C3 = 60 (middle C), like Logic and NI; plain numbers are MIDI notes
+  if(/^\d+$/.test(t)) return Math.min(127,+t);
+  const m=String(t).match(/^([A-Ga-g])([#♯b♭]?)(-?\d)$/); if(!m) return null;
+  return Math.max(0,Math.min(127,SCR_PC[m[1].toLowerCase()]+(m[2]==="#"||m[2]==="♯"?1:m[2]?-1:0)+12*(+m[3]+2)));
+}
+const scrNoteName=m=>["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"][m%12]+(Math.floor(m/12)-2);
+const scrPct=(t,lo,hi)=>{ const m=String(t).match(/-?\d+(\.\d+)?/); return m?Math.max(lo,Math.min(hi,+m[0])):null; };
+
+function runScript(text){
+  const lines=String(text).split(/\r?\n/), warns=[], jobs=[], made=[];
+  const W=(n,msg)=>warns.push(`Line ${n}: ${msg}`);
+  const clean=raw=>raw.replace(/^\s*(#|\/\/).*$/,"").replace(/\s\/\/.*$/,"").trim();
+  pushUndo(); let title="", pat=null, slot=null, defProg=null, sawPattern=false, songSet=false, len=null, long=false;
+  const GMAP=Object.fromEntries(GKEYS.map(k=>[k,GENRES[k].n]));
+  // Steps per pattern: "steps 32", or 32 when any step line is longer than 16
+  const SETTING=/^(tempo|bpm|swing|energy|complexity|wildness|chaos|space|reverb|echo|steps|volume|vol|key|mutate|notes)\b/i;
+  let hasPatterns=false;
+  lines.forEach(raw=>{ const l=clean(raw), m=l.match(/^steps\s+(\d+)/i); if(m){ len=+m[1]===32?32:16; return; }
+    if(/^pattern\s/i.test(l)) hasPatterns=true;
+    const sp=l.search(/\s/); if(sp>0&&!SETTING.test(l)&&SCR_TRACK[scrNorm(l.slice(0,sp))]&&scrIsGrid(l.slice(sp+1))&&!(scrNorm(l.slice(0,sp))==="chords"&&scrLooksProg(l.slice(sp+1)))){
+      hasPatterns=true; if(l.slice(sp+1).replace(/[\s|]/g,"").length>16) long=true; } });
+  if(len==null&&hasPatterns) len=long?32:16;
+  if(len!=null) state.len=len;
+  // Genre first, so the sound lines that follow can change its defaults
+  lines.forEach((raw,i)=>{ const m=clean(raw).match(/^genre\s+(.+)$/i); if(!m) return;
+    const k=scrFind(GMAP,m[1]); if(!k) return W(i+1,`unknown genre "${m[1]}". Try ${Object.values(GMAP).join(", ")}`);
+    state.genre=k; const lk=state.locks.sounds; state.locks.sounds=false; applyGenreSounds(); state.locks.sounds=lk; });
+  const curPat=()=>{ if(!pat){ slot="A"; pat=state.patterns.A=blankPat(); if(defProg) pat.prog=[...defProg]; state.cur="A"; sawPattern=true; made.push("A"); } return pat; };
+  lines.forEach((raw,li)=>{
+    const n=li+1, l=clean(raw); if(!l) return;
+    const sp=l.search(/\s/), cmd=(sp<0?l:l.slice(0,sp)).toLowerCase().replace(/:$/,""), arg=sp<0?"":l.slice(sp+1).trim();
+    const warn=msg=>W(n,msg), trk=t=>SCR_TRACK[scrNorm(t)];
+    if(cmd==="genre"||cmd==="steps") return;
+    if(cmd==="title"||cmd==="name"){ title=arg.replace(/^["“]|["”]$/g,""); return; }
+    if(cmd==="tempo"||cmd==="bpm"){ const v=scrPct(arg,60,180); if(v==null) return warn("tempo needs a number"); if(+arg.match(/\d+/)[0]!==v) warn(`tempo set to ${v} (Beat Lab goes from 60 to 180)`); state.bpm=Math.round(v); return; }
+    if(cmd==="swing"){ const v=scrPct(arg,0,60); if(v==null) return warn("swing needs a number from 0 to 60"); state.swing=Math.round(v); return; }
+    if(cmd==="energy"||cmd==="complexity"||cmd==="wildness"||cmd==="chaos"){ const v=scrPct(arg,0,100); if(v==null) return warn(cmd+" needs a number from 0 to 100");
+      state[cmd==="wildness"?"chaos":cmd]=v/100; state.stage=0; return; }
+    if(cmd==="space"||cmd==="reverb"){ const v=scrPct(arg,0,100); if(v!=null) state.space=v/100; return; }
+    if(cmd==="echo"){ const v=scrPct(arg,0,100); if(v!=null) state.echo=v/100; return; }
+    if(cmd==="vintage"){ const k=scrFind({off:"Off",mpc60:"MPC60",mpc3000:"MPC3000",sp1200:"SP-1200"},arg); if(!k) return warn("vintage can be off, MPC60, MPC3000 or SP-1200"); state.vintage=k; return; }
+    if(cmd==="key"){ const r=scrRoot(arg); if(!r) return warn(`key needs a note, like "key A minor"`); state.root=r.root;
+      if(r.rest){ const m=scrMode(r.rest); if(m) state.mode=m; else warn(`unknown scale "${r.rest}". Try ${Object.values(MODES).map(m=>m.n).join(", ")}`); } return; }
+    if(cmd==="scale"||cmd==="mode"){ const m=scrMode(arg); if(m) state.mode=m; else warn(`unknown scale "${arg}"`); return; }
+    if(cmd==="sound"){
+      const s2=arg.search(/\s/); if(s2<0) return warn(`sound needs a slot and a name, like "sound bass 808"`);
+      const what=scrNorm(arg.slice(0,s2)), val=arg.slice(s2+1).trim(), I=state.inst;
+      const set=(map,key,label)=>{ const k=scrFind(map,val); if(k==null) return warn(`no ${label} called "${val}"`); I[key]=k; };
+      const useInst=(slotKey,name)=>{ const r=scrInst(name,slotKey==="bass"); if(!r){ warn(`no ${slotKey==="bass"?"bass":"instrument"} called "${name}"`); return false; }
+        if(r.key) I[slotKey]=r.key; else jobs.push(()=>niAssignInst(slotKey,r.ni,true)); return true; };
+      if(what==="chords"||what==="keys"){ const [a,b]=val.split("+").map(x=>x.trim());
+        if(!useInst("a",a)) return;
+        if(b){ const bl=b.match(/(\d+)\s*%?\s*$/), bn=bl?b.slice(0,bl.index).trim():b; if(useInst("b",bn)&&bl) I.blend=Math.max(0,Math.min(100,+bl[1]))/100; }
+        else I.b="none"; return; }
+      if(what==="chords2"||what==="chordsb"||what==="layer2"){ const bl=val.match(/\s(\d+)\s*%?\s*$/), bn=bl?val.slice(0,bl.index).trim():val; if(useInst("b",bn)&&bl) I.blend=Math.max(0,Math.min(100,+bl[1]))/100; return; }
+      if(what==="melody"||what==="mel"||what==="lead"){ useInst("mel",val); return; }
+      if(what==="bass"){ useInst("bass",val); return; }
+      if(what==="voicing") return set(VOICINGS,"voicing","voicing");
+      if(what==="rhythm"||what==="chordrhythm") return set(RHYTHMS,"rhythm","chord rhythm");
+      if(what==="perc"||what==="percussion") return set(PERCS,"perc","percussion");
+      if(what==="fx") return set(FXS,"fx","FX");
+      const id=SCR_TRACK[what]; if(id&&KITS[id]) return set(KITS[id],id,trackLabel(id)+" sound");
+      return warn(`"sound ${arg.slice(0,s2)}" isn't a sound slot`);
+    }
+    if(cmd==="kit"){ const name=arg.replace(/^["“]|["”]$/g,"");
+      if(scrNorm(name)==="synth"||scrNorm(name)==="none"){ jobs.push(()=>niSynthKit()); return; }
+      if(typeof NI==="undefined"||!NI.kits.length) return warn("NI kits load from your Native Instruments drive in the Mac app");
+      const k=NI.kits.find(x=>scrNorm(x)===scrNorm(name))||NI.kits.find(x=>scrNorm(kitShort(x))===scrNorm(name))||NI.kits.find(x=>scrNorm(x).includes(scrNorm(name)));
+      if(!k) return warn(`no NI kit called "${name}"`); jobs.push(()=>niUseKit(k,true)); return; }
+    if(cmd==="sample"){
+      const m=arg.match(/^(\S+)\s+["“]?(.+?)["”]?$/); const id=m&&trk(m[1]);
+      if(!id||!DRUMS.includes(id)) return warn(`sample needs a kit pad and a sound name, like sample kick "Kick Sunset 2"`);
+      if(typeof NI==="undefined"||!NI.lib) return warn("samples load from your Native Instruments drive in the Mac app");
+      const q=scrNorm(m[2]), f=NI.lib.drums.find(f=>scrNorm(f.name)===q)||NI.lib.drums.find(f=>scrNorm(f.name+" "+f.kit)===q)||NI.lib.drums.find(f=>scrNorm(f.name).includes(q));
+      if(!f) return warn(`no NI sound called "${m[2]}"`);
+      jobs.push(()=>niAssignDrum(id,f)); return;
+    }
+    if(cmd==="plugin"||cmd==="plug-in"){
+      const s2=arg.search(/\s/), sl=s2<0?null:SCR_SLOT[scrNorm(arg.slice(0,s2))], name=s2<0?"":arg.slice(s2+1).trim().replace(/^["“]|["”]$/g,"");
+      if(!sl) return warn(`plugin needs a part (chords, chords2, melody or bass) and a name, like plugin chords "Kontakt 8"`);
+      if(!NATIVE) return warn("plug-ins play in the Mac app");
+      const p=scrPlugin(name); if(!p) return warn(`no plug-in called "${name}" (Audio/MIDI → Plug-ins lists them)`);
+      auRegister(sl,p.id); state.inst[sl]=auKey(sl,p.id); return; }
+    if(cmd==="notes"){
+      const s2=arg.search(/\s/), id=s2<0?null:trk(arg.slice(0,s2)); if(!id||!PR_TRACKS[id]) return warn(`notes is for melody, bass or chords, like notes melody 1:A3:2 5:C4:1`);
+      const out=[], bad=[];
+      arg.slice(s2+1).trim().split(/[\s,]+/).filter(Boolean).forEach(tok=>{ const [ts,ns,ds,vs]=tok.split(":"), t=+ts-1, m=scrNote(ns||""), d=ds==null?1:+ds;
+        let v=vs==null?.8:+vs; if(v>1) v/=127;
+        if(!(t>=0&&t<PR_STEPS)||m==null||!(d>0)||!(v>0)) return bad.push(tok);
+        out.push({t,d:Math.min(d,PR_STEPS-t),m,v:Math.min(1,v)}); });
+      if(bad.length) warn(`skipped notes ${bad.slice(0,4).join(" ")} (write step:note:length, like 1:A3:2)`);
+      const p=curPat(); if(!p.roll) p.roll={}; p.roll[id]=out.sort((a,b)=>a.t-b.t||a.m-b.m);
+      return; }
+    if(cmd==="pattern"){
+      const m=arg.match(/^([A-Da-d])\b(?:\s*(?:=|from|copy|like)\s*([A-Da-d]))?/); if(!m) return warn("pattern needs a letter from A to D");
+      slot=m[1].toUpperCase(); const src=m[2]&&m[2].toUpperCase();
+      pat=src?JSON.parse(JSON.stringify(state.patterns[src])):blankPat(); if(!src&&defProg) pat.prog=[...defProg];
+      state.patterns[slot]=pat; if(!sawPattern) state.cur=slot; sawPattern=true; if(!made.includes(slot)) made.push(slot); return;
+    }
+    if(cmd==="progression"||cmd==="prog"||(cmd==="chords"&&scrLooksProg(arg))){
+      const p=scrProg(arg); if(!p) return warn(`progression needs chord numbers like "1 6 4 5" or "i VI iv V"`);
+      if(pat) pat.prog=p; else defProg=p; return; }
+    if(cmd==="mutate"){ const v=scrPct(arg,0,100); mutatePattern(curPat(),(v==null?15:v)/100); return; }
+    if(cmd==="reroll"||cmd==="roll"){ const id=trk(arg); if(!id) return warn(`unknown track "${arg}"`); genTrack(id,curPat()); return; }
+    if(cmd==="clear"){ const id=trk(arg); if(!id) return warn(`unknown track "${arg}"`); curPat().steps[id]=z(); return; }
+    if(cmd==="song"){ const t=arg.toUpperCase().split(/[\s,]+/).filter(Boolean);
+      if(t[0]==="OFF"){ state.songMode=false; songSet=true; return; }
+      const bad=t.filter(x=>!SLOTS.includes(x)); if(bad.length||!t.length) return warn("song uses pattern letters A to D, like song A A B A");
+      state.song=t.slice(0,32); state.songMode=true; songSet=true; return; }
+    if(cmd==="mute"||cmd==="unmute"){ arg.split(/[\s,]+/).forEach(x=>{ const id=trk(x); if(id) state.mutes[id]=cmd==="mute"; else warn(`unknown track "${x}"`); }); return; }
+    if(cmd==="volume"||cmd==="vol"){ const m=arg.match(/^(\S+)\s+(\d+)/), id=m&&trk(m[1]); if(!id) return warn(`volume needs a track and a number, like "volume hat 80"`); state.vol[id]=Math.min(150,+m[2])/100; return; }
+    if(cmd==="padfx"||cmd==="pad-fx"||cmd==="effect"){
+      const m=arg.match(/^(\S+)\s+(.+?)(?:\s+(\d+)%?)?(?:\s+(\d+)%?)?$/), id=m&&trk(m[1]); if(!id) return warn(`effect needs a track and an effect, like "effect snare reverb 40"`);
+      const k=scrFind(PADFX,m[2]); if(!k) return warn(`no effect called "${m[2]}"`);
+      state.fx[id]={type:k,amt:m[3]!=null?Math.min(100,+m[3])/100:.5,mix:m[4]!=null?Math.min(100,+m[4])/100:(FX_MIX[k]??1)}; return; }
+    const id=trk(cmd);
+    if(id){ if(!scrIsGrid(arg)) return warn(`steps for ${cmd} should look like X...x...X...x...`); scrSteps(arg,id,curPat(),warn); return; }
+    warn(`didn't understand "${l.length>40?l.slice(0,40)+"…":l}"`);
+  });
+  if(defProg&&!sawPattern) SLOTS.forEach(k=>state.patterns[k].prog=[...defProg]);
+  if(sawPattern){ // a script with patterns describes the whole beat: clear the others, and play as a song only if it says so
+    SLOTS.forEach(k=>{ if(!made.includes(k)) state.patterns[k]=blankPat(); });
+    if(!songSet) state.songMode=false; }
+  if(len!=null) SLOTS.forEach(k=>fitLen(state.patterns[k]));
+  refreshAll(); renderGrid(); renderSlots();
+  if(title&&typeof PROJ!=="undefined"&&!PROJ.path&&/^Untitled/.test(PROJ.name)){ PROJ.name=title; if(typeof projTitle==="function") projTitle(); }
+  (async()=>{ for(const j of jobs){ try{ await j(); }catch(e){} } if(jobs.length){ syncSounds(); renderGrid(); renderPads(); if(typeof niPreloadCurrent==="function") niPreloadCurrent(); } })();
+  const rep=$("scriptReport"); rep.innerHTML="";
+  const ok=document.createElement("div"); ok.className="ok";
+  ok.textContent=`✓ Loaded${title?` “${title}”`:""}: ${GENRES[state.genre].n}, ${state.bpm} BPM, ${NAMES[state.root]} ${MODES[state.mode].n}`
+    +(made.length?`, pattern${made.length>1?"s":""} ${made.join(" ")}`:"")+(state.songMode?`, song ${state.song.join(" ")}`:"")+(warns.length?`. ${warns.length} line${warns.length>1?"s":""} skipped:`:".");
+  rep.appendChild(ok);
+  if(warns.length){ const ul=document.createElement("ul"); warns.slice(0,30).forEach(w=>{ const li=document.createElement("li"); li.textContent=w; ul.appendChild(li); }); rep.appendChild(ul); }
+  toast(title?`Loaded “${title}”`:"Script loaded");
+  return {warns,made,title};
+}
+
+function beatToScript(){
+  const I=state.inst, L=[], pad=s=>s.padEnd(8," "), modeName=state.mode==="ionian"?"major":state.mode==="aeolian"?"minor":state.mode;
+  const rn=k=>NAMES[k].replace("♯","#").replace("♭","b"), q=s=>`"${String(s).replace(/"/g,"'")}"`;
+  const instName=k=>{ const d=INST[k]; if(!d) return null; if(d.ni) return q(d.ni.name+" · "+d.ni.kit); return d.n; };
+  const title=typeof PROJ!=="undefined"&&PROJ.name&&!/^Untitled/.test(PROJ.name)?PROJ.name:"My Beat";
+  L.push("# Ether Beat Lab script",`title ${title}`,`genre ${GENRES[state.genre].n}`,`tempo ${state.bpm}`,`swing ${state.swing}`,`key ${rn(state.root)} ${modeName}`,
+    `steps ${SL()}`,`energy ${Math.round(state.energy*100)}`,`complexity ${Math.round(state.complexity*100)}`,`wildness ${Math.round(state.chaos*100)}`,
+    `space ${Math.round(state.space*100)}`,`echo ${Math.round(state.echo*100)}`);
+  if(state.vintage&&state.vintage!=="off") L.push(`vintage ${state.vintage}`);
+  L.push("");
+  const part=(slot,label)=>{ const k=I[slot], p=auParse(k);
+    if(p) L.push(`plugin ${pad(label)}${q(auName(p.comp))}`);
+    else if(k&&k!=="none"){ const n=slot==="bass"?(INST[k]&&INST[k].ni?instName(k):BASSES[k]):instName(k); if(n) L.push(`sound ${pad(label)}${n}${slot==="b"?` ${Math.round(I.blend*100)}%`:""}`); } };
+  part("a","chords"); if(I.b&&I.b!=="none") part("b","chords2"); part("mel","melody"); part("bass","bass");
+  if(I.voicing!=="auto") L.push(`sound voicing ${VOICINGS[I.voicing]}`);
+  if(I.rhythm!=="auto") L.push(`sound rhythm  ${RHYTHMS[I.rhythm]}`);
+  Object.keys(KITS).forEach(k=>{ if(I[k]&&I[k]!=="auto"&&KITS[k][I[k]]) L.push(`sound ${pad(SCR_NAME[k])}${KITS[k][I[k]]}`); });
+  if(I.perc!=="auto") L.push(`sound perc    ${PERCS[I.perc]}`);
+  L.push(`sound fx      ${FXS[I.fx]}`);
+  if(typeof NI!=="undefined"&&NI.kit) L.push(`kit ${q(NI.kit)}`);
+  DRUMS.forEach(id=>{ const s=samples[id]; if(s&&s.ni&&!s.voice) L.push(`sample ${pad(SCR_NAME[id])}${q(s.name)}`); });
+  const used=new Set(["A",...(state.songMode?state.song:[])]); SLOTS.forEach(k=>{ if(!isEmpty(state.patterns[k])||(state.patterns[k].roll&&Object.values(state.patterns[k].roll).some(r=>r&&r.length))) used.add(k); });
+  SLOTS.filter(k=>used.has(k)).forEach(k=>{ const p=state.patterns[k], N=SL();
+    L.push("",`pattern ${k}`,`progression ${p.prog.map(d=>d+1).join(" ")}`);
+    TRACKS.forEach(id=>{
+      if(p.roll&&p.roll[id]){ L.push(`notes   ${pad(SCR_NAME[id])}`.trimEnd()+" "+p.roll[id].map(n=>`${Math.round(n.t*100)/100+1}:${scrNoteName(n.m)}:${Math.round(n.d*100)/100}:${Math.round(n.v*1000)/1000}`).join(" ")); return; }
+      const a=p.steps[id]; if(!a||!a.some(Boolean)) return;
+      let s=""; for(let i=0;i<N;i++){ const v=a[i]; let c=".";
+        if(v){ if(id==="hat"&&v===3) c="r";
+          else if(id==="bass"&&p.bassDeg[i]) c=String(Math.min(9,p.bassDeg[i]+1));
+          else if(id==="mel"){ let d=p.melDeg[i]; while(d<0) d+=7; while(d>8) d-=7; c=String(d+1); }
+          else if(id==="chop"&&p.chopDeg[i]) c=String(p.chopDeg[i]+1);
+          else if(id==="chops") c=SCR_IDX[p.chopIdx[i]||0];
+          else c=v===2?"X":"x"; }
+        s+=c+(i%4===3&&i<N-1?" ":""); }
+      L.push(pad(SCR_NAME[id])+s); });
+  });
+  if(state.songMode) L.push("",`song ${state.song.join(" ")}`);
+  const muted=TRACKS.filter(t=>state.mutes[t]); if(muted.length) L.push(`mute ${muted.map(t=>SCR_NAME[t]).join(" ")}`);
+  TRACKS.forEach(t=>{ const v=state.vol[t]; if(v!=null&&Math.abs(v-1)>.004) L.push(`volume ${pad(SCR_NAME[t])}${Math.round(v*100)}`); });
+  TRACKS.forEach(t=>{ const f=state.fx[t]; if(f&&f.type!=="none"&&PADFX[f.type]) L.push(`effect ${pad(SCR_NAME[t])}${PADFX[f.type][0]} ${Math.round(f.amt*100)}% ${Math.round(f.mix*100)}%`); });
+  return L.join("\n")+"\n";
+}
+const SCR_EXAMPLE=`# Late Night Ether: a lo-fi example. Lines starting with # are notes.
+title Late Night Ether
+genre lofi
+tempo 82
+swing 24
+key A minor
+space 35
+
+sound chords  Rhodes + Vibraphone 25%
+sound voicing 7ths
+sound melody  Vibraphone
+sound bass    Electric bass
+sound kick    Soft lo-fi
+sound snare   Lo-fi snare
+sound hat     Lo-fi hat
+sound perc    Shaker
+
+pattern A
+progression 1 6 4 5
+kick    X... ..x. ..x. ....
+snare   .... X... .... X..x
+hat     x.x. x.xx x.x. x.x.
+perc    ..x. ..x. ..x. ..x.
+bass    X... ..5. ..x. ...8
+chords  X... .... X... ....
+melody  .... 5.3. .... 2...
+
+pattern B = A
+ohat    .... .... .... ..x.
+melody  5.3. 2... 1.2. 3...
+crash   X... .... .... ....
+
+song A A B A
+`;
+function setupScript(){
+  const ta=$("scriptText"), file=$("scriptFile");
+  ta.addEventListener("keydown",e=>e.stopPropagation()); // typing here (and ⌘Z) edits the text, not the beat
+  $("scriptRun").onclick=()=>{ if(!ta.value.trim()) return toast("Paste a script first"); runScript(ta.value); };
+  $("scriptOpen").onclick=()=>file.click();
+  const readFile=async f=>{ if(!f) return; ta.value=await f.text(); $("scriptPanel").open=true; runScript(ta.value); };
+  file.onchange=e=>{ const f=e.target.files[0]; e.target.value=""; readFile(f); };
+  ta.addEventListener("dragover",e=>{ if(e.dataTransfer.types.includes("Files")){ e.preventDefault(); ta.classList.add("drag"); } });
+  ta.addEventListener("dragleave",()=>ta.classList.remove("drag"));
+  ta.addEventListener("drop",e=>{ if(!e.dataTransfer.files.length) return; e.preventDefault(); ta.classList.remove("drag"); readFile(e.dataTransfer.files[0]); });
+  $("scriptExample").onclick=()=>{ ta.value=SCR_EXAMPLE; $("scriptReport").textContent="Example loaded in the box. Press Load script to hear it."; };
+  $("scriptCopy").onclick=async()=>{ ta.value=beatToScript(); try{ await navigator.clipboard.writeText(ta.value); toast("Beat copied as a script"); }catch(e){ ta.select(); toast("Script is in the box. Copy it from there"); } };
+  $("scriptSave").onclick=()=>{ const txt=ta.value.trim()?ta.value:beatToScript(); const m=txt.match(/^\s*title\s+(.+)$/mi);
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([txt],{type:"text/plain"})); a.download=((m&&m[1].trim())||"beat").replace(/[^\w\- ]+/g,"").trim()+".txt"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+}
+
+setupScript();
 </script>
 
 </body>

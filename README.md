@@ -35,6 +35,10 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 - Patterns A–D chained into a song, including random arrangements.
 - Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut. Tick **Stems** to add a WAV for every track (`stems/01 Kick.wav`, …), all the same length so they line up from the start in Logic or any DAW, each with its own mixer settings, reverb and echo; the vinyl texture gets its own stem. Tick **MIDI** to add `beat.mid` (tempo and swing included) with tracks for Drums (General MIDI notes: kick 36, snare 38, clap 39, closed hat 42, open hat 46, percussion 37, tom 45, crash 49), Bass, Chords, Melody, Vocal chop and Sampler chops (C1 is chop 1). Your choices are remembered.
 
+## Beat Script
+
+Ask Claude for a beat in plain words, paste the script it writes into **AI Producer → Beat Script** (or open a .txt file) and press **Load script**. It sets the genre, tempo, key, sounds (Beat Lab's own, your NI instruments and kits, and plug-ins), 16 or 32 steps, patterns A–D with piano-roll notes, the song order and the mix. Lines it can't use are listed by line number and skipped; Undo takes the whole script back. **Copy this beat as a script** and **Save as .txt** write any beat out the same way. The format is in [BEAT-SCRIPT.md](BEAT-SCRIPT.md).
+
 ## Projects: save, open and pick up where you left off
 
 The **Project** button at the left of the top bar shows your beat's name (a gold dot means changes aren't saved yet) and opens the project menu: **New beat**, **Open…**, **Save**, **Save as…** and **Export audio…**. The same commands are in the Mac app's **File** menu with ⌘N, ⌘O, ⌘S, ⇧⌘S and ⌘E.
