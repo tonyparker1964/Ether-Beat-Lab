@@ -595,11 +595,32 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
     <p class="prod-note" id="prodNote">Type a vibe and press Produce: it picks the genre, tempo, key, scale and energy, and your Native Instruments kit and instruments.</p>
     <details class="prod-set">
       <summary class="lbl">AI settings</summary>
-      <div class="ni-row">
-        <label class="toggle"><input type="checkbox" id="prodAI" checked> Use my local AI (LM Studio)</label>
-        <input type="text" id="prodModel" class="ni-input" placeholder="LM Studio model (blank = the one that's loaded)" aria-label="LM Studio model">
+      <label class="field"><span class="lbl">AI model</span><select id="prodEngine">
+        <option value="local">Local model on this Mac (LM Studio, Ollama…): free and private</option>
+        <option value="claude">Claude (Anthropic): needs an API key</option>
+        <option value="openai">OpenAI (GPT): needs an API key</option>
+        <option value="builtin">Built-in producer (no AI)</option>
+      </select></label>
+      <div class="ni-row" id="prodServerRow" hidden>
+        <select id="prodServer" aria-label="Local AI app">
+          <option value="http://127.0.0.1:1234">LM Studio</option>
+          <option value="http://127.0.0.1:11434">Ollama</option>
+          <option value="http://127.0.0.1:1337">Jan</option>
+          <option value="http://127.0.0.1:8080">llama.cpp or MLX server</option>
+          <option value="custom">Other address…</option>
+        </select>
+        <input type="text" id="prodServerURL" class="ni-input" placeholder="http://127.0.0.1:8000" aria-label="Local AI address" hidden>
+        <button class="mini" id="prodServerCheck" title="Look for the models this app has">Find models</button>
       </div>
-      <p class="ni-status">Runs on this Mac with LM Studio: no API key, nothing leaves your computer. When LM Studio is off, the built-in producer (no AI) reads the mood words in your vibe instead.</p>
+      <div class="ni-row" id="prodModelRow">
+        <input type="text" id="prodModel" class="ni-input" list="prodModels" aria-label="Model">
+        <datalist id="prodModels"></datalist>
+      </div>
+      <div class="ni-row" id="prodKeyRow" hidden>
+        <input type="password" id="prodKey" class="ni-input" autocomplete="off" aria-label="API key">
+        <button class="mini" id="prodKeySave">Save key</button><button class="mini" id="prodKeyDel" hidden>Remove key</button>
+      </div>
+      <p class="ni-status" id="prodEngineNote"></p>
     </details>
   </section>
 
@@ -2560,16 +2581,46 @@ async function prodApply(plan){
   if(chain) applyChain(chain,ctx);
   refreshAll();
 }
+/* Which AI answers: the local one in LM Studio, Claude or OpenAI with your API key, or the built-in producer. */
+const PROD_ENGINES={local:"Local AI",claude:"Claude",openai:"OpenAI",builtin:"Built-in producer"};
+const PROD_DEFAULT_MODEL={claude:"claude-sonnet-5-5",openai:"gpt-5.5"};
+function prodEngine(){ return $("prodEngine").value; }
+function prodGet(k,d){ try{ return localStorage.getItem("beatlab."+k)??d; }catch(e){ return d; } }
+function prodSet(k,v){ try{ if(v==null) localStorage.removeItem("beatlab."+k); else localStorage.setItem("beatlab."+k,v); }catch(e){} }
+async function prodAskCloud(provider,req,model){
+  if(NATIVE){ const r=await native("aiProduce",{provider,system:req.system,user:req.user,model}); if(r.error) throw new Error(r.error); return r; }
+  // web page: straight from this browser with the key kept in this browser
+  const key=prodGet("aikey."+provider,""); if(!key) throw new Error(`add your ${PROD_ENGINES[provider]} API key in AI settings first`);
+  const m=model||PROD_DEFAULT_MODEL[provider];
+  const res=provider==="claude"
+    ? await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:m,max_tokens:2000,system:req.system,messages:[{role:"user",content:req.user}]})})
+    : await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+key},
+        body:JSON.stringify({model:m,messages:[{role:"system",content:req.system},{role:"user",content:req.user}]})});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(`${PROD_ENGINES[provider]} answered with an error (${res.status})${res.status===401?": check the API key":res.status===404?": check the model name":""}. ${(j.error&&j.error.message||"").slice(0,140)}`);
+  const text=provider==="claude"?(j.content||[]).map(c=>c.text||"").join(""):(((j.choices||[])[0]||{}).message||{}).content||"";
+  return {text,model:j.model||m};
+}
 async function produce(){
   const vibe=$("prodVibe").value.trim(); if(!vibe){ toast("Describe the vibe first"); $("prodVibe").focus(); return; }
-  const btn=$("prodGo"), note=$("prodNote"); btn.disabled=true;
+  const btn=$("prodGo"), note=$("prodNote"), eng=prodEngine(); btn.disabled=true;
   let plan=null, who="Built-in producer (no AI)", why="";
   try{
-    if(NATIVE&&$("prodAI").checked){
-      note.textContent="Asking your local AI…";
-      try{ const req=prodRequest(vibe); const r=await native("produce",{system:req.system,user:req.user,model:$("prodModel").value.trim()});
-        if(r.error) throw new Error(r.error); plan=prodParse(r.text); who="AI Producer ("+r.model+")"; }
-      catch(e){ why=e.message; }
+    if(eng!=="builtin"){
+      const model=$("prodModel").value.trim(), req=prodRequest(vibe);
+      note.textContent=eng==="local"?"Asking your local AI…":`Asking ${PROD_ENGINES[eng]}…`;
+      try{
+        let r;
+        if(eng==="local"){
+          if(NATIVE){ r=await native("produce",{system:req.system,user:req.user,model}); if(r.error) throw new Error(r.error); }
+          else { const url=prodServerURL(); let m=model; if(!m){ const lj=await (await fetch(url+"/v1/models")).json(); m=((lj.data||[])[0]||{}).id; }
+            if(!m) throw new Error("no model is loaded in your local AI app");
+            const res=await fetch(url+"/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({model:m,messages:[{role:"system",content:req.system},{role:"user",content:req.user}],max_tokens:3000,temperature:.6})});
+            const j=await res.json(); r={text:(((j.choices||[])[0]||{}).message||{}).content||"",model:m}; } }
+        else r=await prodAskCloud(eng,req,model);
+        plan=prodParse(r.text); who=`AI Producer (${eng==="local"?"":PROD_ENGINES[eng]+" · "}${r.model})`;
+      } catch(e){ why=e.message; }
     }
     if(!plan) plan=prodBuiltIn(vibe);
     note.textContent="Setting up…";
@@ -2582,13 +2633,80 @@ async function produce(){
     toast("Produced · press Play");
   } finally { btn.disabled=false; }
 }
+async function prodEngineUI(){
+  const eng=prodEngine(), cloud=eng==="claude"||eng==="openai";
+  prodSet("prodEngine",eng);
+  $("prodModelRow").hidden=eng==="builtin"; $("prodKeyRow").hidden=!cloud; $("prodServerRow").hidden=eng!=="local";
+  const mi=$("prodModel");
+  mi.placeholder=eng==="local"?"LM Studio model (blank = the one that's loaded)":cloud?`Model (blank = ${PROD_DEFAULT_MODEL[eng]})`:"";
+  mi.value=eng==="local"?(prodGet("prodModel.local",null)??mi.dataset.local??""):prodGet("prodModel."+eng,"");
+  $("prodModels").innerHTML="";
+  const site={claude:"console.anthropic.com",openai:"platform.openai.com"}[eng];
+  const notes={local:"Any model you run on this Mac with LM Studio, Ollama, Jan, a llama.cpp or MLX server, or any app with an OpenAI-style server. Pick the app, press Find models and choose one (blank = the one that's loaded). No API key, nothing leaves your computer. If the app isn't running, the built-in producer answers instead.",
+    builtin:"No AI: reads the genre, mood and speed words in your vibe. Works offline.",
+    claude:"",openai:""};
+  let text=notes[eng];
+  if(cloud){
+    let has=false;
+    if(NATIVE){ const st=await native("aiKeyStatus").catch(()=>({})); has=!!(st&&st[eng]); }
+    else has=!!prodGet("aikey."+eng,"");
+    $("prodKey").value=""; $("prodKey").placeholder=has?"Key saved (paste a new one to replace it)":`Paste your ${PROD_ENGINES[eng]} API key (from ${site})`;
+    $("prodKeyDel").hidden=!has;
+    text=`Uses ${PROD_ENGINES[eng]} with your own API key from ${site}, billed by ${eng==="claude"?"Anthropic":"OpenAI"} per use. Your vibe and the names of the sounds it can choose from are sent to ${eng==="claude"?"Anthropic":"OpenAI"}; your audio files never leave your ${NATIVE?"Mac":"computer"}. `+
+      (NATIVE?"The key is kept in your Mac's Keychain.":"The key is kept in this browser.")+(has?"":" No key saved yet.");
+    if(has) prodLoadModels(eng);
+  }
+  if(eng==="local") prodLocalModels(true);
+  $("prodEngineNote").textContent=text;
+}
+async function prodLoadModels(eng){
+  let list=[];
+  try{
+    if(NATIVE) list=await native("aiModels",{provider:eng});
+    else { const key=prodGet("aikey."+eng,""); const res=await fetch(eng==="claude"?"https://api.anthropic.com/v1/models?limit=100":"https://api.openai.com/v1/models",
+        {headers:eng==="claude"?{"x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"}:{authorization:"Bearer "+key}});
+      const j=await res.json(); list=(j.data||[]).map(x=>x.id); if(eng==="openai") list=list.filter(x=>x.startsWith("gpt-")&&!/audio|realtime|transcribe|tts|image|search/.test(x)).sort().reverse(); }
+  }catch(e){ list=[]; }
+  if(prodEngine()!==eng) return;
+  const dl=$("prodModels"); dl.innerHTML=""; (list||[]).forEach(id=>dl.appendChild(new Option(id,id)));
+}
+/* Local AI app: which server, and the models it has. */
+function prodServerURL(){ const v=$("prodServer").value; return (v==="custom"?$("prodServerURL").value.trim():v).replace(/\/+$/,""); }
+async function prodLocalModels(quiet){
+  const url=prodServerURL(); if(!url) return; let models=[], reach=false;
+  try{
+    if(NATIVE){ const r=await native("setLocalServer",{url}); const m=await native("localModels"); models=m.models||[]; reach=!!m.reachable; }
+    else { const res=await fetch(url+"/v1/models"); const j=await res.json(); models=(j.data||[]).map(x=>x.id).filter(x=>!/embed/i.test(x)); reach=true; }
+  }catch(e){ reach=false; }
+  if(prodEngine()!=="local") return;
+  const dl=$("prodModels"); dl.innerHTML=""; models.forEach(id=>dl.appendChild(new Option(id,id)));
+  const name=$("prodServer").selectedOptions[0].text;
+  $("prodServerCheck").textContent=reach?`${models.length} model${models.length===1?"":"s"} found`:"Find models";
+  if(!quiet) toast(reach?`${name}: ${models.length} model${models.length===1?"":"s"}. Click the model box to pick one.`:`Nothing is answering at ${url}. Start ${name==="Other address…"?"the app":name} and its server first.`);
+}
 function prodSetup(){
   $("prodGo").onclick=produce;
   $("prodVibe").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); produce(); } e.stopPropagation(); });
-  $("prodModel").addEventListener("keydown",e=>e.stopPropagation());
+  ["prodModel","prodKey"].forEach(id=>$(id).addEventListener("keydown",e=>e.stopPropagation()));
   $("niSearch").addEventListener("keydown",e=>e.stopPropagation());
-  if(!NATIVE){ $("prodAI").checked=false; $("prodAI").disabled=true; $("prodModel").disabled=true; }
-  else native("settings").then(s=>{ if(s&&s.model) $("prodModel").value=s.model; }).catch(()=>{});
+  const sel=$("prodEngine");
+  sel.value=prodGet("prodEngine",NATIVE?"local":"builtin"); if(sel.selectedOptions[0]&&sel.selectedOptions[0].disabled||!sel.value) sel.value="builtin";
+  sel.onchange=prodEngineUI;
+  $("prodModel").addEventListener("change",()=>{ const v=$("prodModel").value.trim(); prodSet("prodModel."+prodEngine(),v||null); });
+  // local AI app
+  const saved=prodGet("prodServer","http://127.0.0.1:1234"), srv=$("prodServer");
+  if([...srv.options].some(o=>o.value===saved)) srv.value=saved; else { srv.value="custom"; $("prodServerURL").value=saved; }
+  $("prodServerURL").hidden=srv.value!=="custom";
+  srv.onchange=()=>{ $("prodServerURL").hidden=srv.value!=="custom"; if(srv.value!=="custom"){ prodSet("prodServer",srv.value); $("prodModel").value=""; prodSet("prodModel.local",null); prodLocalModels(false); } };
+  $("prodServerURL").addEventListener("keydown",e=>e.stopPropagation());
+  $("prodServerURL").addEventListener("change",()=>{ prodSet("prodServer",prodServerURL()); prodLocalModels(false); });
+  $("prodServerCheck").onclick=()=>prodLocalModels(false);
+  $("prodKeySave").onclick=async()=>{ const eng=prodEngine(), k=$("prodKey").value.trim(); if(!k){ toast("Paste the API key first"); return; }
+    if(NATIVE){ const r=await native("aiSetKey",{provider:eng,key:k}); if(r&&r.error){ toast(r.error); return; } } else prodSet("aikey."+eng,k);
+    toast(PROD_ENGINES[eng]+" key saved"); prodEngineUI(); };
+  $("prodKeyDel").onclick=async()=>{ const eng=prodEngine(); if(NATIVE) await native("aiSetKey",{provider:eng,key:""}); else prodSet("aikey."+eng,null); toast("Key removed"); prodEngineUI(); };
+  if(NATIVE) native("settings").then(s=>{ if(s&&s.model){ $("prodModel").dataset.local=s.model; if(prodEngine()==="local"&&!$("prodModel").value) $("prodModel").value=s.model; } }).catch(()=>{});
+  prodEngineUI();
 }
 /* ↑ ↓ on a focused Sounds menu steps to the previous or next sound and plays it, without opening the list.
    (⌥↓ or Space still opens the full list.) */

@@ -262,6 +262,7 @@ final class Bridge: NSObject, WKScriptMessageHandlerWithReply {
         default:
             // plug-ins, MIDI, audio devices and recording
             if Engine.shared.handle(action, body, reply: replyHandler) { return }
+            if CloudAI.handle(action, body, reply: replyHandler) { return }
             replyHandler(nil, "Unknown request: \(action)")
         }
     }
@@ -354,9 +355,9 @@ enum Producer {
         var chosen = model
         if chosen.isEmpty { chosen = await loadedModel() ?? "" }
         if chosen.isEmpty {
-            return ["error": "LM Studio isn't running, or it has no model. Open LM Studio, load a model and start its server."]
+            return ["error": "No local model found at \(baseURL). Start your local AI app (LM Studio, Ollama, Jan…), load a model and start its server, or pick a model name."]
         }
-        guard let url = URL(string: baseURL + "/v1/chat/completions") else { return ["error": "LM Studio's address isn't valid."] }
+        guard let url = URL(string: baseURL + "/v1/chat/completions") else { return ["error": "The local AI address isn't valid."] }
         let noThink = chosen.lowercased().contains("qwen3")
         let payload: [String: Any] = [
             "model": chosen,
@@ -376,18 +377,18 @@ enum Producer {
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             guard (200..<300).contains(status) else {
                 let body = String(data: data, encoding: .utf8) ?? ""
-                return ["error": "LM Studio answered with an error (\(status)). \(body.prefix(200))"]
+                return ["error": "The local AI answered with an error (\(status)). \(body.prefix(200))"]
             }
             let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             let choices = obj?["choices"] as? [[String: Any]]
             let message = choices?.first?["message"] as? [String: Any]
             let text = message?["content"] as? String ?? ""
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return ["error": "The model answered with nothing. Try a different model in LM Studio."]
+                return ["error": "The model answered with nothing. Try a different model."]
             }
             return ["text": text, "model": chosen]
         } catch {
-            return ["error": "LM Studio isn't reachable at \(baseURL). Open LM Studio and start its server (Developer → Status: Running)."]
+            return ["error": "No local AI server is answering at \(baseURL). Start it (LM Studio: Developer → Status: Running; Ollama: open the Ollama app)."]
         }
     }
 
