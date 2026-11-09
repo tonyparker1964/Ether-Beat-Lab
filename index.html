@@ -5220,21 +5220,25 @@ function scrPlugin(text){
    ("Dark piano" → a dark piano), the drum kit's expansion, then instruments with the most recorded notes (they sound best
    across the keyboard). Several close ones? One is picked at random so scripts don't all sound alike. */
 const SCR_WORDS_SKIP=new Set(["synth","sound","section","bass","the","and","ether"]);
-function scrNiBest(key,isBass,kit,avoid,slot){
+// One-shots that are already a chord, a riff or a phrase: played as single notes they stack into a clash.
+const SCR_NOT_NOTES=/(^|[^a-z])(chord|chords|stab|stabs|maj|maj7|maj9|min|min7|min9|m7|m9|m11|7th|9th|sus|sus2|sus4|dim|aug|prog|progression|riff|riffs|phrase|phrases|melody|melodies|arp|arps|hook|lick|licks|line|lines|seq|sequence)([^a-z]|$)/i;
+const scrIsNotes=i=>!SCR_NOT_NOTES.test(i.name)&&!i.zones.some(z=>SCR_NOT_NOTES.test(z.path.split("/").pop().replace(/\.[^.]+$/,"")));
+function scrNiBest(key,isBass,kit,avoid,slot,kits){
   if(typeof NI==="undefined"||!NI.lib) return null;
   const d=isBass?BASSES[key]:INST[key]; if(!d) return null;
   const cat=isBass?"bass":INST_CAT[key]; if(!cat) return null;
   const words=scrLabel(d).toLowerCase().replace(/\(.*?\)/g," ").split(/[^a-z0-9]+/).filter(w=>w.length>2&&!SCR_WORDS_SKIP.has(w));
   if(key==="epiano") words.push("rhodes","electric","ep","wurli");
   if(key==="808"||key==="dist808") words.push("808");
-  const pool=NI.lib.instruments.filter(i=>i.category===cat&&!(avoid||[]).includes(i.id)); if(!pool.length) return null;
+  const pool=NI.lib.instruments.filter(i=>i.category===cat&&!(avoid||[]).includes(i.id)&&scrIsNotes(i)); if(!pool.length) return null;
   const score=i=>{ const n=(i.name+" "+i.kit).toLowerCase(); let sc=0; words.forEach(w=>{ if(n.includes(w)) sc+=3; });
-    if(kit&&i.kit===kit) sc+=2.5; sc+=Math.min(8,i.zones.length)/4;
-    if(slot){ const fit=scrRangeFit(i,slot); sc-=Math.max(0,fit-5)*.35; } // stretched more than ~5 notes: it starts to sound wrong
+    if(kit&&i.kit===kit) sc+=2.5; if(kits&&kits.includes(i.kit)) sc+=2; // the same expansion as the drums and the other parts: one sound
+    const z=i.zones.length; sc+=z>=6?4:z>=3?3:z===2?1:-2.5; // several recorded notes sound real; one note stretched sounds thin
+    if(slot){ const fit=scrRangeFit(i,slot); sc-=Math.max(0,fit-4)*.6; } // stretched more than ~4 notes: it starts to sound wrong
     return sc; };
   const ranked=pool.map(i=>[score(i),i]).sort((a,b)=>b[0]-a[0]), top=ranked[0][0];
-  const near=ranked.filter(([sc])=>sc>=top-.6).slice(0,4).map(([,i])=>i);
-  return near[Math.floor(R()*near.length)];
+  const near=ranked.filter(([sc])=>sc>=top-.6).slice(0,4).map(([,i])=>i), pickI=near[Math.floor(R()*near.length)];
+  pickI.__fit=slot?scrRangeFit(pickI,slot):0; return pickI;
 }
 /* ---- Keeping your NI sounds in tune with the script ----
    File names give a sound's note ("Rhodes C3", "808 F#"); without one the library guesses middle C. Beat Lab listens to
@@ -5286,7 +5290,10 @@ async function scrTuneDrums(){ // pitched kicks (808s, tuned kicks) onto the son
     let pc=null; const nn=scrNameNote(smp.name); if(nn) pc=nn.pc;
     else if(smp.buf.duration>.45){ const p=scrPitch({buf:smp.buf,start:smp.start*smp.buf.duration}); if(p!=null) pc=((Math.round(p)%12)+12)%12; }
     if(pc==null) continue;
-    let st=((state.root-pc)%12+12)%12; if(st>6) st-=12;
+    // the smallest move that puts it on the root, fifth or fourth; a kick moved more than 3 semitones sounds wrong, so leave it
+    let st=null; for(const iv of [0,7,5]){ let x=((state.root+iv-pc)%12+12)%12; if(x>6) x-=12; if(st==null||Math.abs(x)<Math.abs(st)) st=x; }
+    const long=smp.buf.duration>.45||/808|sub|boom/i.test(smp.name);
+    if(Math.abs(st)>(long?5:3)){ smp.p.tune=0; continue; }
     smp.p.tune=st; if(st) out.push(`${t} ${st>0?"+":""}${st}`);
   }
   return out;
@@ -5426,11 +5433,16 @@ function runScript(text){
     const words=vibe.join(" ").toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>=3);
     let kit=null;
     if(!kitGiven&&NI.kits.length){ kit=niGenreKit(words); if(kit){ const k=kit; jobs.unshift(()=>niUseKit(k,true)); niPicked.push("kit "+kitShort(k)); } }
-    const used=[];
-    [["a","chords",false],["b","chords 2",false],["mel","melody",false],["bass","bass",true]].forEach(([sl,label,isBass])=>{
+    const used=[], kits=[];
+    [["a","chords",false],["bass","bass",true],["mel","melody",false],["b","chords 2",false]].forEach(([sl,label,isBass])=>{
       const cur=state.inst[sl]; if(explicit.has(sl)||!cur||cur==="none"||/^(ni|au):/.test(cur)) return;
-      const best=scrNiBest(cur,isBass,kit,used,sl); if(!best) return;
-      used.push(best.id); jobs.push(async()=>{ const f=await scrCheckRoots(best); if(f) tuned.push(`${best.name} (${f} note${f>1?"s":""} found by ear)`); await niAssignInst(sl,best,true); }); niPicked.push(`${label} ${best.name}`); });
+      const best=scrNiBest(cur,isBass,kit,used,sl,kits);
+      // a second chord layer only helps when it's a real instrument in range; otherwise one good layer sounds better
+      if(sl==="b"&&(!best||best.zones.length<3||best.__fit>5)){ state.inst.b="none"; niPicked.push("chords 2 off (no close match)"); return; }
+      if(!best) return;
+      used.push(best.id); kits.push(best.kit);
+      jobs.push(async()=>{ const f=await scrCheckRoots(best); if(f) tuned.push(`${best.name} (${f} note${f>1?"s":""} found by ear)`); await niAssignInst(sl,best,true); });
+      niPicked.push(`${label} ${best.name} (${best.zones.length} recorded note${best.zones.length>1?"s":""})`); });
   }
   if(typeof NI!=="undefined"&&NI.lib) jobs.push(async()=>{ const d=await scrTuneDrums(); if(d.length) tuned.push("tuned to "+NAMES[state.root]+": "+d.join(", ")); });
   refreshAll(); renderGrid(); renderSlots();
