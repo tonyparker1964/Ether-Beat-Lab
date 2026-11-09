@@ -33,7 +33,7 @@ A browser-based beat maker built for Ether's creative workflow. Every sound is s
 - **Note repeat** (1/8 to 1/32 and triplets), **Vintage** mode (MPC60, MPC3000, SP-1200) and a live **Filter sweep**.
 - Stop, Space or Esc silences everything, including samples, reverb and echo tails.
 - Patterns A–D chained into a song, including random arrangements.
-- Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut.
+- Export a ZIP containing a 44.1 kHz stereo `beat.wav` and `beat-markers.json` with tempo, sounds, chords, sections, beat, bar, kick and snare timing for Ether Cut. Tick **Stems** to add a WAV for every track (`stems/01 Kick.wav`, …), all the same length so they line up from the start in Logic or any DAW, each with its own mixer settings, reverb and echo; the vinyl texture gets its own stem. Tick **MIDI** to add `beat.mid` (tempo and swing included) with tracks for Drums (General MIDI notes: kick 36, snare 38, clap 39, closed hat 42, open hat 46, percussion 37, tom 45, crash 49), Bass, Chords, Melody, Vocal chop and Sampler chops (C1 is chop 1). Your choices are remembered.
 
 ## Projects: save, open and pick up where you left off
 

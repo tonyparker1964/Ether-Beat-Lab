@@ -288,6 +288,8 @@ body.studio .st-side .ni-row select{max-width:none;flex:1 1 120px}
 /* Export */
 .export{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .export .field{flex:0 0 150px}
+.exp-opts{display:flex;flex-direction:column;gap:6px}
+.exp-opts .dim{color:var(--dim);font-size:12px}
 .export p{margin:0;color:var(--dim);font-size:13px;flex:1 1 260px;min-width:0;max-width:62ch}
 #status{font-family:var(--f-mono);font-size:12px;color:var(--accent);flex-basis:100%}
 #status:empty{display:none}
@@ -644,8 +646,12 @@ body.studio .st-pane .viz-box{height:calc(var(--edit-h,42vh) - 150px);min-height
     <label class="field"><span class="lbl">Length</span>
       <select id="bars"><option value="8">8 bars</option><option value="16" selected>16 bars</option><option value="32">32 bars</option><option value="song">Whole song</option></select>
     </label>
-    <button class="btn primary" id="export">Export for Ether Cut</button>
-    <p>Saves a .zip with <strong>beat.wav</strong> (44.1 kHz stereo) and <strong>beat-markers.json</strong>: tempo, chords, sections, and every beat, bar, kick and snare time. It sounds just like the Mixer (EQ, compression, pans, sends and solos); muted tracks stay out.</p>
+    <div class="exp-opts" role="group" aria-label="Also include">
+      <label class="toggle"><input type="checkbox" id="expStems"> Stems <span class="dim">(a WAV for each track)</span></label>
+      <label class="toggle"><input type="checkbox" id="expMidi" checked> MIDI <span class="dim">(beat.mid)</span></label>
+    </div>
+    <button class="btn primary" id="export">Export</button>
+    <p>Saves a .zip with <strong>beat.wav</strong> (44.1 kHz stereo) and <strong>beat-markers.json</strong> for Ether Cut (tempo, chords, sections, and every beat, bar, kick and snare time). <strong>Stems</strong> are one WAV per track that line up from the start in any DAW; <strong>MIDI</strong> has the drums, bass, chords and melody as notes. It sounds just like the Mixer (EQ, compression, pans, sends and solos); muted tracks stay out.</p>
     <div id="status" role="status"></div>
   </section>
 </div>
@@ -1878,12 +1884,15 @@ async function doExport(){
         padFx:Object.fromEntries(Object.entries(state.fx).filter(([,c])=>c.type!=="none").map(([k,c])=>[k,PADFX[c.type][0]]))},timeSignature:"4/4",bars,loopSeconds:r3(total),fileSeconds:r3(len/sr),
       sections:sections.map(s=>({...s,chords:[0,1,2,3].map(b=>chordName(state.patterns[s.pattern],b))})),
       beats,barStarts:barT,kicks:marks.kicks.map(r3),snares:marks.snares.map(r3),muted:TRACKS.filter(t=>state.mutes[t])};
-    const zip=zipStore([{name:"beat.wav",data:wavEncode(buf)},{name:"beat-markers.json",data:new TextEncoder().encode(JSON.stringify(meta,null,2))}]);
+    const files=[{name:"beat.wav",data:wavEncode(buf)},{name:"beat-markers.json",data:new TextEncoder().encode(JSON.stringify(meta,null,2))}];
+    const xo={bars,useSong,sr,len}; await exportExtras(files,xo);
+    status.textContent="Packing the ZIP…";
+    const zip=zipStore(files);
     const fname=`ether-beat-${state.genre}-${state.bpm}bpm${useSong?"-song":""}.zip`;
     const dl=await downloadsP;
-    if(dl){ status.textContent="Confirm the save to finish."; await dl.save({filename:fname,data:zip}); status.textContent="Saved "+fname; }
+    if(dl){ status.textContent="Confirm the save to finish."; await dl.save({filename:fname,data:zip}); status.textContent="Saved "+fname+(xo.extra.length?" (with "+xo.extra.join(" and ")+")":""); }
     else if(dl===null){ status.textContent="Saving files is not available in this view. Open the page in claude.ai or run the HTML file in a browser to export."; }
-    else { const a=document.createElement("a"); a.href=URL.createObjectURL(zip); a.download=fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); status.textContent="Saved "+fname; }
+    else { const a=document.createElement("a"); a.href=URL.createObjectURL(zip); a.download=fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); status.textContent="Saved "+fname+(xo.extra.length?" (with "+xo.extra.join(" and ")+")":""); }
   }catch(e){
     const code=e&&e.code;
     status.textContent=code==="declined"?"Save cancelled.":code==="rate_limited"?"A save prompt is already open. Finish it, then try again.":"Export failed: "+(e&&e.message||e);
@@ -3717,6 +3726,103 @@ function projSetup(){
   projRestore();
 }
 projSetup();
+</script>
+
+<script>
+/* ---------- Stems and MIDI in the export ----------
+   Stems: one WAV per track, the same length as beat.wav so they line up from zero in any DAW. Each stem is the track
+   through its mixer strip with its own reverb and echo, at the level it has in the mix (not normalized).
+   MIDI: beat.mid with a track each for drums (General MIDI drum notes), bass, chords, melody, vocal chop and sampler
+   chops, at the beat's tempo and swing. */
+const GM_DRUM={kick:36,snare:38,clap:39,hat:42,ohat:46,perc:37,tom:45,crash:49};
+const safeName=x=>String(x||"").normalize("NFKD").replace(/[^\w .()+-]+/g,"-").replace(/-+/g,"-").replace(/^[-. ]+|[-. ]+$/g,"").slice(0,60)||"track";
+function exportSlots(bars,useSong){ const out=[]; for(let g=0;g<bars*16;g++) out.push(useSong?state.song[Math.floor(g/64)]:state.cur); return out; }
+function trackUsed(id,slots){ return !state.mutes[id]&&[...new Set(slots)].some(L=>{ const a=state.patterns[L].steps[id]; return a&&a.some(v=>v); }); }
+
+async function renderStem(id,bars,useSong,sr,len){
+  const off=new OfflineAudioContext(2,len,sr), ch=buildChain(off,off.destination), sd=stepDur();
+  ch.crackle.gain.cancelScheduledValues(0); ch.crackle.gain.setValueAtTime(id==="texture"?G().texture*.5:0,0);
+  const mutes=state.mutes, solo=state.solo;
+  state.mutes=Object.fromEntries(TRACKS.map(t=>[t,t!==id])); state.solo={};
+  try{ for(let g=0;g<bars*16;g++){ const slot=useSong?state.song[Math.floor(g/64)]:state.cur; scheduleStep(off,ch,state.patterns[slot],g%64,g*sd,null); } }
+  finally{ state.mutes=mutes; state.solo=solo; }
+  return off.startRendering();
+}
+async function exportStems(files,o,status){
+  const slots=exportSlots(o.bars,o.useSong), solo=anySolo();
+  const ids=MIX_ORDER.filter(id=>trackUsed(id,slots)&&(!solo||state.solo[id]));
+  const list=ids.map(id=>[id,trackLabel(id)]);
+  if(G().texture>0) list.push(["texture","Vinyl texture"]);
+  for(let k=0;k<list.length;k++){
+    const [id,label]=list[k];
+    status.textContent=`Rendering stem ${k+1} of ${list.length}: ${label}…`;
+    const buf=await renderStem(id,o.bars,o.useSong,o.sr,o.len);
+    files.push({name:`stems/${String(k+1).padStart(2,"0")} ${safeName(label)}.wav`,data:projWav(buf)});
+  }
+  return list.length;
+}
+
+/* ---------- MIDI ---------- */
+function midiVar(n){ const b=[n&0x7f]; while(n>>=7) b.unshift((n&0x7f)|0x80); return b; }
+function midiTrack(name,events,extra){
+  // events: [tick, bytes[]]; note-offs sort before note-ons at the same tick
+  events.sort((a,b)=>a[0]-b[0]||((a[1][0]&0xf0)===0x80?-1:0)-((b[1][0]&0xf0)===0x80?-1:0));
+  const nm=[...new TextEncoder().encode(name)], data=[0,0xff,0x03,...midiVar(nm.length),...nm,...(extra||[])];
+  let last=0; for(const [t,bytes] of events){ data.push(...midiVar(t-last),...bytes); last=t; }
+  data.push(0,0xff,0x2f,0);
+  const len=data.length; return [0x4d,0x54,0x72,0x6b,(len>>>24)&255,(len>>>16)&255,(len>>>8)&255,len&255,...data];
+}
+function buildMidi(bars,useSong){
+  const PPQ=480, ST=120, slots=exportSlots(bars,useSong), g=G(), m=state.mutes, E=state.energy;
+  const swingT=Math.round(state.swing/100*.66*ST), clampN=n=>Math.max(0,Math.min(127,Math.round(n)));
+  const vel=x=>clampN((x===2?1:.55)*112+12);
+  const T={drums:[],bass:[],keys:[],mel:[],chop:[],chops:[]};
+  const note=(trk,ch,tick,pitch,v,dur)=>{ dur=Math.max(30,Math.round(dur)); T[trk].push([tick,[0x90|ch,clampN(pitch),clampN(v)]],[tick+dur,[0x80|ch,clampN(pitch),0]]); };
+  for(let gs=0;gs<bars*16;gs++){
+    const pat=state.patterns[slots[gs]], i=gs%64, st=pat.steps, s=i%st.kick.length, bar=Math.floor(i/16)%4;
+    const t=gs*ST+(s%2===1?swingT:0), len=k=>(nextHit(st[k]||[],s)-s)*ST;
+    if(st.kick[s]&&!m.kick) note("drums",9,t,GM_DRUM.kick,vel(st.kick[s]),ST*.9);
+    let sv=st.snare[s]; if(!sv&&g.fill&&E>.45&&bar===3&&s>=13) sv=s===15?2:1;
+    if(sv&&!m.snare){ const clap=trackLabel("snare")==="Clap"; note("drums",9,t,clap?GM_DRUM.clap:GM_DRUM.snare,vel(sv)*(sv===1?.85:1),ST*.9); }
+    const h=st.hat[s];
+    if(h&&!m.hat){ if(h===3){ for(let k=0;k<3;k++) note("drums",9,t+Math.round(k*ST/3),GM_DRUM.hat,90+k*10,ST/3); } else note("drums",9,t,GM_DRUM.hat,vel(h),ST*.5); }
+    if(st.ohat[s]&&!m.ohat) note("drums",9,t,GM_DRUM.ohat,vel(st.ohat[s]),ST*1.5);
+    if(st.perc[s]&&!m.perc) note("drums",9,t,GM_DRUM.perc,vel(st.perc[s]),ST*.8);
+    if(st.tom[s]&&!m.tom) note("drums",9,t,GM_DRUM.tom,vel(st.tom[s]),ST*.9);
+    if(st.crash[s]&&bar===0&&!m.crash) note("drums",9,t,GM_DRUM.crash,vel(st.crash[s]),ST*4);
+    if(st.chop[s]&&!m.chop){ const rel=chordRel(pat,bar); note("chop",3,t,keysBase()+rel[(pat.chopDeg[s]||0)%rel.length],vel(st.chop[s]),Math.min(len("chop"),ST*2)); }
+    if(st.chops&&st.chops[s]&&!m.chops) note("chops",4,t,36+(pat.chopIdx?pat.chopIdx[s]:0),vel(st.chops[s]),Math.min(len("chops"),ST*4));
+    if(st.mel[s]&&!m.mel) note("mel",2,t,keysBase()+12+sn(pat.prog[bar]+pat.melDeg[s]),vel(st.mel[s]),Math.min(len("mel"),ST*12.8*state.bpm/120));
+    if(st.bass[s]&&!m.bass) note("bass",0,t,bassBase()+sn(pat.prog[bar]+pat.bassDeg[s]),vel(st.bass[s]),len("bass")*(state.inst.bass.includes("808")?1:.8));
+    if(st.keys[s]&&!m.keys){
+      const rel=chordRel(pat,bar), kb=keysBase(), kt=rhythm();
+      const ps=kt==="arp"?[kb+12+rel[(s/2|0)%rel.length]]:kt==="seq"?[kb+12*(1+(Math.floor(s/4)%2))+rel[[0,1,2,3,2,1][s%6]%rel.length]]:rel.map(r=>kb+r);
+      ps.forEach(pc=>note("keys",1,t,pc,vel(st.keys[s])*.9,kt==="seq"?ST*.9:len("keys")));
+    }
+  }
+  const tempo=Math.round(60000000/state.bpm);
+  const head=[0,0xff,0x51,3,(tempo>>16)&255,(tempo>>8)&255,tempo&255,0,0xff,0x58,4,4,2,24,8];
+  const key=[0,0xff,0x01,...(t=>[t.length,...t])([...new TextEncoder().encode(`${NAMES[state.root]} ${MODES[state.mode].n} · ${G().n} · Ether Beat Lab`)])];
+  const prog=(ch,p)=>[0,0xc0|ch,p];
+  const tracks=[midiTrack("Ether Beat Lab",[],head.concat(key))];
+  const add=(k,name,extra)=>{ if(T[k].length) tracks.push(midiTrack(name,T[k],extra)); };
+  add("drums","Drums"); add("bass",trackLabel("bass")||"Bass",prog(0,38)); add("keys",trackLabel("keys")||"Chords",prog(1,4));
+  add("mel","Melody",prog(2,73)); add("chop","Vocal chop",prog(3,52)); add("chops","Sampler chops (C1 = chop 1)");
+  const hdr=[0x4d,0x54,0x68,0x64,0,0,0,6,0,1,0,tracks.length,(PPQ>>8)&255,PPQ&255];
+  return {data:new Uint8Array(hdr.concat(...tracks)),tracks:tracks.length-1};
+}
+/* Called by the export with the files so far; adds stems and MIDI when they're switched on. */
+async function exportExtras(files,o){
+  const status=$("status"), got=[];
+  if($("expMidi").checked){ const m=buildMidi(o.bars,o.useSong); files.push({name:"beat.mid",data:m.data}); got.push("MIDI"); }
+  if($("expStems").checked){ const n=await exportStems(files,o,status); got.push(n+" stems"); }
+  o.extra=got;
+}
+function extrasSetup(){
+  ["expStems","expMidi"].forEach(id=>{ try{ const v=localStorage.getItem("beatlab."+id); if(v!==null) $(id).checked=v==="1"; }catch(e){}
+    $(id).addEventListener("change",e=>{ try{ localStorage.setItem("beatlab."+id,e.target.checked?"1":"0"); }catch(err){} }); });
+}
+extrasSetup();
 </script>
 
 </body>
